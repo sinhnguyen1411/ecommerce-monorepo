@@ -1,0 +1,65 @@
+﻿version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ecommerce_mysql
+    restart: unless-stopped
+    env_file:
+      - ./env/mysql.env
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  directus:
+    image: directus/directus:latest
+    container_name: ecommerce_directus
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    env_file:
+      - ./env/directus.env
+    volumes:
+      - directus_uploads:/directus/uploads
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_DIRECTUS_URL: ${NEXT_PUBLIC_DIRECTUS_URL}
+        NEXT_PUBLIC_DIRECTUS_PUBLIC_TOKEN: ${NEXT_PUBLIC_DIRECTUS_PUBLIC_TOKEN}
+        NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME}
+        NEXT_PUBLIC_LOCALE: ${NEXT_PUBLIC_LOCALE}
+        NEXT_PUBLIC_CURRENCY: ${NEXT_PUBLIC_CURRENCY}
+    container_name: ecommerce_web
+    restart: unless-stopped
+    env_file:
+      - ./env/web.env
+    depends_on:
+      - directus
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    container_name: ecommerce_api
+    restart: unless-stopped
+    depends_on:
+      - mysql
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ecommerce_nginx
+    restart: unless-stopped
+    depends_on:
+      - web
+      - directus
+      - api
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  mysql_data:
+  directus_uploads:

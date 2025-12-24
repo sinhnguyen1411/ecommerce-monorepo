@@ -1,0 +1,85 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: 30 33 32;
+  --color-sand: 247 242 233;
+  --color-clay: 224 197 165;
+  --color-moss: 70 104 84;
+  --color-ember: 204 96 72;
+  --color-cream: 255 250 243;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100%;
+  color: rgb(var(--color-ink));
+  background-color: rgb(var(--color-sand));
+  background-image:
+    radial-gradient(circle at 10% 10%, rgba(204, 96, 72, 0.12), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(70, 104, 84, 0.18), transparent 38%),
+    linear-gradient(180deg, rgba(255, 250, 243, 0.9), rgba(247, 242, 233, 0.9));
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .section-shell {
+    @apply mx-auto w-full max-w-6xl px-6;
+  }
+
+  .card-surface {
+    @apply rounded-3xl bg-cream/80 shadow-soft backdrop-blur-sm;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition;
+  }
+
+  .btn-primary {
+    @apply btn bg-moss text-cream hover:bg-ember;
+  }
+
+  .btn-ghost {
+    @apply btn border border-moss/30 text-moss hover:border-ember hover:text-ember;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-full bg-moss/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-moss;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border border-moss/20 bg-white/70 px-4 py-2 text-sm text-ink shadow-sm placeholder:text-ink/50 focus:border-ember focus:outline-none;
+  }
+
+  .rich-content h2 {
+    @apply mt-8 text-2xl font-semibold;
+  }
+
+  .rich-content p {
+    @apply mt-4 text-base leading-relaxed text-ink/80;
+  }
+
+  .rich-content ul {
+    @apply mt-4 list-disc pl-5 text-ink/80;
+  }
+}
+

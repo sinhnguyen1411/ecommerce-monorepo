@@ -1,0 +1,31 @@
+﻿version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ecommerce_mysql
+    restart: unless-stopped
+    env_file:
+      - ./env/mysql.env
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  directus:
+    image: directus/directus:latest
+    container_name: ecommerce_directus
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    env_file:
+      - ./env/directus.env
+    ports:
+      - "8055:8055"
+    volumes:
+      - directus_uploads:/directus/uploads
+
+volumes:
+  mysql_data:
+  directus_uploads:
+

@@ -1,0 +1,11 @@
+﻿node_modules
+.next
+npm-debug.log*
+.env*
+
+bin
+*.exe
+*.out
+*.test
+
+.DS_Store
