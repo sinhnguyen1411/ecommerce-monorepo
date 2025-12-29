@@ -2,6 +2,7 @@
 .next
 npm-debug.log*
 .env*
+apps/api/uploads
 
 bin
 *.exe

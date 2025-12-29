@@ -1,25 +1,26 @@
-﻿const locale = process.env.NEXT_PUBLIC_LOCALE || "en-US";
-const currency = process.env.NEXT_PUBLIC_CURRENCY || "USD";
+﻿const locale = process.env.NEXT_PUBLIC_LOCALE || "vi-VN";
+const currency = process.env.NEXT_PUBLIC_CURRENCY || "VND";
 
-export function formatPrice(value?: number | null) {
+export function formatCurrency(value?: number | null) {
   if (typeof value !== "number") {
     return "";
   }
 
   return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency
+    currency,
+    maximumFractionDigits: 0
   }).format(value);
 }
 
-export function formatDate(value?: string | null) {
+export function formatDate(value?: string | Date | null) {
   if (!value) {
     return "";
   }
 
-  const date = new Date(value);
+  const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return value;
+    return "";
   }
 
   return new Intl.DateTimeFormat(locale, {
@@ -36,4 +37,3 @@ export function stripHtml(value?: string | null) {
 
   return value.replace(/<[^>]*>/g, "").trim();
 }
-

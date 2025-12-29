@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Product } from "@/lib/directus";
+import { Product } from "@/lib/api";
 
 import { useCart } from "./CartContext";
 
@@ -13,7 +13,7 @@ type AddToCartButtonProps = {
 export default function AddToCartButton({
   product,
   variant = "primary",
-  label = "Add to cart"
+  label = "Them vao gio"
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const className = variant === "ghost" ? "btn-ghost" : "btn-primary";
@@ -27,7 +27,8 @@ export default function AddToCartButton({
           name: product.name,
           slug: product.slug,
           price: product.price,
-          image: product.product_images?.[0]?.image
+          compareAtPrice: product.compare_at_price,
+          imageUrl: product.images?.[0]?.url
         })
       }
     >
@@ -35,4 +36,3 @@ export default function AddToCartButton({
     </button>
   );
 }
-

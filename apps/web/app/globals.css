@@ -3,12 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --color-ink: 30 33 32;
-  --color-sand: 247 242 233;
-  --color-clay: 224 197 165;
-  --color-moss: 70 104 84;
-  --color-ember: 204 96 72;
-  --color-cream: 255 250 243;
+  --color-ink: 24 30 28;
+  --color-forest: 44 83 60;
+  --color-moss: 102 128 92;
+  --color-sun: 236 184 98;
+  --color-clay: 198 110 78;
+  --color-cream: 252 248 240;
+  --color-mist: 240 244 239;
 }
 
 * {
@@ -18,11 +19,11 @@
 body {
   min-height: 100%;
   color: rgb(var(--color-ink));
-  background-color: rgb(var(--color-sand));
+  background-color: rgb(var(--color-cream));
   background-image:
-    radial-gradient(circle at 10% 10%, rgba(204, 96, 72, 0.12), transparent 45%),
-    radial-gradient(circle at 85% 15%, rgba(70, 104, 84, 0.18), transparent 38%),
-    linear-gradient(180deg, rgba(255, 250, 243, 0.9), rgba(247, 242, 233, 0.9));
+    radial-gradient(circle at 15% 10%, rgba(236, 184, 98, 0.18), transparent 45%),
+    radial-gradient(circle at 80% 12%, rgba(44, 83, 60, 0.15), transparent 40%),
+    linear-gradient(180deg, rgba(252, 248, 240, 0.96), rgba(240, 244, 239, 0.94));
 }
 
 @layer base {
@@ -37,7 +38,7 @@ body {
   h5,
   h6 {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -47,7 +48,7 @@ body {
   }
 
   .card-surface {
-    @apply rounded-3xl bg-cream/80 shadow-soft backdrop-blur-sm;
+    @apply rounded-[28px] border border-forest/10 bg-white/80 shadow-[0_20px_40px_-30px_rgba(33,55,43,0.5)] backdrop-blur-sm;
   }
 
   .btn {
@@ -55,19 +56,31 @@ body {
   }
 
   .btn-primary {
-    @apply btn bg-moss text-cream hover:bg-ember;
+    @apply btn bg-forest text-cream hover:bg-clay;
+  }
+
+  .btn-secondary {
+    @apply btn bg-sun text-ink hover:bg-clay hover:text-cream;
   }
 
   .btn-ghost {
-    @apply btn border border-moss/30 text-moss hover:border-ember hover:text-ember;
+    @apply btn border border-forest/30 text-forest hover:border-clay hover:text-clay;
   }
 
   .pill {
-    @apply inline-flex items-center gap-2 rounded-full bg-moss/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-moss;
+    @apply inline-flex items-center gap-2 rounded-full bg-forest/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-forest;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-full bg-mist px-3 py-1 text-xs font-semibold text-forest;
   }
 
   .field {
-    @apply w-full rounded-2xl border border-moss/20 bg-white/70 px-4 py-2 text-sm text-ink shadow-sm placeholder:text-ink/50 focus:border-ember focus:outline-none;
+    @apply w-full rounded-2xl border border-forest/20 bg-white/90 px-4 py-2 text-sm text-ink shadow-sm placeholder:text-ink/50 focus:border-clay focus:outline-none;
+  }
+
+  .section-title {
+    @apply text-3xl font-semibold md:text-4xl;
   }
 
   .rich-content h2 {
@@ -83,3 +96,31 @@ body {
   }
 }
 
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.7s ease-out both;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}

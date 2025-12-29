@@ -3,57 +3,64 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: ecommerce_mysql
+    container_name: ttc_mysql
     restart: unless-stopped
     env_file:
       - ./env/mysql.env
     volumes:
       - mysql_data:/var/lib/mysql
 
-  directus:
-    image: directus/directus:latest
-    container_name: ecommerce_directus
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+      target: prod
+    container_name: ttc_api
     restart: unless-stopped
+    env_file:
+      - ./env/api.env
     depends_on:
       - mysql
-    env_file:
-      - ./env/directus.env
     volumes:
-      - directus_uploads:/directus/uploads
+      - api_uploads:/app/uploads
+      - ../migrations:/app/migrations:ro
+      - ../seed:/app/seed:ro
 
   web:
     build:
       context: ../apps/web
       dockerfile: Dockerfile
+      target: runner
       args:
-        NEXT_PUBLIC_DIRECTUS_URL: ${NEXT_PUBLIC_DIRECTUS_URL}
-        NEXT_PUBLIC_DIRECTUS_PUBLIC_TOKEN: ${NEXT_PUBLIC_DIRECTUS_PUBLIC_TOKEN}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME}
+        NEXT_PUBLIC_FREE_SHIPPING: ${NEXT_PUBLIC_FREE_SHIPPING}
+        NEXT_PUBLIC_MIN_ORDER: ${NEXT_PUBLIC_MIN_ORDER}
+        NEXT_PUBLIC_SOCIAL_FACEBOOK: ${NEXT_PUBLIC_SOCIAL_FACEBOOK}
+        NEXT_PUBLIC_SOCIAL_MESSENGER: ${NEXT_PUBLIC_SOCIAL_MESSENGER}
+        NEXT_PUBLIC_SOCIAL_ZALO: ${NEXT_PUBLIC_SOCIAL_ZALO}
+        NEXT_PUBLIC_COMPANY_PHONE: ${NEXT_PUBLIC_COMPANY_PHONE}
+        NEXT_PUBLIC_COMPANY_EMAIL: ${NEXT_PUBLIC_COMPANY_EMAIL}
+        NEXT_PUBLIC_COMPANY_ADDRESS: ${NEXT_PUBLIC_COMPANY_ADDRESS}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
         NEXT_PUBLIC_LOCALE: ${NEXT_PUBLIC_LOCALE}
         NEXT_PUBLIC_CURRENCY: ${NEXT_PUBLIC_CURRENCY}
-    container_name: ecommerce_web
+        NEXT_PUBLIC_BANK_NAME: ${NEXT_PUBLIC_BANK_NAME}
+        NEXT_PUBLIC_BANK_ACCOUNT: ${NEXT_PUBLIC_BANK_ACCOUNT}
+        NEXT_PUBLIC_BANK_HOLDER: ${NEXT_PUBLIC_BANK_HOLDER}
+    container_name: ttc_web
     restart: unless-stopped
     env_file:
       - ./env/web.env
     depends_on:
-      - directus
-
-  api:
-    build:
-      context: ../apps/api
-      dockerfile: Dockerfile
-    container_name: ecommerce_api
-    restart: unless-stopped
-    depends_on:
-      - mysql
+      - api
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: ecommerce_nginx
+    container_name: ttc_nginx
     restart: unless-stopped
     depends_on:
       - web
-      - directus
       - api
     ports:
       - "80:80"
@@ -62,4 +69,4 @@ services:
 
 volumes:
   mysql_data:
-  directus_uploads:
+  api_uploads:

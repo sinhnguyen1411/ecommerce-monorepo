@@ -2,41 +2,49 @@
 
 import Link from "next/link";
 
-import { useCart } from "./cart/CartContext";
+import { siteConfig } from "@/lib/site";
 
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "Harvest & Hearth";
+import { useCart } from "./cart/CartContext";
 
 export default function SiteHeader() {
   const { itemCount, open } = useCart();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-moss/10 bg-sand/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-forest/10 bg-cream/80 backdrop-blur">
       <div className="section-shell flex items-center justify-between py-4">
         <Link href="/" className="flex items-center gap-3">
-          <span className="h-3 w-3 rounded-full bg-ember" />
+          <span className="h-3 w-3 rounded-full bg-clay" />
           <span className="text-lg font-semibold tracking-tight">
-            {siteName}
+            {siteConfig.name}
           </span>
         </Link>
-        <nav className="hidden items-center gap-6 text-sm font-semibold text-ink/70 md:flex">
+        <nav className="hidden items-center gap-6 text-sm font-semibold text-ink/70 lg:flex">
           <Link href="/products" className="transition hover:text-ink">
-            Products
+            San pham
           </Link>
           <Link href="/blog" className="transition hover:text-ink">
-            Journal
+            Tin tuc
           </Link>
-          <Link href="/#about" className="transition hover:text-ink">
-            Our story
+          <Link href="/pages/about-us" className="transition hover:text-ink">
+            Gioi thieu
+          </Link>
+          <Link href="/pages/hoi-dap-cung-nha-nong" className="transition hover:text-ink">
+            Hoi dap
+          </Link>
+          <Link href="/pages/locations" className="transition hover:text-ink">
+            Cua hang
           </Link>
         </nav>
         <div className="flex items-center gap-3">
-          <button className="btn-ghost hidden md:inline-flex">Subscribe</button>
+          <span className="hidden text-xs font-semibold text-forest/80 md:inline">
+            Hotline: {siteConfig.phone}
+          </span>
           <button
             onClick={open}
             className="btn-primary relative"
             aria-label="Open cart"
           >
-            Cart
+            Gio hang
             <span className="rounded-full bg-cream/20 px-2 text-xs font-semibold">
               {itemCount}
             </span>
@@ -46,4 +54,3 @@ export default function SiteHeader() {
     </header>
   );
 }
-

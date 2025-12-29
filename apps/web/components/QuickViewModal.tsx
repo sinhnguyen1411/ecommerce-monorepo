@@ -1,10 +1,9 @@
 ﻿"use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 
-import { buildAssetUrl, Product } from "@/lib/directus";
-import { formatPrice } from "@/lib/format";
+import { Product } from "@/lib/api";
+import { formatCurrency } from "@/lib/format";
 
 import AddToCartButton from "./cart/AddToCartButton";
 
@@ -14,7 +13,7 @@ type QuickViewModalProps = {
 
 export default function QuickViewModal({ product }: QuickViewModalProps) {
   const [open, setOpen] = useState(false);
-  const image = product.product_images?.[0]?.image;
+  const image = product.images?.[0]?.url;
   const onSale =
     typeof product.compare_at_price === "number" &&
     product.compare_at_price > product.price;
@@ -42,7 +41,7 @@ export default function QuickViewModal({ product }: QuickViewModalProps) {
   return (
     <>
       <button className="btn-ghost" onClick={() => setOpen(true)}>
-        Quick view
+        Xem nhanh
       </button>
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
@@ -50,44 +49,43 @@ export default function QuickViewModal({ product }: QuickViewModalProps) {
             className="absolute inset-0 bg-ink/50"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-3xl overflow-hidden rounded-3xl bg-cream shadow-glow">
+          <div className="relative z-10 w-full max-w-3xl overflow-hidden rounded-3xl bg-cream shadow-lg">
             <div className="grid gap-6 p-8 md:grid-cols-[1.1fr_1fr]">
-              <div className="relative h-64 overflow-hidden rounded-2xl bg-sand md:h-full">
+              <div className="relative h-64 overflow-hidden rounded-2xl bg-mist md:h-full">
                 {image ? (
-                  <Image
-                    src={buildAssetUrl(image)}
+                  <img
+                    src={image}
                     alt={product.name}
-                    fill
-                    className="object-cover"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm text-ink/50">
-                    No image available
+                    Chua co anh
                   </div>
                 )}
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center justify-between">
-                  <p className="pill">Quick look</p>
+                  <p className="pill">Xem nhanh</p>
                   <button
                     onClick={() => setOpen(false)}
-                    className="rounded-full border border-moss/20 px-3 py-1 text-xs font-semibold"
+                    className="rounded-full border border-forest/20 px-3 py-1 text-xs font-semibold"
                   >
-                    Close
+                    Dong
                   </button>
                 </div>
                 <h3 className="mt-5 text-2xl font-semibold">{product.name}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-ink/70">
                   {product.description ||
-                    "Small-batch harvest items with a focus on flavor and provenance."}
+                    "San pham duoc thu hoach tu vuon doi tac trong ngay."}
                 </p>
                 <div className="mt-5 flex items-baseline gap-2">
                   <span className="text-xl font-semibold">
-                    {formatPrice(product.price)}
+                    {formatCurrency(product.price)}
                   </span>
                   {onSale ? (
                     <span className="text-sm text-ink/50 line-through">
-                      {formatPrice(product.compare_at_price)}
+                      {formatCurrency(product.compare_at_price)}
                     </span>
                   ) : null}
                 </div>
@@ -96,7 +94,7 @@ export default function QuickViewModal({ product }: QuickViewModalProps) {
                   <AddToCartButton
                     product={product}
                     variant="ghost"
-                    label="Add & keep browsing"
+                    label="Them & tiep tuc"
                   />
                 </div>
               </div>
@@ -107,4 +105,3 @@ export default function QuickViewModal({ product }: QuickViewModalProps) {
     </>
   );
 }
-
