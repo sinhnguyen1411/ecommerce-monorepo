@@ -2,7 +2,7 @@
 
 import { Product } from "@/lib/api";
 
-import { useCart } from "./CartContext";
+import { useCartStore } from "@/store/cart";
 
 type AddToCartButtonProps = {
   product: Product;
@@ -15,7 +15,7 @@ export default function AddToCartButton({
   variant = "primary",
   label = "Them vao gio"
 }: AddToCartButtonProps) {
-  const { addItem } = useCart();
+  const addItem = useCartStore((state) => state.addItem);
   const className = variant === "ghost" ? "btn-ghost" : "btn-primary";
 
   return (

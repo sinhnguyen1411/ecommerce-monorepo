@@ -1,12 +1,17 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import AddToCartButton from "@/components/cart/AddToCartButton";
-import ProductCard from "@/components/ProductCard";
 import RecentlyViewed from "@/components/RecentlyViewed";
+import ProductDetailSidebar from "@/components/product/ProductDetailSidebar";
+import ProductGrid from "@/components/product/ProductGrid";
+import SaleBadge from "@/components/product/SaleBadge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getProduct, getProducts } from "@/lib/api";
-import { formatCurrency } from "@/lib/format";
-import { siteConfig } from "@/lib/site";
+
+export const metadata = {
+  title: "San pham | Nong Nghiep TTC",
+  description: "Chi tiet san pham va thong tin mua hang."
+};
 
 type ProductDetailPageProps = {
   params: {
@@ -43,9 +48,14 @@ export default async function ProductDetailPage({
       <section className="section-shell pb-16">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-4">
-            <div className="relative overflow-hidden rounded-3xl bg-mist">
+            <div className="relative overflow-hidden rounded-[32px] bg-mist">
+              {onSale ? (
+                <div className="absolute left-4 top-4 z-10">
+                  <SaleBadge />
+                </div>
+              ) : null}
               {product.images?.[0]?.url ? (
-                <div className="relative h-96">
+                <div className="relative h-[420px]">
                   <img
                     src={product.images[0].url}
                     alt={product.name}
@@ -53,14 +63,14 @@ export default async function ProductDetailPage({
                   />
                 </div>
               ) : (
-                <div className="flex h-96 items-center justify-center text-sm text-ink/50">
-                  Chua co anh
+                <div className="flex h-[420px] items-center justify-center text-sm text-ink/50">
+                  Dang cap nhat anh
                 </div>
               )}
             </div>
             {product.images?.length > 1 ? (
-              <div className="grid grid-cols-3 gap-4">
-                {product.images.slice(1, 4).map((image) => (
+              <div className="grid grid-cols-4 gap-4">
+                {product.images.slice(1, 5).map((image) => (
                   <div
                     key={image.id}
                     className="relative h-24 overflow-hidden rounded-2xl bg-mist"
@@ -76,68 +86,39 @@ export default async function ProductDetailPage({
             ) : null}
           </div>
 
-          <div className="card-surface flex flex-col p-8">
-            <div className="flex flex-wrap gap-2">
-              {product.categories?.map((category) => (
-                <span key={category.id} className="chip">
-                  {category.name}
-                </span>
-              ))}
-            </div>
-            <h1 className="mt-4 text-3xl font-semibold">{product.name}</h1>
-            <p className="mt-4 text-sm text-ink/70">
-              {product.description ||
-                "San pham tu nong trai doi tac, dam bao chat luong va do tuoi moi."}
-            </p>
-            <div className="mt-6 flex items-baseline gap-2">
-              <span className="text-2xl font-semibold">
-                {formatCurrency(product.price)}
-              </span>
-              {onSale ? (
-                <span className="text-sm text-ink/50 line-through">
-                  {formatCurrency(product.compare_at_price)}
-                </span>
-              ) : null}
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <AddToCartButton product={product} />
-              <AddToCartButton
-                product={product}
-                variant="ghost"
-                label="Them vao danh sach"
-              />
-            </div>
-            <div className="mt-8 space-y-3 text-sm text-ink/70">
-              <div className="flex items-center justify-between">
-                <span>Hoan tra</span>
-                <Link className="text-forest" href="/pages/return-policy">
-                  Xem chinh sach
-                </Link>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Dieu khoan</span>
-                <Link className="text-forest" href="/pages/terms-of-service">
-                  Xem chi tiet
-                </Link>
-              </div>
-            </div>
-            <div className="mt-8 rounded-2xl border border-forest/10 bg-white/70 p-5 text-sm text-ink/70">
-              <p className="font-semibold">Ho tro nhanh</p>
-              <p className="mt-2">Hotline: {siteConfig.phone}</p>
-              <div className="mt-3 flex flex-wrap gap-3">
-                <Link className="btn-ghost" href={siteConfig.social.zalo}>
-                  Zalo
-                </Link>
-                <Link className="btn-ghost" href={siteConfig.social.messenger}>
-                  Messenger
-                </Link>
-                <Link className="btn-ghost" href={siteConfig.social.facebook}>
-                  Facebook
-                </Link>
-              </div>
-            </div>
-          </div>
+          <ProductDetailSidebar product={product} />
         </div>
+      </section>
+
+      <section className="section-shell pb-12">
+        <Tabs
+          defaultValue="description"
+          className="rounded-[28px] border border-forest/10 bg-white/90 p-6"
+        >
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="description">Mo ta</TabsTrigger>
+            <TabsTrigger value="return">Doi tra</TabsTrigger>
+            <TabsTrigger value="terms">Dieu khoan</TabsTrigger>
+          </TabsList>
+          <TabsContent value="description" className="pt-4 text-sm text-ink/70">
+            {product.description ||
+              "San pham duoc chon loc tu cac nha vuon doi tac, dam bao do tuoi moi va nguon goc ro rang."}
+          </TabsContent>
+          <TabsContent value="return" className="pt-4 text-sm text-ink/70">
+            Doi tra trong 24 gio neu san pham khong dat chat luong. Xem them tai{" "}
+            <Link className="text-forest" href="/pages/return-policy">
+              chinh sach doi tra
+            </Link>
+            .
+          </TabsContent>
+          <TabsContent value="terms" className="pt-4 text-sm text-ink/70">
+            Don hang duoc xac nhan khi TTC lien he hoac nhan thanh toan thanh cong. Xem chi tiet tai{" "}
+            <Link className="text-forest" href="/pages/terms-of-service">
+              dieu khoan dich vu
+            </Link>
+            .
+          </TabsContent>
+        </Tabs>
       </section>
 
       <section className="section-shell pb-12">
@@ -150,13 +131,10 @@ export default async function ProductDetailPage({
             Xem tat ca
           </Link>
         </div>
-        <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {relatedProducts
-            .filter((item) => item.id !== product.id)
-            .slice(0, 3)
-            .map((item) => (
-              <ProductCard key={item.id} product={item} />
-            ))}
+        <div className="mt-6">
+          <ProductGrid
+            products={relatedProducts.filter((item) => item.id !== product.id).slice(0, 3)}
+          />
         </div>
       </section>
 

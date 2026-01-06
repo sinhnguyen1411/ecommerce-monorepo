@@ -3,10 +3,11 @@
 import { Newsreader, Work_Sans } from "next/font/google";
 
 import CartDrawer from "@/components/cart/CartDrawer";
-import { CartProvider } from "@/components/cart/CartContext";
-import SiteFooter from "@/components/SiteFooter";
-import SiteHeader from "@/components/SiteHeader";
-import SocialButtons from "@/components/SocialButtons";
+import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
+import Topbar from "@/components/layout/Topbar";
+import SocialFloatingButtons from "@/components/common/SocialFloatingButtons";
+import { Sonner } from "@/components/ui/sonner";
 
 const displayFont = Newsreader({
   subsets: ["latin"],
@@ -33,15 +34,13 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className={`${displayFont.variable} ${sansFont.variable} text-ink`}>
-        <CartProvider>
-          <div className="flex min-h-screen flex-col">
-            <SiteHeader />
-            <main className="flex-1 pb-16">{children}</main>
-            <SiteFooter />
-          </div>
-          <CartDrawer />
-          <SocialButtons />
-        </CartProvider>
+        <Topbar />
+        <Header />
+        <main className="min-h-screen pb-16">{children}</main>
+        <Footer />
+        <CartDrawer />
+        <SocialFloatingButtons />
+        <Sonner />
       </body>
     </html>
   );

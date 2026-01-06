@@ -1,7 +1,7 @@
 import SectionTitle from "@/components/common/SectionTitle";
 import { getLocations } from "@/lib/api";
 
-import LocationsClient from "./LocationsClient";
+import LocationsClient from "../pages/locations/LocationsClient";
 
 export const metadata = {
   title: "Cua hang | Nong Nghiep TTC",

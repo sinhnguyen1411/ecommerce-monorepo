@@ -1,6 +1,11 @@
-﻿import { getProducts } from "@/lib/api";
+import { getProducts } from "@/lib/api";
 
 import CartClient from "./CartClient";
+
+export const metadata = {
+  title: "Gio hang | Nong Nghiep TTC",
+  description: "Xem va cap nhat gio hang mua sam."
+};
 
 export default async function CartPage() {
   const suggestedProducts = await getProducts({ limit: 4 });

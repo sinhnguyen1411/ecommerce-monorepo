@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 
+import { Button } from "@/components/ui/button";
 import { uploadPaymentProof } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { siteConfig } from "@/lib/site";
@@ -82,7 +83,7 @@ export default function ThankYouPage() {
 
       <section className="section-shell pb-16">
         <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
-          <div className="card-surface p-6">
+          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
             <h2 className="text-lg font-semibold">Thong tin don hang</h2>
             {order ? (
               <div className="mt-4 space-y-2 text-sm text-ink/70">
@@ -109,7 +110,7 @@ export default function ThankYouPage() {
             </div>
           </div>
 
-          <div className="card-surface p-6">
+          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
             <h2 className="text-lg font-semibold">Thanh toan ngan hang</h2>
             {order && paymentMethod !== "cod" ? (
               <div className="mt-4 space-y-4">
@@ -142,9 +143,9 @@ export default function ThankYouPage() {
           </div>
         </div>
         <div className="mt-6">
-          <a className="btn-ghost" href="/">
-            Tiep tuc mua sam
-          </a>
+          <Button asChild variant="outline">
+            <a href="/">Tiep tuc mua sam</a>
+          </Button>
         </div>
       </section>
     </div>

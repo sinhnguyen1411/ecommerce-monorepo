@@ -1,12 +1,13 @@
-﻿"use client";
+"use client";
 
-import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
-import { useCart } from "@/components/cart/CartContext";
+import { Button } from "@/components/ui/button";
 import { createOrder } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { siteConfig } from "@/lib/site";
+import { getCartSubtotal, useCartStore } from "@/store/cart";
 
 const paymentOptions = [
   { value: "cod", label: "Thanh toan khi nhan hang" },
@@ -21,15 +22,13 @@ const shippingOptions = [
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const {
-    items,
-    subtotal,
-    promoCode,
-    note,
-    deliveryTime,
-    clearCart,
-    setPromoCode
-  } = useCart();
+  const items = useCartStore((state) => state.items);
+  const promoCode = useCartStore((state) => state.promoCode);
+  const note = useCartStore((state) => state.note);
+  const deliveryTime = useCartStore((state) => state.deliveryTime);
+  const clear = useCartStore((state) => state.clear);
+  const setPromoCode = useCartStore((state) => state.setPromoCode);
+
   const [customerName, setCustomerName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -39,6 +38,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const subtotal = getCartSubtotal(items);
   const minOrderAmount = siteConfig.minOrderAmount;
   const meetsMinOrder = minOrderAmount === 0 || subtotal >= minOrderAmount;
 
@@ -94,7 +94,7 @@ export default function CheckoutPage() {
           payment_method: paymentMethod
         })
       );
-      clearCart();
+      clear();
       router.push("/checkout/thank-you");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Thanh toan that bai.");
@@ -118,7 +118,7 @@ export default function CheckoutPage() {
       <section className="section-shell pb-16">
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
-            <div className="card-surface p-6">
+            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
               <h2 className="text-lg font-semibold">Thong tin giao hang</h2>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <input
@@ -149,7 +149,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="card-surface p-6">
+            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
               <h2 className="text-lg font-semibold">Phuong thuc giao hang</h2>
               <div className="mt-4 grid gap-3">
                 {shippingOptions.map((option) => (
@@ -170,7 +170,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="card-surface p-6">
+            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
               <h2 className="text-lg font-semibold">Phuong thuc thanh toan</h2>
               <div className="mt-4 grid gap-3">
                 {paymentOptions.map((option) => (
@@ -191,7 +191,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="card-surface p-6">
+            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
               <h2 className="text-lg font-semibold">Khuyen mai</h2>
               <div className="mt-4 flex flex-col gap-3 md:flex-row">
                 <input
@@ -206,7 +206,7 @@ export default function CheckoutPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="card-surface p-6">
+            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
               <h3 className="text-lg font-semibold">Tong don hang</h3>
               <div className="mt-4 space-y-2 text-sm text-ink/70">
                 <div className="flex items-center justify-between">
@@ -223,18 +223,14 @@ export default function CheckoutPage() {
                   </p>
                 ) : null}
               </div>
-              {error ? (
-                <p className="mt-4 text-sm text-clay">{error}</p>
-              ) : null}
-              <button
-                className={`btn-primary mt-6 w-full ${
-                  meetsMinOrder ? "" : "pointer-events-none opacity-50"
-                }`}
+              {error ? <p className="mt-4 text-sm text-clay">{error}</p> : null}
+              <Button
+                className="mt-6 w-full"
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !meetsMinOrder}
               >
                 {isSubmitting ? "Dang xu ly..." : "Dat hang"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

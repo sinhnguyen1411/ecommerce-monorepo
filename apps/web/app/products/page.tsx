@@ -1,8 +1,13 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 
 import { getCategories, getProducts } from "@/lib/api";
 
 import ProductsClient from "./ProductsClient";
+
+export const metadata = {
+  title: "San pham | Nong Nghiep TTC",
+  description: "Danh sach san pham nong san va muc gia tai TTC."
+};
 
 type ProductsPageProps = {
   searchParams?: {

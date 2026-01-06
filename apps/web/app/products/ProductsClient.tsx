@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import ProductCard from "@/components/ProductCard";
+import Pagination from "@/components/common/Pagination";
+import ProductGrid from "@/components/product/ProductGrid";
 import { Category, Product } from "@/lib/api";
 
 const sortOptions = [
@@ -28,6 +29,8 @@ export default function ProductsClient({
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState(initialCategory || "all");
   const [sort, setSort] = useState(initialSort || "latest");
+  const [page, setPage] = useState(1);
+  const pageSize = 9;
 
   const filtered = useMemo(() => {
     let list = [...products];
@@ -47,6 +50,9 @@ export default function ProductsClient({
     return list;
   }, [products, activeCategory, sort]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
+
   const updateRoute = (nextCategory: string, nextSort: string) => {
     const params = new URLSearchParams();
     if (nextCategory && nextCategory !== "all") {
@@ -61,7 +67,7 @@ export default function ProductsClient({
 
   return (
     <div className="section-shell pb-16">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white/80 p-5 text-sm shadow-lg">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] border border-forest/10 bg-white/90 p-5 text-sm shadow-[0_18px_36px_-26px_rgba(33,55,43,0.4)]">
         <div className="flex flex-wrap gap-2">
           <button
             className={
@@ -71,6 +77,7 @@ export default function ProductsClient({
             }
             onClick={() => {
               setActiveCategory("all");
+              setPage(1);
               updateRoute("all", sort);
             }}
           >
@@ -86,6 +93,7 @@ export default function ProductsClient({
               }
               onClick={() => {
                 setActiveCategory(category.slug);
+                setPage(1);
                 updateRoute(category.slug, sort);
               }}
             >
@@ -102,6 +110,7 @@ export default function ProductsClient({
             value={sort}
             onChange={(event) => {
               setSort(event.target.value);
+              setPage(1);
               updateRoute(activeCategory, event.target.value);
             }}
           >
@@ -114,16 +123,15 @@ export default function ProductsClient({
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filtered.length === 0 ? (
-          <div className="card-surface col-span-full p-10 text-center text-sm text-ink/70">
-            Khong tim thay san pham phu hop.
-          </div>
-        ) : (
-          filtered.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))
-        )}
+      <div className="mt-8">
+        <ProductGrid products={pageItems} />
+      </div>
+      <div className="mt-10">
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(value) => setPage(value)}
+        />
       </div>
     </div>
   );
