@@ -25,6 +25,7 @@ export default function MobileMenu() {
             <Link href="/pages/hoi-dap-cung-nha-nong" className="hover:text-ink">Hoi dap</Link>
             <Link href="/locations" className="hover:text-ink">Cua hang</Link>
             <Link href="/cart" className="hover:text-ink">Gio hang</Link>
+            <Link href="/account" className="hover:text-ink">Tai khoan</Link>
           </nav>
         </SheetContent>
       </Sheet>

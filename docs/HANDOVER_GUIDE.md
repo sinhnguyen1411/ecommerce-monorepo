@@ -39,5 +39,17 @@ See docs/README_DEPLOY.md for MySQL backup and restore commands.
 
 ## Next phase notes
 
-- Phase 2 adds Google OAuth, user accounts, and admin dashboard.
-- Phase 3 adds store search and advanced promotions.
+## Phase 2 (implemented)
+
+- Google OAuth login for users.
+- Account pages: profile, addresses, order history.
+- Admin dashboard with CRUD for products, posts, Q&A, and payment settings.
+- Admin order management: status, payment verification, internal notes.
+
+Admin login (local seed):
+- Email: admin@ttc.local
+- Password: admin123
+
+## Phase 3 (planned)
+
+- Store search enhancements and promotions.

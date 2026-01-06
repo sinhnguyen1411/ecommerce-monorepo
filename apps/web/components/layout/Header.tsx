@@ -27,6 +27,7 @@ export default function Header() {
           <Link href="/pages/about-us" className="hover:text-ink">Gioi thieu</Link>
           <Link href="/pages/hoi-dap-cung-nha-nong" className="hover:text-ink">Hoi dap</Link>
           <Link href="/locations" className="hover:text-ink">Cua hang</Link>
+          <Link href="/account" className="hover:text-ink">Tai khoan</Link>
         </nav>
         <div className="ml-auto hidden w-full max-w-md items-center gap-2 rounded-full border border-forest/20 bg-white px-3 py-1 text-sm lg:flex">
           <Search className="h-4 w-4 text-ink/50" />
