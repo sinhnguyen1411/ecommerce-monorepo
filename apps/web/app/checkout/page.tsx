@@ -81,7 +81,7 @@ export default function CheckoutPage() {
         note: [
           note,
           invoiceEnabled
-            ? `Hoa don: ${companyName} | ${taxCode} | ${invoiceEmail} | ${invoiceAddress}`
+            ? `Hóa đơn: ${companyName} | ${taxCode} | ${invoiceEmail} | ${invoiceAddress}`
             : ""
         ]
           .filter(Boolean)

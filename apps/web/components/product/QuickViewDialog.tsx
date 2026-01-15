@@ -1,23 +1,40 @@
 ﻿"use client";
 
+import { ReactNode } from "react";
+
 import { Product } from "@/lib/api";
 import { useCartStore } from "@/store/cart";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 import Price from "./Price";
 
-export default function QuickViewDialog({ product }: { product: Product }) {
+export default function QuickViewDialog({
+  product,
+  trigger
+}: {
+  product: Product;
+  trigger?: ReactNode;
+}) {
   const addItem = useCartStore((state) => state.addItem);
   const image = product.images?.[0]?.url;
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Xem nhanh
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm">
+            Xem nhanh
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <div className="grid gap-6 md:grid-cols-[1.1fr_1fr]">

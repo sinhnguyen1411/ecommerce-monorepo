@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Pagination from "@/components/common/Pagination";
 import ProductGrid from "@/components/product/ProductGrid";
@@ -72,7 +72,20 @@ export default function ProductsClient({
   );
   const [activeSizes, setActiveSizes] = useState(initialSizes ? initialSizes.split(",") : []);
   const [page, setPage] = useState(1);
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement | null>(null);
   const pageSize = 9;
+
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      if (!sortRef.current || sortRef.current.contains(event.target as Node)) {
+        return;
+      }
+      setSortOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const vendorOptions = useMemo(() => {
     return Array.from(
@@ -400,7 +413,7 @@ export default function ProductsClient({
         <p>Bộ lọc</p>
       </div>
       <div className="filter-options">
-        <div className="filter_group">
+        <div className="filter_group filter_group_block">
           <div className="filter_group-subtitle">
             <span>Danh mục sản phẩm</span>
           </div>
@@ -440,7 +453,7 @@ export default function ProductsClient({
           </div>
         </div>
 
-        <div className="filter_group">
+        <div className="filter_group filter_group_block">
           <div className="filter_group-subtitle">
             <span>Thương hiệu</span>
           </div>
@@ -473,7 +486,7 @@ export default function ProductsClient({
           </div>
         </div>
 
-        <div className="filter_group">
+        <div className="filter_group filter_group_block">
           <div className="filter_group-subtitle">
             <span>Khoảng giá</span>
           </div>
@@ -505,7 +518,7 @@ export default function ProductsClient({
           </div>
         </div>
 
-        <div className="filter_group">
+        <div className="filter_group filter_group_block">
           <div className="filter_group-subtitle">
             <span>Màu sắc</span>
           </div>
@@ -538,7 +551,7 @@ export default function ProductsClient({
           </div>
         </div>
 
-        <div className="filter_group">
+        <div className="filter_group filter_group_block">
           <div className="filter_group-subtitle">
             <span>Size</span>
           </div>
@@ -571,7 +584,7 @@ export default function ProductsClient({
           </div>
         </div>
 
-        <div className="filter_group">
+        <div className="filter_group filter_group_block">
           <div className="filter_group-subtitle">
             <span>Tìm kiếm</span>
           </div>
@@ -603,6 +616,14 @@ export default function ProductsClient({
           </div>
         </div>
       </div>
+      <div className="filter-footer">
+        <button type="button" className="btn-filter btn-filter-clear" onClick={clearFilters}>
+          Hủy
+        </button>
+        <button type="button" className="btn-filter btn-filter-apply" onClick={() => updateRoute()}>
+          Áp dụng
+        </button>
+      </div>
     </div>
   );
 
@@ -613,7 +634,7 @@ export default function ProductsClient({
     <div className="container">
       <div className="section-collection">
         <div className="row">
-          <div className="col-lg-12 col-md-12 col-12 sidebar sidebar-left">
+          <div className="col-lg-3 col-md-12 col-12 sidebar sidebar-left">
             <div className="filter-wrapper">
               <div className="filter-current">
                 <div className="widget-title">
@@ -657,7 +678,7 @@ export default function ProductsClient({
             </div>
           </div>
 
-          <div className="col-lg-12 col-md-12 col-12 collection main-container">
+          <div className="col-lg-9 col-md-12 col-12 collection main-container">
             <div className="toolbar-products">
               <div className="head-title">
                 <h1 className="title">Tất cả sản phẩm</h1>
@@ -683,28 +704,38 @@ export default function ProductsClient({
                   <div className="filter-content">{FilterPanel}</div>
                 </SheetContent>
               </Sheet>
-              <div className="product-sort">
-                <label className="title" htmlFor="sort-by">
+              <div className="product-sort" ref={sortRef}>
+                <button
+                  className="title"
+                  type="button"
+                  onClick={() => setSortOpen((prev) => !prev)}
+                  aria-expanded={sortOpen}
+                >
                   <span>Sắp xếp theo</span>
                   <span className="text">{currentSortLabel}</span>
-                </label>
-                <div className="sort-by">
-                  <select
-                    id="sort-by"
-                    value={sort}
-                    onChange={(event) => {
-                      setSort(event.target.value);
-                      setPage(1);
-                      updateRoute({ sort: event.target.value });
-                    }}
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
+                  <span className="icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 128 128">
+                      <path d="m64 88c-1.023 0-2.047-.391-2.828-1.172l-40-40c-1.563-1.563-1.563-4.094 0-5.656s4.094-1.563 5.656 0l37.172 37.172 37.172-37.172c1.563-1.563 4.094-1.563 5.656 0s1.563 4.094 0 5.656l-40 40c-.781.781-1.805 1.172-2.828 1.172z"></path>
+                    </svg>
+                  </span>
+                </button>
+                <ul className={`sort-by sort-by-content ${sortOpen ? "open" : ""}`}>
+                  {sortOptions.map((option) => (
+                    <li key={option.value}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSort(option.value);
+                          setPage(1);
+                          setSortOpen(false);
+                          updateRoute({ sort: option.value });
+                        }}
+                      >
                         {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
 
