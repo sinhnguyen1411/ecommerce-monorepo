@@ -1,12 +1,10 @@
-import Link from "next/link";
-
 import { getCategories, getProducts } from "@/lib/api";
 
 import ProductsClient from "../../products/ProductsClient";
 
 export const metadata = {
-  title: "Sản phẩm | Nông nghiệp TTC",
-  description: "Danh sách sản phẩm nông sản và mức giá tại TTC."
+  title: "Tất cả sản phẩm | Nông nghiệp TTC",
+  description: "Danh sách sản phẩm nông nghiệp và mức giá tại TTC."
 };
 
 type CollectionsAllPageProps = {
@@ -40,22 +38,25 @@ export default async function CollectionsAllPage({
   ]);
 
   return (
-    <div>
-      <section className="section-shell pb-8 pt-14">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Sản phẩm</p>
-            <h1 className="mt-3 text-2xl font-semibold">Chợ nông sản TTC</h1>
-            <p className="mt-3 max-w-xl text-sm text-ink/70">
-              Lọc theo danh mục, giá và mùa vụ. Tất cả dữ liệu đồng bộ từ hệ thống
-              quản lý.
-            </p>
+    <div className="layout-collections">
+      <div className="header-banner">
+        <div className="breadcrumb-shop">
+          <div className="container">
+            <div className="breadcrumb-list">
+              <ol className="breadcrumb breadcrumb-arrows">
+                <li>
+                  <a href="/" target="_self">
+                    Trang chủ
+                  </a>
+                </li>
+                <li className="active">
+                  <strong>Tất cả sản phẩm</strong>
+                </li>
+              </ol>
+            </div>
           </div>
-          <Link className="button btnlight" href="/blogs/news">
-            Đọc tin tức
-          </Link>
         </div>
-      </section>
+      </div>
 
       <ProductsClient
         categories={categories}

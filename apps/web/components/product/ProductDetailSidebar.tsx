@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Facebook, Link2, MessageCircle, Minus, Plus, Twitter } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { Facebook, Link2, Minus, Plus, Twitter } from "lucide-react";
 import { Product } from "@/lib/api";
 import { siteConfig } from "@/lib/site";
 import { useCartStore } from "@/store/cart";
@@ -75,129 +73,121 @@ export default function ProductDetailSidebar({ product }: ProductDetailSidebarPr
   const shareEncoded = encodeURIComponent(shareUrl);
 
   return (
-    <div className="flex flex-col border border-forest/10 bg-white p-8">
-      <div className="flex flex-wrap gap-2 text-xs">
-        {product.vendor ? (
-          <span className="border border-forest/10 bg-white px-3 py-1 font-semibold text-ink">
-            {product.vendor}
+    <div className="info-wrapper">
+      <div className="info-header">
+        <div className="product-name">
+          <h1>{product.name}</h1>
+        </div>
+        <div className="product-sku">
+          <span className="pro-state">
+            Tình trạng: <strong>{available ? "Còn hàng" : "Hết hàng"}</strong>
           </span>
-        ) : null}
-        <span
-          className={`px-3 py-1 font-semibold ${
-            available ? "bg-forest/10 text-forest" : "bg-clay/20 text-clay"
-          }`}
-        >
-          {available ? "Còn hàng" : "Hết hàng"}
-        </span>
-      </div>
-      <h1 className="mt-4 text-2xl font-semibold">{product.name}</h1>
-      <p className="mt-4 text-sm text-ink/70">
-        {product.description ||
-          "Sản phẩm từ nông trại đối tác, đảm bảo chất lượng và độ tươi mới."}
-      </p>
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Price price={product.price} compareAt={product.compare_at_price} />
-        {percent ? (
-          <span className="rounded-full bg-clay/20 px-3 py-1 text-xs font-semibold text-clay">
-            -{percent}%
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-6">
-        <p className="text-sm font-semibold">Số lượng</p>
-        <div className="mt-3 flex items-center gap-3">
-          <button
-            onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-            className="h-10 w-10 border border-forest/20"
-            disabled={!available}
-          >
-            <Minus className="h-4 w-4" />
-          </button>
-          <span className="min-w-[2ch] text-center text-sm">{quantity}</span>
-          <button
-            onClick={() => setQuantity((prev) => prev + 1)}
-            className="h-10 w-10 border border-forest/20"
-            disabled={!available}
-          >
-            <Plus className="h-4 w-4" />
-          </button>
+          {product.vendor ? (
+            <span className="pro-vendor">
+              Thương hiệu:{" "}
+              <strong>
+                <Link href={`/collections/all?vendor=${encodeURIComponent(product.vendor)}`}>
+                  {product.vendor}
+                </Link>
+              </strong>
+            </span>
+          ) : null}
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Button onClick={handleAdd} disabled={!available}>
-          Thêm vào giỏ
-        </Button>
-        <Button variant="outline" onClick={handleBuyNow} disabled={!available}>
-          Mua ngay
-        </Button>
-      </div>
-
-      <div className="mt-5 border border-forest/10 bg-white p-4 text-sm text-ink/70">
-        <p className="font-semibold text-ink">Voucher TTC</p>
-        <p className="mt-2">Nhận ưu đãi và tư vấn nhanh qua Messenger.</p>
-        <Link className="mt-3 inline-flex text-forest" href={siteConfig.social.messenger}>
-          Nhận voucher
-        </Link>
-      </div>
-
-      <div className="mt-6 space-y-3 text-sm text-ink/70">
-        <div className="flex items-center justify-between">
-          <span>Hoàn trả</span>
-          <Link className="text-forest" href={siteConfig.policies.returnPolicy}>
-            Xem chính sách
-          </Link>
+      <div className="info-body">
+        <div className="product-price">
+          <span className="pro-title">Giá:</span>
+          <Price price={product.price} compareAt={product.compare_at_price} />
+          {percent ? <span className="pro-percent">-{percent}%</span> : null}
         </div>
-        <div className="flex items-center justify-between">
-          <span>Điều khoản</span>
-          <Link className="text-forest" href={siteConfig.policies.termsOfService}>
-            Xem chi tiết
-          </Link>
-        </div>
-      </div>
 
-      <div className="mt-6 border border-forest/10 bg-white p-5 text-sm text-ink/70">
-        <p className="font-semibold">Chia sẻ</p>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <div className="product-quantity">
+          <div className="pro-title">Số lượng:</div>
+          <div className="pro-qty">
+            <button
+              type="button"
+              onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+              className="qty-btn"
+              aria-label="Giảm số lượng"
+              disabled={!available}
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <input className="qty-value" value={quantity} readOnly aria-label="Số lượng" />
+            <button
+              type="button"
+              onClick={() => setQuantity((prev) => prev + 1)}
+              className="qty-btn"
+              aria-label="Tăng số lượng"
+              disabled={!available}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="product-actions">
+          <div className="product-actions__inner">
+            <div className="action-buys">
+              <button
+                type="button"
+                className={`button btn-addtocart ${!available ? "disabled" : ""}`}
+                onClick={handleAdd}
+                disabled={!available}
+              >
+                Thêm vào giỏ
+              </button>
+              <button
+                type="button"
+                className={`button btnred btn-buynow ${!available ? "disabled" : ""}`}
+                onClick={handleBuyNow}
+                disabled={!available}
+              >
+                Mua ngay
+              </button>
+            </div>
+            <div className="action-link">
+              <Link
+                className="button btndark link-voucher"
+                href={siteConfig.social.messenger}
+                target="_blank"
+                rel="noopener"
+              >
+                Click vào đây để nhận ưu đãi
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="product-share">
+          <span className="pro-title">Chia sẻ: </span>
           <Link
-            className="button btnlight"
+            className="tooltip-cs share-facebook"
             href={`https://www.facebook.com/sharer/sharer.php?u=${shareEncoded}`}
             target="_blank"
             rel="noreferrer"
+            aria-label="Facebook"
           >
             <Facebook className="h-4 w-4" />
-            Facebook
           </Link>
           <Link
-            className="button btnlight"
+            className="tooltip-cs share-twitter"
             href={`https://twitter.com/intent/tweet?url=${shareEncoded}`}
             target="_blank"
             rel="noreferrer"
+            aria-label="Twitter"
           >
             <Twitter className="h-4 w-4" />
-            Twitter
           </Link>
-          <button className="button btnlight" onClick={handleCopy}>
+          <button
+            className="tooltip-cs share-link"
+            type="button"
+            onClick={handleCopy}
+            aria-label="Sao chép liên kết"
+          >
             <Link2 className="h-4 w-4" />
-            Sao chép url
           </button>
-        </div>
-      </div>
-
-      <div className="mt-6 border border-forest/10 bg-white p-5 text-sm text-ink/70">
-        <p className="font-semibold">Hỗ trợ nhanh</p>
-        <p className="mt-2">Hotline: {siteConfig.phone}</p>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <Link className="button btnlight" href={siteConfig.social.zalo}>
-            Zalo
-          </Link>
-          <Link className="button btnlight" href={siteConfig.social.messenger}>
-            Messenger
-          </Link>
-          <Link className="button btnlight" href={siteConfig.social.facebook}>
-            Facebook
-          </Link>
         </div>
       </div>
     </div>

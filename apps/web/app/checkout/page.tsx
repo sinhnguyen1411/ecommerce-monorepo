@@ -116,23 +116,35 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div>
-      <section className="section-shell pb-6 pt-14">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Thanh toán</p>
-          <h1 className="mt-3 text-2xl font-semibold">Hoàn tất đơn hàng</h1>
-          <p className="mt-3 max-w-xl text-sm text-ink/70">
-            Điền thông tin giao hàng và chọn hình thức thanh toán.
-          </p>
+    <div className="checkout-wrapper">
+      <div className="breadcrumb-shop">
+        <div className="container">
+          <div className="breadcrumb-list">
+            <ol className="breadcrumb breadcrumb-arrows">
+              <li>
+                <a href="/" target="_self">
+                  Trang chủ
+                </a>
+              </li>
+              <li className="active">
+                <strong>Thanh toán</strong>
+              </li>
+            </ol>
+          </div>
         </div>
-      </section>
+      </div>
 
-      <section className="section-shell pb-16">
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-6">
-            <div className="border border-forest/10 bg-white p-6">
-              <h2 className="text-lg font-semibold">Thông tin giao hàng</h2>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <section className="section-shell pb-16 pt-6">
+        <div className="checkout-heading">
+          <h1>Hoàn tất đơn hàng</h1>
+          <p>Điền thông tin giao hàng và chọn phương thức thanh toán.</p>
+        </div>
+
+        <div className="checkout-layout">
+          <div className="checkout-main">
+            <div className="checkout-box">
+              <h2>Thông tin giao hàng</h2>
+              <div className="checkout-grid">
                 <input
                   className="field"
                   value={customerName}
@@ -159,7 +171,7 @@ export default function CheckoutPage() {
                   placeholder="Địa chỉ giao hàng"
                 />
               </div>
-              <div className="mt-4 flex items-center gap-3 text-sm font-semibold">
+              <div className="checkout-checkbox">
                 <input
                   id="invoice"
                   type="checkbox"
@@ -169,7 +181,7 @@ export default function CheckoutPage() {
                 <label htmlFor="invoice">Xuất hóa đơn doanh nghiệp</label>
               </div>
               {invoiceEnabled ? (
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="checkout-grid">
                   <input
                     className="field"
                     value={companyName}
@@ -198,14 +210,11 @@ export default function CheckoutPage() {
               ) : null}
             </div>
 
-            <div className="border border-forest/10 bg-white p-6">
-              <h2 className="text-lg font-semibold">Phương thức giao hàng</h2>
-              <div className="mt-4 grid gap-3">
+            <div className="checkout-box">
+              <h2>Phương thức giao hàng</h2>
+              <div className="checkout-options">
                 {shippingOptions.map((option) => (
-                  <label
-                    key={option.value}
-                    className="flex items-center justify-between border border-forest/20 bg-white px-4 py-3 text-sm"
-                  >
+                  <label key={option.value} className="checkout-option">
                     <span>{option.label}</span>
                     <input
                       type="radio"
@@ -219,14 +228,11 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="border border-forest/10 bg-white p-6">
-              <h2 className="text-lg font-semibold">Phương thức thanh toán</h2>
-              <div className="mt-4 grid gap-3">
+            <div className="checkout-box">
+              <h2>Phương thức thanh toán</h2>
+              <div className="checkout-options">
                 {paymentOptions.map((option) => (
-                  <label
-                    key={option.value}
-                    className="flex items-center justify-between border border-forest/20 bg-white px-4 py-3 text-sm"
-                  >
+                  <label key={option.value} className="checkout-option">
                     <span>{option.label}</span>
                     <input
                       type="radio"
@@ -240,48 +246,50 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="border border-forest/10 bg-white p-6">
-              <h2 className="text-lg font-semibold">Khuyến mãi</h2>
-              <div className="mt-4 flex flex-col gap-3 md:flex-row">
+            <div className="checkout-box">
+              <h2>Khuyến mãi</h2>
+              <div className="checkout-promo">
                 <input
                   className="field"
                   value={promoCode}
                   onChange={(event) => setPromoCode(event.target.value)}
                   placeholder="Nhập mã khuyến mãi"
                 />
-                <button className="button btnlight">Áp dụng</button>
+                <button className="button btnlight" type="button">
+                  Áp dụng
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="border border-forest/10 bg-white p-6">
-              <h3 className="text-lg font-semibold">Đơn hàng</h3>
-              <div className="mt-4 space-y-3 text-sm text-ink/70">
+          <aside className="checkout-sidebar">
+            <div className="checkout-summary">
+              <h3>Đơn hàng</h3>
+              <div className="checkout-items">
                 {items.length === 0 ? (
                   <p>Giỏ hàng đang trống.</p>
                 ) : (
                   items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between gap-3">
+                    <div key={item.id} className="checkout-item">
                       <div>
-                        <p className="text-sm font-semibold text-ink">{item.name}</p>
-                        <p className="text-xs text-ink/60">Số lượng: {item.quantity}</p>
+                        <p className="item-name">{item.name}</p>
+                        <p className="item-qty">Số lượng: {item.quantity}</p>
                       </div>
-                      <span className="text-sm">{formatCurrency(item.price * item.quantity)}</span>
+                      <span>{formatCurrency(item.price * item.quantity)}</span>
                     </div>
                   ))
                 )}
               </div>
-              <div className="mt-4 space-y-2 text-sm text-ink/70">
-                <div className="flex items-center justify-between">
+              <div className="checkout-totals">
+                <div className="row">
                   <span>Số lượng sản phẩm</span>
                   <span>{totalItems}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="row">
                   <span>Tạm tính</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="row">
                   <span>Phí vận chuyển</span>
                   <span>
                     {siteConfig.freeShippingThreshold > 0 &&
@@ -290,22 +298,26 @@ export default function CheckoutPage() {
                       : "Tính khi giao"}
                   </span>
                 </div>
+                <div className="row total">
+                  <span>Tổng cộng</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
               </div>
               {minOrderAmount > 0 ? (
-                <p className="mt-3 text-xs text-ink/60">
+                <p className="checkout-note">
                   Đơn hàng tối thiểu {formatCurrency(minOrderAmount)}
                 </p>
               ) : null}
-              {error ? <p className="mt-4 text-sm text-clay">{error}</p> : null}
+              {error ? <p className="checkout-error">{error}</p> : null}
               <Button
-                className="mt-6 w-full"
+                className="checkout-submit"
                 onClick={handleSubmit}
                 disabled={isSubmitting || !meetsMinOrder}
               >
                 {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
               </Button>
             </div>
-          </div>
+          </aside>
         </div>
       </section>
     </div>

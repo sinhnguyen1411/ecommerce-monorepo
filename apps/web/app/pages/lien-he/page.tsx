@@ -1,13 +1,13 @@
-import Link from "next/link";
-
 import { siteConfig } from "@/lib/site";
 
 export const metadata = {
-  title: "Li?n h? | N?ng nghi?p TTC",
-  description: "Th?ng tin li?n h? v? h? tr? t? TTC."
+  title: "Liên hệ | Nông nghiệp TTC",
+  description: "Thông tin liên hệ và hỗ trợ từ TTC."
 };
 
 export default function ContactPage() {
+  const contactPhone = "0559.786.888";
+
   return (
     <div className="layout-pageContact">
       <div className="breadcrumb-shop">
@@ -16,11 +16,11 @@ export default function ContactPage() {
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
                 <a href="/" target="_self">
-                  Trang ch?
+                  Trang chủ
                 </a>
               </li>
               <li className="active">
-                <strong>LI?N H?</strong>
+                <strong>LIÊN HỆ</strong>
               </li>
             </ol>
           </div>
@@ -44,43 +44,43 @@ export default function ContactPage() {
           <div className="container">
             <div className="row">
               <div className="col-lg-6 col-md-12 col-12 column-left">
-                <h2>G?i th?c m?c cho ch?ng t?i</h2>
+                <h2>Gửi thắc mắc cho chúng tôi</h2>
                 <p>
-                  N?u b?n c? th?c m?c g?, c? th? g?i y?u c?u cho ch?ng t?i, v?
-                  ch?ng t?i s? li?n l?c l?i v?i b?n s?m nh?t c? th? .
+                  Nếu bạn có thắc mắc gì, có thể gửi yêu cầu cho chúng tôi, và
+                  chúng tôi sẽ liên lạc lại với bạn sớm nhất có thể .
                 </p>
                 <form className="contact-form">
                   <div className="row">
                     <div className="col-lg-12 col-md-12 col-12">
                       <div className="input-group">
-                        <input className="form-control" placeholder="T?n c?a b?n" />
+                        <input className="form-control" placeholder="Tên của bạn" />
                       </div>
                     </div>
                     <div className="col-lg-6 col-md-6 col-12">
                       <div className="input-group">
-                        <input className="form-control" placeholder="Email c?a b?n" />
+                        <input className="form-control" placeholder="Email của bạn" />
                       </div>
                     </div>
                     <div className="col-lg-6 col-md-6 col-12">
                       <div className="input-group">
-                        <input className="form-control" placeholder="S? ?i?n tho?i c?a b?n" />
+                        <input className="form-control" placeholder="Số điện thoại của bạn" />
                       </div>
                     </div>
                     <div className="col-lg-12 col-md-12 col-12">
                       <div className="input-group">
-                        <textarea className="form-control" placeholder="N?i dung" />
+                        <textarea className="form-control" placeholder="Nội dung" />
                       </div>
                     </div>
                     <div className="col-lg-12 col-md-12 col-12">
                       <button className="button" type="submit">
-                        G?i cho ch?ng t?i
+                        Gửi cho chúng tôi
                       </button>
                     </div>
                   </div>
                 </form>
               </div>
               <div className="col-lg-6 col-md-12 col-12 column-right">
-                <h2>Th?ng tin li?n h?</h2>
+                <h2>Thông tin liên hệ</h2>
                 <div className="contact-info">
                   <div className="contact-info__list">
                     <div className="contact-info__item">
@@ -93,7 +93,7 @@ export default function ContactPage() {
                         </span>
                       </div>
                       <div className="right">
-                        <strong>??a ch?</strong>
+                        <strong>Địa chỉ</strong>
                         <br />
                         {siteConfig.address}
                       </div>
@@ -107,9 +107,9 @@ export default function ContactPage() {
                         </span>
                       </div>
                       <div className="right">
-                        <strong>?i?n tho?i</strong>
+                        <strong>Điện thoại</strong>
                         <br />
-                        {siteConfig.phone}
+                        {contactPhone}
                       </div>
                     </div>
                     <div className="contact-info__item">
@@ -123,23 +123,31 @@ export default function ContactPage() {
                         </span>
                       </div>
                       <div className="right">
-                        <strong>Email</strong>
+                        <strong>Thời gian làm việc</strong>
                         <br />
-                        {siteConfig.email}
+                        Tất cả các ngày trong tuần
                       </div>
                     </div>
                     <div className="contact-info__item">
                       <div className="left">
                         <span className="icon">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">
-                            <path d="M22 12a10 10 0 1 0-11.6 9.9v-7h-2.3V12h2.3V9.7c0-2.3 1.4-3.6 3.5-3.6 1 0 2 .1 2 .1v2.3h-1.1c-1.1 0-1.5.7-1.5 1.4V12h2.6l-.4 2.9h-2.2v7A10 10 0 0 0 22 12z"></path>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 368 368">
+                            <path d="M184,60c4.4,0,8-3.6,8-8v-4c0-4.4-3.6-8-8-8c-4.4,0-8,3.6-8,8v4C176,56.4,179.6,60,184,60z"></path>
+                            <path d="M184,308c-4.4,0-8,3.6-8,8v4c0,4.4,3.6,8,8,8c4.4,0,8-3.6,8-8v-4C192,311.6,188.4,308,184,308z"></path>
+                            <path d="M52,176h-4c-4.4,0-8,3.6-8,8c0,4.4,3.6,8,8,8h4c4.4,0,8-3.6,8-8C60,179.6,56.4,176,52,176z"></path>
+                            <path d="M320,176h-4c-4.4,0-8,3.6-8,8c0,4.4,3.6,8,8,8h4c4.4,0,8-3.6,8-8C328,179.6,324.4,176,320,176z"></path>
+                            <path d="M93.6,82.4c-3.2-3.2-8-3.2-11.2,0c-3.2,3.2-3.2,8,0,11.2l2.8,2.8c1.6,1.6,3.6,2.4,5.6,2.4s4-0.8,5.6-2.4c3.2-3.2,3.2-8,0-11.2L93.6,82.4z"></path>
+                            <path d="M85.2,271.6l-2.8,2.8c-3.2,3.2-3.2,8,0,11.2C84,287.2,86,288,88,288s4-0.8,5.6-2.4l2.8-2.8c3.2-3.2,3.2-8,0-11.2S88.4,268.4,85.2,271.6z"></path>
+                            <path d="M274.4,82.4l-2.8,2.8c-3.2,3.2-3.2,8,0,11.2c1.6,1.6,3.6,2.4,5.6,2.4s4-0.8,5.6-2.4l2.8-2.8c3.2-3.2,3.2-8,0-11.2C282.4,79.2,277.6,79.2,274.4,82.4z"></path>
+                            <path d="M192,180.8V108c0-4.4-3.6-8-8-8c-4.4,0-8,3.6-8,8v76c0,2,0.8,4,2.4,5.6l87.6,87.6c1.6,1.6,3.6,2.4,5.6,2.4s4-0.8,5.6-2.4c3.2-3.2,3.2-8,0-11.2L192,180.8z"></path>
+                            <path d="M184,0C82.4,0,0,82.4,0,184s82.4,184,184,184s184-82.4,184-184S285.6,0,184,0z M184,352c-92.8,0-168-75.2-168-168S91.2,16,184,16s168,75.2,168,168S276.8,352,184,352z"></path>
                           </svg>
                         </span>
                       </div>
                       <div className="right">
-                        <strong>Facebook</strong>
+                        <strong>Email</strong>
                         <br />
-                        <Link href={siteConfig.social.facebook}>N?ng nghi?p TTC</Link>
+                        {siteConfig.email}
                       </div>
                     </div>
                   </div>

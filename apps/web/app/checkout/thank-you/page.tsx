@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 
-import { Button } from "@/components/ui/button";
 import { uploadPaymentProof } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { siteConfig } from "@/lib/site";
@@ -70,21 +69,33 @@ export default function ThankYouPage() {
   };
 
   return (
-    <div>
-      <section className="section-shell pb-6 pt-14">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Hoàn tất</p>
-          <h1 className="mt-3 text-2xl font-semibold">Cảm ơn bạn đã đặt hàng</h1>
-          <p className="mt-3 max-w-xl text-sm text-ink/70">
-            Chúng tôi sẽ liên hệ để xác nhận và giao hàng theo lịch.
-          </p>
+    <div className="checkout-wrapper">
+      <div className="breadcrumb-shop">
+        <div className="container">
+          <div className="breadcrumb-list">
+            <ol className="breadcrumb breadcrumb-arrows">
+              <li>
+                <a href="/" target="_self">
+                  Trang chủ
+                </a>
+              </li>
+              <li className="active">
+                <strong>Hoàn tất đơn hàng</strong>
+              </li>
+            </ol>
+          </div>
         </div>
-      </section>
+      </div>
 
-      <section className="section-shell pb-16">
-        <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
-          <div className="border border-forest/10 bg-white p-6">
-            <h2 className="text-lg font-semibold">Thông tin đơn hàng</h2>
+      <section className="section-shell pb-16 pt-6">
+        <div className="checkout-heading">
+          <h1>Cảm ơn bạn đã đặt hàng</h1>
+          <p>Chúng tôi sẽ liên hệ để xác nhận và giao hàng theo lịch.</p>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <div className="checkout-box">
+            <h2>Thông tin đơn hàng</h2>
             {order ? (
               <div className="mt-4 space-y-2 text-sm text-ink/70">
                 <p>Mã đơn: {order.order_number}</p>
@@ -110,8 +121,8 @@ export default function ThankYouPage() {
             </div>
           </div>
 
-          <div className="border border-forest/10 bg-white p-6">
-            <h2 className="text-lg font-semibold">Thanh toán ngân hàng</h2>
+          <div className="checkout-box">
+            <h2>Thanh toán ngân hàng</h2>
             {order && paymentMethod !== "cod" ? (
               <div className="mt-4 space-y-4">
                 <div className="border border-forest/10 bg-white p-4 text-sm">
@@ -142,6 +153,7 @@ export default function ThankYouPage() {
             )}
           </div>
         </div>
+
         <div className="mt-6">
           <a href="/" className="button btnlight">
             Tiếp tục mua sắm

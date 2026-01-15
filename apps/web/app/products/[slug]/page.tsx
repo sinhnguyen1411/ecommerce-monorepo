@@ -29,87 +29,86 @@ export default async function ProductDetailPage({
     notFound();
   }
 
-  const onSale =
-    typeof product.compare_at_price === "number" &&
-    product.compare_at_price > product.price;
-  const salePercent = onSale
-    ? Math.round(
-        ((product.compare_at_price || 0) - product.price) /
-          (product.compare_at_price || 1) *
-          100
-      )
-    : null;
-
   const categorySlug = product.categories?.[0]?.slug;
   const relatedProducts = categorySlug
     ? await getProducts({ category: categorySlug, limit: 4 })
     : [];
 
   return (
-    <div>
-      <section className="section-shell pb-6 pt-12">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-ink/60">
-          <div>
-            <Link className="hover:text-forest" href="/">
-              Trang chủ
-            </Link>{" "}
-            /{" "}
-            <Link className="hover:text-forest" href="/collections/all">
-              Sản phẩm
-            </Link>{" "}
-            / <span>{product.name}</span>
+    <div className="layout-productDetail layout-pageProduct">
+      <div className="breadcrumb-shop">
+        <div className="container">
+          <div className="breadcrumb-list">
+            <ol className="breadcrumb breadcrumb-arrows">
+              <li>
+                <Link href="/">Trang chủ</Link>
+              </li>
+              <li>
+                <Link href="/collections/all">Sản phẩm</Link>
+              </li>
+              <li className="active">
+                <span>
+                  <strong>{product.name}</strong>
+                </span>
+              </li>
+            </ol>
           </div>
-          <Link className="text-ink/60 hover:text-clay" href="/collections/all">
-            &larr; Quay lại sản phẩm
-          </Link>
         </div>
-      </section>
+      </div>
 
-      <section className="section-shell pb-16">
-        <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-          <ProductGallery
-            images={product.images || []}
-            name={product.name}
-            salePercent={salePercent}
-          />
-          <ProductDetailSidebar product={product} />
-        </div>
-      </section>
-
-      <section className="section-shell pb-12">
-        <ProductInfoHighlights />
-      </section>
-
-      <section className="section-shell pb-12">
-        <ProductTabs description={product.description} />
-      </section>
-
-      <section className="section-shell pb-12">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Liên quan</p>
-            <h2 className="mt-3 text-xl font-semibold">Sản phẩm gợi ý</h2>
+      <div className="productDetail-information productDetail_style__01">
+        <div className="container">
+          <div className="productDetail-main">
+            <div className="row">
+              <div className="col-lg-5 col-md-12 col-12 product-gallery">
+                <ProductGallery images={product.images || []} name={product.name} />
+              </div>
+              <div className="col-lg-7 col-md-12 col-12 product-info">
+                <ProductDetailSidebar product={product} />
+              </div>
+            </div>
           </div>
-          <Link href="/collections/all" className="button btnlight">
-            Xem tất cả
-          </Link>
         </div>
-        <div className="mt-6">
-          <ProductGrid
-            products={relatedProducts.filter((item) => item.id !== product.id).slice(0, 3)}
-          />
-        </div>
-      </section>
+      </div>
 
-      <section className="section-shell pb-16">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Đã xem</p>
-          <h2 className="mt-3 text-xl font-semibold">Sản phẩm vừa xem</h2>
+      <div className="productDetail-subinfo">
+        <div className="container">
+          <ProductInfoHighlights />
         </div>
-        <div className="mt-6">
-          <RecentlyViewed current={product} />
+      </div>
+
+      <div className="productDetail-description">
+        <div className="container">
+          <div className="product-tabs">
+            <ProductTabs description={product.description} />
+          </div>
         </div>
-      </section>
+      </div>
+
+      <div className="productDetail-related">
+        <div className="container">
+          <div className="product-related">
+            <div className="product-related__head">
+              <h2>Sản phẩm liên quan</h2>
+              <Link href="/collections/all" className="button btnlight">
+                Xem tất cả
+              </Link>
+            </div>
+            <ProductGrid
+              products={relatedProducts.filter((item) => item.id !== product.id).slice(0, 3)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="productDetail-viewed">
+        <div className="container">
+          <div className="product-viewed">
+            <h2>Sản phẩm đã xem</h2>
+            <RecentlyViewed current={product} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

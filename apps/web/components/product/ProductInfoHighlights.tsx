@@ -32,25 +32,33 @@ const extraInfo = [
 
 export default function ProductInfoHighlights() {
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="border border-forest/10 bg-white p-6">
-        <p className="text-sm font-semibold">Chính sách bán hàng</p>
-        <div className="mt-4 space-y-3 text-sm text-ink/70">
+    <div className="product-subinfo">
+      <div className="subinfo-block">
+        <div className="subtitle">
+          <span>Chính sách bán hàng</span>
+        </div>
+        <div className="subinfo-list">
           {sellingPolicies.map((item) => (
-            <div key={item.label} className="flex items-center gap-3">
-              <img src={item.icon} alt={item.label} className="h-10 w-10" />
-              <span>{item.label}</span>
+            <div key={item.label} className="item">
+              <div className="item--img">
+                <img src={item.icon} alt={item.label} />
+              </div>
+              <div className="item--text">{item.label}</div>
             </div>
           ))}
         </div>
       </div>
-      <div className="border border-forest/10 bg-white p-6">
-        <p className="text-sm font-semibold">Thông tin thêm</p>
-        <div className="mt-4 space-y-3 text-sm text-ink/70">
+      <div className="subinfo-block">
+        <div className="subtitle">
+          <span>Thông tin thêm</span>
+        </div>
+        <div className="subinfo-list">
           {extraInfo.map((item) => (
-            <div key={item.label} className="flex items-center gap-3">
-              <img src={item.icon} alt={item.label} className="h-10 w-10" />
-              <span>{item.label}</span>
+            <div key={item.label} className="item">
+              <div className="item--img">
+                <img src={item.icon} alt={item.label} />
+              </div>
+              <div className="item--text">{item.label}</div>
             </div>
           ))}
         </div>

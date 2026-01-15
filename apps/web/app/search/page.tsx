@@ -27,33 +27,56 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     : products;
 
   return (
-    <div>
-      <section className="section-shell pb-6 pt-14">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Tìm kiếm</p>
-          <h1 className="mt-3 text-2xl font-semibold">Kết quả tìm kiếm</h1>
-          <p className="mt-3 max-w-xl text-sm text-ink/70">
-            {query
-              ? `Từ khóa: ${query} (${filtered.length} sản phẩm)`
-              : "Nhập từ khóa để tìm kiếm sản phẩm."}
-          </p>
-        </div>
-      </section>
-
-      <section className="section-shell pb-16">
-        {filtered.length === 0 ? (
-          <div className="border border-forest/10 bg-white p-10 text-center text-sm text-ink/70">
-            Không tìm thấy sản phẩm phù hợp.
-            <div className="mt-4">
-              <Link href="/collections/all" className="button btnlight">
-                Xem tất cả sản phẩm
-              </Link>
+    <div className="layout-collections">
+      <div className="header-banner">
+        <div className="breadcrumb-shop">
+          <div className="container">
+            <div className="breadcrumb-list">
+              <ol className="breadcrumb breadcrumb-arrows">
+                <li>
+                  <a href="/" target="_self">
+                    Trang chủ
+                  </a>
+                </li>
+                <li className="active">
+                  <strong>Tìm kiếm</strong>
+                </li>
+              </ol>
             </div>
           </div>
-        ) : (
-          <ProductGrid products={filtered} />
-        )}
-      </section>
+        </div>
+      </div>
+
+      <div className="container">
+        <div className="section-collection">
+          <div className="toolbar-products">
+            <div className="head-title">
+              <h1 className="title">Kết quả tìm kiếm</h1>
+              <div className="product-count">
+                <div className="count">
+                  <b>{filtered.length}</b> sản phẩm
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="search-note">
+            {query ? `Từ khóa: "${query}"` : "Nhập từ khóa để tìm kiếm sản phẩm."}
+          </p>
+
+          {filtered.length === 0 ? (
+            <div className="border border-forest/10 bg-white p-10 text-center text-sm text-ink/70">
+              Không tìm thấy sản phẩm phù hợp.
+              <div className="mt-4">
+                <Link href="/collections/all" className="button btnlight">
+                  Xem tất cả sản phẩm
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <ProductGrid products={filtered} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

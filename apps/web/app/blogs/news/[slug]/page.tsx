@@ -8,8 +8,8 @@ import { formatDate } from "@/lib/format";
 import { siteConfig } from "@/lib/site";
 
 export const metadata = {
-  title: "Ki?n th?c n?ng nghi?p | N?ng nghi?p TTC",
-  description: "B?i vi?t v? g?c chia s? c?a TTC."
+  title: "Kiến thức nông nghiệp | Nông nghiệp TTC",
+  description: "Bài viết và góc chia sẻ của TTC."
 };
 
 type BlogDetailPageProps = {
@@ -37,10 +37,10 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
           <div className="breadcrumb-list">
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
-                <Link href="/">Trang ch?</Link>
+                <Link href="/">Trang chủ</Link>
               </li>
               <li>
-                <Link href="/blogs/news">Tin t?c</Link>
+                <Link href="/blogs/news">Tin tức</Link>
               </li>
               <li className="active">
                 <span>
@@ -60,21 +60,21 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
                 {post.cover_image ? (
                   <img src={post.cover_image} alt={post.title} />
                 ) : (
-                  <div className="no-image">?ang c?p nh?t ?nh</div>
+                  <div className="no-image">Đang cập nhật ảnh</div>
                 )}
               </div>
               <div className="article-content">
                 <h1 className="article-title">{post.title}</h1>
                 <div className="article-post-meta">
-                  <span className="author">b?i: {siteConfig.email}</span>
+                  <span className="author">bởi: {siteConfig.email}</span>
                   <span className="date">
-                    <time>{formatDate(post.published_at) || "Tin t?c"}</time>
+                    <time>{formatDate(post.published_at) || "Tin tức"}</time>
                   </span>
                 </div>
                 <div
                   className="rich-content"
                   dangerouslySetInnerHTML={{
-                    __html: post.content || "<p>N?i dung ?ang ???c c?p nh?t.</p>"
+                    __html: post.content || "<p>Nội dung đang được cập nhật.</p>"
                   }}
                 />
               </div>
@@ -82,9 +82,9 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
             <div className="related-posts">
               <div className="related-posts__head">
-                <h2>??c th?m</h2>
+                <h2>Đọc thêm</h2>
                 <Link href="/blogs/news" className="button btnlight">
-                  Xem t?t c?
+                  Xem tất cả
                 </Link>
               </div>
               <div className="row blog-posts">
@@ -98,14 +98,14 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
             <aside className="sidebar-blogs blogs-sticky">
               <PostSidebar posts={posts.slice(0, 5)} />
               <div className="sidebar-box">
-                <p className="sidebar-title">Li?n h? nhanh</p>
+                <p className="sidebar-title">Liên hệ nhanh</p>
                 <p className="sidebar-text">
-                  C?n t? v?n v? n?ng s?n? G?i hotline ?? ???c h? tr?.
+                  Cần tư vấn về nông sản? Gọi hotline để được hỗ trợ.
                 </p>
                 <p className="sidebar-hotline">{siteConfig.phone}</p>
               </div>
               <Link className="button btnlight" href="/collections/all">
-                Mua s?n ph?m
+                Mua sản phẩm
               </Link>
             </aside>
           </div>

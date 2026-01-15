@@ -1,10 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Filter } from "lucide-react";
-
 import Pagination from "@/components/common/Pagination";
 import ProductGrid from "@/components/product/ProductGrid";
 import { Category, Product } from "@/lib/api";
@@ -12,14 +9,14 @@ import { formatCurrency } from "@/lib/format";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const sortOptions = [
-  { value: "created-descending", label: "Mới nhất" },
-  { value: "created-ascending", label: "Cũ nhất" },
   { value: "price-ascending", label: "Giá: Tăng dần" },
   { value: "price-descending", label: "Giá: Giảm dần" },
   { value: "title-ascending", label: "Tên: A-Z" },
   { value: "title-descending", label: "Tên: Z-A" },
-  { value: "best-selling", label: "Bán chạy" },
-  { value: "quantity-descending", label: "Tồn kho" }
+  { value: "created-ascending", label: "Cũ nhất" },
+  { value: "created-descending", label: "Mới nhất" },
+  { value: "best-selling", label: "Bán chạy nhất" },
+  { value: "quantity-descending", label: "Tồn kho giảm dần" }
 ];
 
 type ProductsClientProps = {
@@ -275,11 +272,12 @@ export default function ProductsClient({
   const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const activeTags = useMemo(() => {
-    const tags: { key: string; label: string; onRemove: () => void }[] = [];
+    const tags: { key: string; label: string; value: string; onRemove: () => void }[] = [];
     if (query) {
       tags.push({
         key: "q",
-        label: `Tìm kiếm: ${query}`,
+        label: "Từ khóa",
+        value: query,
         onRemove: () => {
           setQuery("");
           setPage(1);
@@ -291,7 +289,8 @@ export default function ProductsClient({
       const category = categories.find((item) => item.slug === activeCategory);
       tags.push({
         key: "category",
-        label: category?.name || activeCategory,
+        label: "Danh mục",
+        value: category?.name || activeCategory,
         onRemove: () => {
           setActiveCategory("all");
           setPage(1);
@@ -303,7 +302,8 @@ export default function ProductsClient({
       activeVendors.forEach((vendor) =>
         tags.push({
           key: `vendor-${vendor}`,
-          label: vendor,
+          label: "Thương hiệu",
+          value: vendor,
           onRemove: () => {
             const next = activeVendors.filter((item) => item !== vendor);
             setActiveVendors(next);
@@ -318,7 +318,8 @@ export default function ProductsClient({
       const maxValue = Number(priceMax);
       tags.push({
         key: "price",
-        label: `${priceMin ? formatCurrency(Number.isNaN(minValue) ? 0 : minValue) : "0"} - ${
+        label: "Khoảng giá",
+        value: `${priceMin ? formatCurrency(Number.isNaN(minValue) ? 0 : minValue) : "0"} - ${
           priceMax ? formatCurrency(Number.isNaN(maxValue) ? 0 : maxValue) : "..."
         }`,
         onRemove: () => {
@@ -333,7 +334,8 @@ export default function ProductsClient({
       activeColors.forEach((color) =>
         tags.push({
           key: `color-${color}`,
-          label: color,
+          label: "Màu sắc",
+          value: color,
           onRemove: () => {
             const next = activeColors.filter((item) => item !== color);
             setActiveColors(next);
@@ -347,7 +349,8 @@ export default function ProductsClient({
       activeSizes.forEach((size) =>
         tags.push({
           key: `size-${size}`,
-          label: size,
+          label: "Size",
+          value: size,
           onRemove: () => {
             const next = activeSizes.filter((item) => item !== size);
             setActiveSizes(next);
@@ -392,240 +395,328 @@ export default function ProductsClient({
   };
 
   const FilterPanel = (
-    <div className="space-y-6 text-sm text-ink/70">
-      <div className="rounded-2xl border border-forest/10 bg-white/90 p-4">
-        <p className="text-sm font-semibold text-ink">Danh mục sản phẩm</p>
-        <div className="mt-3 space-y-2">
-          <button
-            className={`block w-full text-left ${activeCategory === "all" ? "text-forest" : ""}`}
-            onClick={() => {
-              setActiveCategory("all");
-              setPage(1);
-              updateRoute({ category: "all" });
-            }}
-          >
-            Tất cả
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              className={`block w-full text-left ${
-                activeCategory === category.slug ? "text-forest" : ""
-              }`}
-              onClick={() => {
-                setActiveCategory(category.slug);
-                setPage(1);
-                updateRoute({ category: category.slug });
-              }}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
+    <div className="filter-inner">
+      <div className="filter-head">
+        <p>Bộ lọc</p>
       </div>
-
-      <div className="rounded-2xl border border-forest/10 bg-white/90 p-4">
-        <p className="text-sm font-semibold text-ink">Thương hiệu</p>
-        <div className="mt-3 space-y-2">
-          {vendorOptions.length === 0 ? (
-            <p className="text-xs text-ink/60">Đang cập nhật.</p>
-          ) : (
-            vendorOptions.map((vendor) => (
-              <label key={vendor} className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={activeVendors.includes(vendor)}
-                  onChange={() => {
-                    const next = activeVendors.includes(vendor)
-                      ? activeVendors.filter((item) => item !== vendor)
-                      : [...activeVendors, vendor];
-                    setActiveVendors(next);
+      <div className="filter-options">
+        <div className="filter_group">
+          <div className="filter_group-subtitle">
+            <span>Danh mục sản phẩm</span>
+          </div>
+          <div className="filter_group-content layered-category">
+            <ul className="tree-menu">
+              <li>
+                <button
+                  type="button"
+                  className={`filter-link ${activeCategory === "all" ? "active" : ""}`}
+                  onClick={() => {
+                    setActiveCategory("all");
                     setPage(1);
-                    updateRoute({ vendors: next });
+                    updateRoute({ category: "all" });
                   }}
-                />
-                {vendor}
-              </label>
-            ))
-          )}
+                >
+                  Tất cả
+                </button>
+              </li>
+              {categories.map((category) => (
+                <li key={category.id}>
+                  <button
+                    type="button"
+                    className={`filter-link ${
+                      activeCategory === category.slug ? "active" : ""
+                    }`}
+                    onClick={() => {
+                      setActiveCategory(category.slug);
+                      setPage(1);
+                      updateRoute({ category: category.slug });
+                    }}
+                  >
+                    {category.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      </div>
 
-      <div className="rounded-2xl border border-forest/10 bg-white/90 p-4">
-        <p className="text-sm font-semibold text-ink">Khoảng giá</p>
-        <div className="mt-3 grid gap-2">
-          <input
-            className="field"
-            value={priceMin}
-            onChange={(event) => setPriceMin(event.target.value)}
-            placeholder="Giá từ"
-          />
-          <input
-            className="field"
-            value={priceMax}
-            onChange={(event) => setPriceMax(event.target.value)}
-            placeholder="Giá đến"
-          />
-          <button
-            className="btn-ghost"
-            onClick={() => {
-              setPage(1);
-              updateRoute({ priceMin, priceMax });
-            }}
-          >
-            Áp dụng
-          </button>
+        <div className="filter_group">
+          <div className="filter_group-subtitle">
+            <span>Thương hiệu</span>
+          </div>
+          <div className="filter_group-content">
+            {vendorOptions.length === 0 ? (
+              <p className="filter-empty">Đang cập nhật.</p>
+            ) : (
+              <ul className="filter-list">
+                {vendorOptions.map((vendor) => (
+                  <li key={vendor}>
+                    <label className="filter-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={activeVendors.includes(vendor)}
+                        onChange={() => {
+                          const next = activeVendors.includes(vendor)
+                            ? activeVendors.filter((item) => item !== vendor)
+                            : [...activeVendors, vendor];
+                          setActiveVendors(next);
+                          setPage(1);
+                          updateRoute({ vendors: next });
+                        }}
+                      />
+                      <span>{vendor}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="rounded-2xl border border-forest/10 bg-white/90 p-4">
-        <p className="text-sm font-semibold text-ink">Màu sắc</p>
-        <div className="mt-3 space-y-2">
-          {colorOptions.length === 0 ? (
-            <p className="text-xs text-ink/60">Đang cập nhật.</p>
-          ) : (
-            colorOptions.map((color) => (
-              <label key={color} className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={activeColors.includes(color)}
-                  onChange={() => {
-                    const next = activeColors.includes(color)
-                      ? activeColors.filter((item) => item !== color)
-                      : [...activeColors, color];
-                    setActiveColors(next);
+        <div className="filter_group">
+          <div className="filter_group-subtitle">
+            <span>Khoảng giá</span>
+          </div>
+          <div className="filter_group-content">
+            <div className="filter-price">
+              <input
+                className="field"
+                value={priceMin}
+                onChange={(event) => setPriceMin(event.target.value)}
+                placeholder="Giá từ"
+              />
+              <input
+                className="field"
+                value={priceMax}
+                onChange={(event) => setPriceMax(event.target.value)}
+                placeholder="Giá đến"
+              />
+              <button
+                className="btn-filter btn-filter-apply"
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  updateRoute({ priceMin, priceMax });
+                }}
+              >
+                Áp dụng
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="filter_group">
+          <div className="filter_group-subtitle">
+            <span>Màu sắc</span>
+          </div>
+          <div className="filter_group-content">
+            {colorOptions.length === 0 ? (
+              <p className="filter-empty">Đang cập nhật.</p>
+            ) : (
+              <ul className="filter-list">
+                {colorOptions.map((color) => (
+                  <li key={color}>
+                    <label className="filter-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={activeColors.includes(color)}
+                        onChange={() => {
+                          const next = activeColors.includes(color)
+                            ? activeColors.filter((item) => item !== color)
+                            : [...activeColors, color];
+                          setActiveColors(next);
+                          setPage(1);
+                          updateRoute({ colors: next });
+                        }}
+                      />
+                      <span>{color}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="filter_group">
+          <div className="filter_group-subtitle">
+            <span>Size</span>
+          </div>
+          <div className="filter_group-content">
+            {sizeOptions.length === 0 ? (
+              <p className="filter-empty">Đang cập nhật.</p>
+            ) : (
+              <ul className="filter-list">
+                {sizeOptions.map((size) => (
+                  <li key={size}>
+                    <label className="filter-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={activeSizes.includes(size)}
+                        onChange={() => {
+                          const next = activeSizes.includes(size)
+                            ? activeSizes.filter((item) => item !== size)
+                            : [...activeSizes, size];
+                          setActiveSizes(next);
+                          setPage(1);
+                          updateRoute({ sizes: next });
+                        }}
+                      />
+                      <span>{size}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="filter_group">
+          <div className="filter_group-subtitle">
+            <span>Tìm kiếm</span>
+          </div>
+          <div className="filter_group-content">
+            <div className="filter-search">
+              <input
+                className="field"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Tìm sản phẩm..."
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
                     setPage(1);
-                    updateRoute({ colors: next });
-                  }}
-                />
-                {color}
-              </label>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-forest/10 bg-white/90 p-4">
-        <p className="text-sm font-semibold text-ink">Kích cỡ</p>
-        <div className="mt-3 space-y-2">
-          {sizeOptions.length === 0 ? (
-            <p className="text-xs text-ink/60">Đang cập nhật.</p>
-          ) : (
-            sizeOptions.map((size) => (
-              <label key={size} className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={activeSizes.includes(size)}
-                  onChange={() => {
-                    const next = activeSizes.includes(size)
-                      ? activeSizes.filter((item) => item !== size)
-                      : [...activeSizes, size];
-                    setActiveSizes(next);
-                    setPage(1);
-                    updateRoute({ sizes: next });
-                  }}
-                />
-                {size}
-              </label>
-            ))
-          )}
+                    updateRoute({ query });
+                  }
+                }}
+              />
+              <button
+                className="btn-filter btn-filter-apply"
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  updateRoute({ query });
+                }}
+              >
+                Áp dụng
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
+  const currentSortLabel =
+    sortOptions.find((option) => option.value === sort)?.label || "Mới nhất";
+
   return (
-    <div className="section-shell pb-16">
-      <div className="text-xs text-ink/60">
-        <Link href="/" className="hover:text-forest">
-          Trang chủ
-        </Link>{" "}
-        / <span>Sản phẩm</span>
-      </div>
-
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3 text-xs text-ink/60">
-          <Sheet>
-            <SheetTrigger asChild>
-              <button className="flex items-center gap-2 rounded-full border border-forest/20 px-4 py-2 text-xs font-semibold text-forest lg:hidden">
-                <Filter className="h-4 w-4" />
-                Bộ lọc
-              </button>
-            </SheetTrigger>
-            <SheetContent className="max-w-sm">
-              <SheetHeader>
-                <SheetTitle>Bộ lọc sản phẩm</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6">{FilterPanel}</div>
-            </SheetContent>
-          </Sheet>
-          <span>Tìm thấy {filtered.length} sản phẩm</span>
-          {activeTags.length ? (
-            <button
-              className="rounded-full border border-forest/20 px-3 py-1 text-forest"
-              onClick={clearFilters}
-            >
-              Xóa lọc
-            </button>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            className="field w-56"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Tìm sản phẩm"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                setPage(1);
-                updateRoute({ query });
-              }
-            }}
-          />
-          <select
-            className="field w-44"
-            value={sort}
-            onChange={(event) => {
-              setSort(event.target.value);
-              setPage(1);
-              updateRoute({ sort: event.target.value });
-            }}
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-[280px_1fr]">
-        <aside className="hidden lg:block">{FilterPanel}</aside>
-        <div>
-          {activeTags.length ? (
-            <div className="flex flex-wrap gap-2">
-              {activeTags.map((tag) => (
-                <button
-                  key={tag.key}
-                  className="rounded-full border border-forest/20 px-3 py-1 text-xs text-forest"
-                  onClick={tag.onRemove}
-                >
-                  {tag.label} x
-                </button>
-              ))}
+    <div className="container">
+      <div className="section-collection">
+        <div className="row">
+          <div className="col-lg-12 col-md-12 col-12 sidebar sidebar-left">
+            <div className="filter-wrapper">
+              <div className="filter-current">
+                <div className="widget-title">
+                  <div className="filter-subtitle">Bạn đang xem</div>
+                </div>
+                <div className="list-tags">
+                  {activeTags.map((tag) => (
+                    <div key={tag.key} className="filter_tags">
+                      {tag.label}: <b>{tag.value}</b>
+                      <button
+                        type="button"
+                        className="filter_tags_remove"
+                        onClick={tag.onRemove}
+                        aria-label={`Xóa ${tag.label}`}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          xmlnsXlink="http://www.w3.org/1999/xlink"
+                          viewBox="0 0 50 50"
+                        >
+                          <path
+                            fill="#333"
+                            d="M9.016 40.837a1.001 1.001 0 0 0 1.415-.001l14.292-14.309 14.292 14.309a1 1 0 1 0 1.416-1.413L26.153 25.129 40.43 10.836a1 1 0 1 0-1.415-1.413L24.722 23.732 10.43 9.423a1 1 0 1 0-1.415 1.413l14.276 14.293L9.015 39.423a1 1 0 0 0 .001 1.414z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                  {activeTags.length ? (
+                    <button
+                      type="button"
+                      className="filter_tags filter_tags_remove_all"
+                      onClick={clearFilters}
+                    >
+                      <span>Xóa hết</span>
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              <div className="filter-content">{FilterPanel}</div>
             </div>
-          ) : null}
-
-          <div className="mt-6">
-            <ProductGrid products={pageItems} />
           </div>
-          <div className="mt-10">
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onPageChange={(value) => setPage(value)}
-            />
+
+          <div className="col-lg-12 col-md-12 col-12 collection main-container">
+            <div className="toolbar-products">
+              <div className="head-title">
+                <h1 className="title">Tất cả sản phẩm</h1>
+                <div className="product-count">
+                  <div className="count">
+                    <b>{filtered.length}</b> sản phẩm
+                  </div>
+                </div>
+              </div>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <button type="button" className="product-filter-mb">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 459 459">
+                      <path d="M178.5 382.5h102v-51h-102v51zM0 76.5v51h459v-51H0zm76.5 178.5h306v-51h-306v51z" />
+                    </svg>
+                    <span>Bộ lọc</span>
+                  </button>
+                </SheetTrigger>
+                <SheetContent className="filter-sheet">
+                  <SheetHeader>
+                    <SheetTitle>Bộ lọc</SheetTitle>
+                  </SheetHeader>
+                  <div className="filter-content">{FilterPanel}</div>
+                </SheetContent>
+              </Sheet>
+              <div className="product-sort">
+                <label className="title" htmlFor="sort-by">
+                  <span>Sắp xếp theo</span>
+                  <span className="text">{currentSortLabel}</span>
+                </label>
+                <div className="sort-by">
+                  <select
+                    id="sort-by"
+                    value={sort}
+                    onChange={(event) => {
+                      setSort(event.target.value);
+                      setPage(1);
+                      updateRoute({ sort: event.target.value });
+                    }}
+                  >
+                    {sortOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <ProductGrid products={pageItems} />
+
+            <div className="pagination-wrapper">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={(value) => setPage(value)}
+              />
+            </div>
           </div>
         </div>
       </div>

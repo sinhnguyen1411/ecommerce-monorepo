@@ -32,12 +32,12 @@ export default function ProductCard({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
 
   return (
-    <div className="product-loop">
+    <div className="col-lg-4 col-md-6 col-6 product-loop">
       <div className="product-inner">
         <div className="proloop-image">
           {onSale ? <SaleBadge percent={percent} /> : null}
           {!available ? <span className="pro-soldout">Hết hàng</span> : null}
-          <Link href={`/products/${product.slug}`} className="proloop-link">
+          <Link href={`/products/${product.slug}`} className="proloop-link quickview-product">
             <div className="lazy-img">
               {image ? (
                 <img src={image} alt={product.name} />
