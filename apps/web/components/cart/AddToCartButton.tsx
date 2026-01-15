@@ -13,10 +13,10 @@ type AddToCartButtonProps = {
 export default function AddToCartButton({
   product,
   variant = "primary",
-  label = "Them vao gio"
+  label = "Thêm vào giỏ"
 }: AddToCartButtonProps) {
   const addItem = useCartStore((state) => state.addItem);
-  const className = variant === "ghost" ? "btn-ghost" : "btn-primary";
+  const className = variant === "ghost" ? "button btnlight" : "button";
 
   return (
     <button

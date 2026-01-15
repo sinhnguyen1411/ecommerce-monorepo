@@ -1,20 +1,21 @@
-﻿import type { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     "",
-    "/products",
-    "/blog",
+    "/collections/all",
     "/blogs/news",
     "/cart",
     "/checkout",
+    "/search",
     "/pages/about-us",
     "/pages/hoi-dap-cung-nha-nong",
-    "/pages/locations",
-    "/pages/return-policy",
-    "/pages/terms-of-service"
+    "/pages/lien-he",
+    "/pages/chinh-sach-doi-tra",
+    "/pages/chinh-sach-bao-mat",
+    "/pages/dieu-khoan-dich-vu"
   ];
 
   return routes.map((route) => ({

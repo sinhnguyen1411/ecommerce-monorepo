@@ -1,13 +1,30 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { Search, ShoppingBag } from "lucide-react";
+import { ShoppingBag, User } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { siteConfig } from "@/lib/site";
 import { getCartCount, useCartStore } from "@/store/cart";
 
+import LocationDropdown from "./LocationDropdown";
 import MobileMenu from "./MobileMenu";
+import SearchDialog from "./SearchDialog";
+
+const navLinks = [
+  { href: "/", label: "Trang chủ" },
+  { href: "/pages/about-us", label: "Giới thiệu" },
+  { href: "/collections/all", label: "Sản phẩm" },
+  { href: "/blogs/news", label: "Kiến thức nông nghiệp" },
+  { href: "/pages/hoi-dap-cung-nha-nong", label: "Hỏi đáp cùng nhà nông" },
+  { href: "/pages/lien-he", label: "Liên hệ" }
+];
 
 export default function Header() {
   const items = useCartStore((state) => state.items);
@@ -15,35 +32,66 @@ export default function Header() {
   const count = getCartCount(items);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-forest/10 bg-white/90 backdrop-blur">
-      <div className="section-shell flex items-center gap-6 py-4">
-        <Link href="/" className="flex items-center gap-3 font-semibold">
-          <span className="h-2.5 w-2.5 rounded-full bg-clay" />
-          <span className="text-lg">{siteConfig.name}</span>
-        </Link>
-        <nav className="hidden items-center gap-6 text-sm font-semibold text-ink/70 lg:flex">
-          <Link href="/products" className="hover:text-ink">San pham</Link>
-          <Link href="/blog" className="hover:text-ink">Tin tuc</Link>
-          <Link href="/pages/about-us" className="hover:text-ink">Gioi thieu</Link>
-          <Link href="/pages/hoi-dap-cung-nha-nong" className="hover:text-ink">Hoi dap</Link>
-          <Link href="/locations" className="hover:text-ink">Cua hang</Link>
-          <Link href="/account" className="hover:text-ink">Tai khoan</Link>
-        </nav>
-        <div className="ml-auto hidden w-full max-w-md items-center gap-2 rounded-full border border-forest/20 bg-white px-3 py-1 text-sm lg:flex">
-          <Search className="h-4 w-4 text-ink/50" />
-          <Input className="h-8 border-none p-0 text-sm shadow-none focus-visible:ring-0" placeholder="Tim san pham" />
+    <header className="mainHeader--height">
+      <div className="mainHeader mainHeader_temp01" id="main-header">
+        <div className="mainHeader-middle">
+          <div className="container-fluid">
+            <div className="flex-container-header">
+              <div className="header-wrap-iconav header-wrap-actions">
+                <div className="header-action">
+                  <MobileMenu />
+                </div>
+              </div>
+              <div className="header-wrap-logo">
+                <div className="wrap-logo">
+                  <h1>
+                    <Link href="/">{siteConfig.name}</Link>
+                  </h1>
+                </div>
+              </div>
+              <div className="header-wrap-menu">
+                <nav className="navbar-mainmenu">
+                  <ul className="menuList-main">
+                    {navLinks.map((link) => (
+                      <li key={link.href}>
+                        <Link href={link.href}>{link.label}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </div>
+              <div className="header-actions">
+                <LocationDropdown />
+                <SearchDialog />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="header-action-btn" aria-label="Tài khoản">
+                      <User className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 p-2">
+                    <div className="px-2 py-2 text-xs text-ink/60">Tài khoản của bạn</div>
+                    <DropdownMenuItem asChild>
+                      <Link href="/login">Đăng nhập</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account">Tài khoản của tôi</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/login">Quên mật khẩu</Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <button onClick={open} className="header-action-cart">
+                  <ShoppingBag className="h-4 w-4" />
+                  Giỏ hàng
+                  <span>({count})</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={open}
-          className="relative ml-auto flex items-center gap-2 rounded-full border border-forest/20 px-4 py-2 text-sm font-semibold text-forest transition hover:border-clay hover:text-clay lg:ml-0"
-        >
-          <ShoppingBag className="h-4 w-4" />
-          Gio hang
-          <span className="rounded-full bg-forest/10 px-2 text-xs font-semibold text-forest">
-            {count}
-          </span>
-        </button>
-        <MobileMenu />
       </div>
     </header>
   );

@@ -1,29 +1,48 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 
 import { Post } from "@/lib/api";
 import { formatDate, stripHtml } from "@/lib/format";
+import { siteConfig } from "@/lib/site";
 
 export default function PostCard({ post }: { post: Post }) {
+  const excerpt = stripHtml(post.excerpt || post.content || "").trim();
+
   return (
-    <Link href={`/blog/${post.slug}`} className="group overflow-hidden rounded-[28px] border border-forest/10 bg-white/80">
-      <div className="aspect-[4/3] w-full overflow-hidden bg-mist">
-        {post.cover_image ? (
-          <img
-            src={post.cover_image}
-            alt={post.title}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-sm text-ink/50">Dang cap nhat anh</div>
-        )}
+    <article className="article-loop col-lg-4 col-md-6 col-12">
+      <div className="article-inner">
+        <div className="article-image">
+          <Link
+            href={`/blogs/news/${post.slug}`}
+            className="blog-post-thumbnail"
+            title={post.title}
+            rel="nofollow"
+          >
+            {post.cover_image ? (
+              <img src={post.cover_image} alt={post.title} />
+            ) : (
+              <div className="no-image">Đang cập nhật ảnh</div>
+            )}
+          </Link>
+        </div>
+        <div className="article-detail">
+          <div className="article-title">
+            <h3 className="post-title">
+              <Link href={`/blogs/news/${post.slug}`} title={post.title}>
+                {post.title}
+              </Link>
+            </h3>
+          </div>
+          <p className="entry-content">
+            {excerpt ? `${excerpt.slice(0, 160)}...` : "Đang cập nhật nội dung."}
+          </p>
+          <div className="article-post-meta">
+            <span className="author">bởi: {siteConfig.email}</span>
+            <span className="date">
+              <time>{formatDate(post.published_at) || "Tin tức"}</time>
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="space-y-3 p-5">
-        <p className="text-xs uppercase tracking-[0.2em] text-ink/50">
-          {formatDate(post.published_at) || "Tin tuc"}
-        </p>
-        <h3 className="text-lg font-semibold">{post.title}</h3>
-        <p className="text-sm text-ink/70">{stripHtml(post.excerpt).slice(0, 120)}</p>
-      </div>
-    </Link>
+    </article>
   );
 }

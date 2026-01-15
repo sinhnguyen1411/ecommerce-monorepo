@@ -36,8 +36,8 @@ export default function RecentlyViewed({ current }: { current: Product }) {
 
   if (content.length === 0) {
     return (
-      <div className="rounded-[28px] border border-forest/10 bg-white/80 p-6 text-sm text-ink/70">
-        San pham vua xem se hien thi tai day.
+      <div className="border border-forest/10 bg-white p-6 text-sm text-ink/70">
+        Sản phẩm vừa xem sẽ hiển thị tại đây.
       </div>
     );
   }

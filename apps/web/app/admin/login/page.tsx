@@ -35,13 +35,13 @@ export default function AdminLoginPage() {
       <section className="section-shell pb-10 pt-14">
         <SectionTitle
           eyebrow="Admin"
-          title="Dang nhap quan tri"
-          description="Chi danh cho nhan vien quan ly noi bo."
+          title="Đăng nhập quản trị"
+          description="Chỉ dành cho nhân viên quản lý nội bộ."
         />
       </section>
 
       <section className="section-shell pb-16">
-        <div className="rounded-[28px] border border-forest/10 bg-white/90 p-8">
+        <div className="border border-forest/10 bg-white p-8">
           {error ? <p className="text-sm text-clay">{error}</p> : null}
           <div className="mt-4 grid gap-3">
             <input
@@ -52,7 +52,7 @@ export default function AdminLoginPage() {
             />
             <input
               className="field"
-              placeholder="Mat khau"
+              placeholder="Mật khẩu"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -60,10 +60,10 @@ export default function AdminLoginPage() {
           </div>
           <div className="mt-4 flex flex-wrap gap-3">
             <Button onClick={handleLogin} disabled={loading}>
-              {loading ? "Dang xu ly..." : "Dang nhap"}
+              {loading ? "Đang xử lý..." : "Đăng nhập"}
             </Button>
-            <Link href="/" className="btn-ghost">
-              Ve trang chu
+            <Link href="/" className="button btnlight">
+              Về trang chủ
             </Link>
           </div>
         </div>

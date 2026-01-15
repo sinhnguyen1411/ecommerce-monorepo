@@ -1,141 +1,335 @@
 import Link from "next/link";
 
 import PostCard from "@/components/blog/PostCard";
-import SectionTitle from "@/components/common/SectionTitle";
 import ProductGrid from "@/components/product/ProductGrid";
-import { getCategories, getPosts, getProducts } from "@/lib/api";
-import { siteConfig } from "@/lib/site";
+import { getPosts, getProducts } from "@/lib/api";
 
 export const metadata = {
-  title: "Nong Nghiep TTC | Trang chu",
-  description: "San pham nong nghiep, tin tuc mua vu va cong dong nha nong."
+  title: "Nông nghiệp xanh TTC | Nông nghiệp TTC",
+  description: "Sản phẩm nông nghiệp, tin tức mùa vụ và góc chia sẻ của TTC."
 };
 
 export default async function HomePage() {
-  const [categories, featuredProducts, posts] = await Promise.all([
-    getCategories(),
-    getProducts({ featured: true, limit: 6 }),
+  const [featuredProducts, posts] = await Promise.all([
+    getProducts({ featured: true, limit: 8 }),
     getPosts()
   ]);
 
   return (
-    <div>
-      <section className="section-shell pb-8 pt-8">
-        <div className="grid gap-8 rounded-[32px] border border-forest/10 bg-white/80 p-7 md:grid-cols-[1.15fr_0.85fr]">
-          <div className="space-y-4">
-            <p className="pill">Nong san TTC</p>
-            <h1 className="text-3xl font-semibold md:text-4xl">
-              Giao nong san tu vuon den ban an trong ngay.
-            </h1>
-            <p className="text-sm text-ink/70">
-              Lua chon san pham tuoi sach, dat hang nhanh, tu van tan tinh. Dong bo du lieu tu he thong quan ly.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/products" className="rounded-full bg-forest px-5 py-2 text-sm font-semibold text-white">
-                Mua san pham
-              </Link>
-              <Link href="/blog" className="rounded-full border border-forest/20 px-5 py-2 text-sm font-semibold text-forest">
-                Doc tin tuc
+    <main className="mainWrapper--content">
+      <section className="section-home-slider">
+        <div className="home-slider">
+          <div className="home-slider__track">
+            <div className="home-slide">
+              <Link href="/collections/all" className="home-slide__link">
+                <picture>
+                  <source media="(min-width: 768px)" srcSet="/ttc/home/slide_1_img.jpg" />
+                  <source media="(max-width: 767px)" srcSet="/ttc/home/slide_1_mb.jpg" />
+                  <img src="/ttc/home/slide_1_img.jpg" alt="Chương trình khuyến mãi 1" />
+                </picture>
               </Link>
             </div>
-            <div className="grid gap-4 rounded-2xl bg-mist p-4 text-xs text-ink/70 sm:grid-cols-3">
-              <div>
-                <p className="uppercase tracking-[0.2em]">Giao nhanh</p>
-                <p className="mt-1 font-semibold">24 - 48 gio</p>
+            <div className="home-slide">
+              <Link href="/collections/all" className="home-slide__link">
+                <picture>
+                  <source media="(min-width: 768px)" srcSet="/ttc/home/slide_2_img.jpg" />
+                  <source media="(max-width: 767px)" srcSet="/ttc/home/slide_2_mb.jpg" />
+                  <img src="/ttc/home/slide_2_img.jpg" alt="Chương trình khuyến mãi 2" />
+                </picture>
+              </Link>
+            </div>
+          </div>
+          <div className="home-slider__pagination" aria-hidden="true">
+            <span />
+            <span />
+          </div>
+        </div>
+      </section>
+
+      <section className="section-home-introduce">
+        <div className="container">
+          <div className="section-title text-center">
+            <span className="sub-title">Định hướng phát triển sản phẩm</span>
+            <h2 className="title">Nông nghiệp xanh TTC</h2>
+          </div>
+          <div className="intro-grid">
+            <div className="intro-content">
+              <div className="block-introduce">
+                <div className="block-introduce__title">
+                  Giải pháp cho tương lai thông minh
+                </div>
+                <div className="block-introduce__desc">
+                  TTC Nông Nghiệp tự hào là đơn vị tiên phong trong việc xây dựng nền
+                  nông nghiệp xanh với giải pháp cho tương lai thông minh, bền vững.
+                  Với sứ mệnh đồng hành cùng nhà nông, TTC không ngừng nghiên cứu và
+                  phát triển các dòng sản phẩm thân thiện với môi trường như phân
+                  bón hữu cơ, chế phẩm sinh học và giải pháp xử lý đất trồng an
+                  toàn. Chúng tôi hiểu rằng để phát triển lâu dài, nông nghiệp phải
+                  đi đôi với bảo vệ tài nguyên thiên nhiên, cải thiện chất lượng
+                  đất, nước và hệ sinh thái canh tác. Định hướng của TTC Nông Nghiệp
+                  là ứng dụng công nghệ cao vào sản xuất, tối ưu năng suất mà vẫn
+                  đảm bảo an toàn cho sức khỏe người tiêu dùng. Các sản phẩm như
+                  phân bón sinh học, chế phẩm xử lý tuyến trùng của TTC không chỉ
+                  giúp cây trồng sinh trưởng mạnh mẽ mà còn góp phần giảm thiểu tác
+                  động tiêu cực đến môi trường. Chúng tôi cam kết mang đến cho bà
+                  con giải pháp canh tác hiệu quả, chi phí hợp lý và lợi ích lâu
+                  dài. Với TTC Nông Nghiệp, phát triển nông nghiệp xanh không chỉ
+                  là mục tiêu mà còn là trách nhiệm đối với thế hệ tương lai. Cùng
+                  TTC, vun đắp nền nông nghiệp bền vững từ hôm nay!
+                </div>
+                <div className="block-introduce__link">
+                  <span className="link1">
+                    <Link href="/collections/all" className="button">
+                      Tìm hiểu thêm
+                    </Link>
+                  </span>
+                  <span className="link2">
+                    <Link href="/pages/lien-he" className="button">
+                      Liên hệ đặt hàng
+                    </Link>
+                  </span>
+                </div>
               </div>
-              <div>
-                <p className="uppercase tracking-[0.2em]">Nguon hang</p>
-                <p className="mt-1 font-semibold">Nong trai doi tac</p>
-              </div>
-              <div>
-                <p className="uppercase tracking-[0.2em]">Ho tro</p>
-                <p className="mt-1 font-semibold">Tu van truc tiep</p>
+            </div>
+            <div className="intro-image">
+              <Link href="/collections/all" className="image-use-effect3">
+                <img src="/ttc/home/home_introduce_img.jpg" alt="Nông nghiệp xanh TTC" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section-home-banner">
+        <div className="container">
+          <div className="banner-block banner-left">
+            <div className="banner-block__left">
+              <Link href="/collections/all" className="image-use-effect3">
+                <img src="/ttc/home/home_banner_1_img.jpg" alt="Organic Master" />
+              </Link>
+            </div>
+            <div className="banner-block__right banner-block__info">
+              <div className="info">
+                <h3 className="title">ORGANIC MASTER</h3>
+                <p className="text">
+                  Phân bón hữu cơ Organic Master là giải pháp đột phá cho nông
+                  nghiệp xanh bền vững. Sản phẩm có hàm lượng OM 60%, Axit Fulvic
+                  36% và Amino Acid 26,5%, nhập khẩu trực tiếp từ Nhật Bản. Organic
+                  Master giúp cải tạo đất bạc màu, phục hồi cây suy yếu, tăng năng
+                  suất cây trồng đến 40%. Sản phẩm nuôi dưỡng đất và cây trồng theo
+                  mô hình hữu cơ, an toàn, thân thiện môi trường và phát triển lâu
+                  dài.
+                </p>
+                <ul>
+                  <li>
+                    Hàm lượng chất hữu cơ (OM): 60% + Giúp cải tạo đất, tăng độ tơi
+                    xốp, phục hồi đất bạc màu.
+                  </li>
+                  <li>
+                    Hàm lượng Axit Fulvic: 36% + Hỗ trợ cây hấp thụ dưỡng chất
+                    nhanh, mạnh rễ, bung đất.
+                  </li>
+                  <li>
+                    Hàm lượng Amino Acid: 26,5% + Tăng cường sức đề kháng cho cây,
+                    dưỡng xanh lá, dày trái, giúp phục hồi cây suy yếu.
+                  </li>
+                </ul>
+                <Link href="/collections/all" className="button">
+                  Xem chi tiết
+                </Link>
               </div>
             </div>
           </div>
-          <div className="relative h-[260px] overflow-hidden rounded-3xl bg-mist md:h-full">
-            <img src="/hero.svg" alt="Hero" className="h-full w-full object-cover" />
+          <div className="banner-block banner-right">
+            <div className="banner-block__left banner-block__info">
+              <div className="info">
+                <h3 className="title">MICROBIAL</h3>
+                <p className="text">
+                  Chế phẩm vi sinh Microbial là sản phẩm sinh học tiên tiến được
+                  nghiên cứu và sản xuất với thành phần chính gồm chủng vi sinh
+                  Bacillus (SP1), kết hợp các chất thảo mộc, enzyme, tinh dầu quế,
+                  hợp chất protein lên men và chất bám dính đặc biệt. Nhờ sự kết
+                  hợp này, chế phẩm có khả năng tiêu diệt tuyến trùng, sâu bệnh và
+                  côn trùng gây hại như ruồi vàng, sên, rệp một cách mạnh mẽ, hiệu
+                  quả cao và kéo dài. Không chỉ tác động phòng trừ dịch hại,
+                  Microbial còn giúp phân giải xenlulo, tạo điều kiện lý tưởng cho
+                  sự phát triển của rễ cây, cải thiện môi trường đất, cân bằng độ
+                  pH và tăng khả năng hấp thu dinh dưỡng cho cây trồng. Sản phẩm
+                  đặc biệt phù hợp cho các loại cây công nghiệp (tiêu, cà phê),
+                  cây ăn trái (cam, quýt, bưởi) và rau màu. Với ưu điểm an toàn,
+                  thân thiện môi trường và hiệu quả vượt trội, chế phẩm vi sinh
+                  Microbial là giải pháp sinh học bền vững cho nhà nông hiện đại.
+                </p>
+                <ul>
+                  <li>Tiêu diệt và ngăn chặn tuyến trùng hiệu quả</li>
+                  <li>Cân bằng độ pH và cải tạo đất</li>
+                  <li>Duy trì hệ vi sinh vật có lợi trong đất</li>
+                </ul>
+                <Link href="/collections/all" className="button">
+                  Xem chi tiết
+                </Link>
+              </div>
+            </div>
+            <div className="banner-block__right">
+              <Link href="/collections/all" className="image-use-effect3">
+                <img src="/ttc/home/home_banner_2_img.jpg" alt="Microbial" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="section-shell py-10">
-        <SectionTitle
-          eyebrow="Danh muc"
-          title="San pham theo mua vu"
-          description="Chon nhanh theo tung nhom san pham duoc ua chuong."
-        />
-        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/products?category=${category.slug}`}
-              className="rounded-[24px] border border-forest/10 bg-white/80 p-5 transition hover:-translate-y-1"
-            >
-              <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Danh muc</p>
-              <h3 className="mt-3 text-lg font-semibold">{category.name}</h3>
-              <p className="mt-2 text-sm text-ink/70">
-                {category.description || "San pham noi bat theo mua."}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="section-shell py-10">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <SectionTitle eyebrow="Noi bat" title="Gian hang san pham" />
-          <Link href="/products" className="text-sm font-semibold text-forest">
-            Xem tat ca
-          </Link>
-        </div>
-        <div className="mt-6 rounded-[32px] border border-forest/10 bg-white/90 p-6">
-          <ProductGrid products={featuredProducts} />
-        </div>
-      </section>
-
-      <section className="section-shell py-10">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <SectionTitle eyebrow="Tin tuc" title="Goc chia se" />
-          <Link href="/blog" className="text-sm font-semibold text-forest">
-            Doc them
-          </Link>
-        </div>
-        <div className="mt-6 grid gap-6 md:grid-cols-3">
-          {posts.slice(0, 3).map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </div>
-      </section>
-
-      <section className="section-shell py-10">
-        <div className="grid gap-6 rounded-[32px] border border-forest/10 bg-forest px-8 py-10 text-white md:grid-cols-[1.2fr_1fr]">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-white/70">Ban tin</p>
-            <h2 className="mt-3 text-2xl font-semibold">Nhan thong tin mua vu moi.</h2>
-            <p className="mt-2 text-sm text-white/70">Cap nhat san pham va uu dai tu TTC.</p>
-          </div>
-          <div className="flex flex-col gap-3">
-            <input className="h-10 rounded-full border border-white/20 bg-white/10 px-4 text-sm text-white placeholder:text-white/60" placeholder="Email cua ban" />
-            <button className="h-10 rounded-full bg-sun text-sm font-semibold text-ink">Dang ky</button>
+      <section className="section-home-feature">
+        <div className="container">
+          <div className="feature-grid">
+            <div className="feature-block">
+              <div className="feature-block__inner image-use-effect4">
+                <div className="feature-block__img">
+                  <img src="/ttc/home/home_feature_1_img.jpg" alt="FREESHIP TOÀN QUỐC" />
+                </div>
+                <div className="feature-block__title">
+                  <h4>FREESHIP TOÀN QUỐC</h4>
+                </div>
+                <div className="feature-block__content">
+                  <p>
+                    TTC Nông Nghiệp miễn phí vận chuyển toàn quốc cho các sản phẩm
+                    như phân bón, chai xử lý tuyến trùng, hỗ trợ giao hàng nhanh
+                    chóng, đảm bảo chất lượng đến tận tay khách hàng.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="feature-block">
+              <div className="feature-block__inner image-use-effect4">
+                <div className="feature-block__img">
+                  <img src="/ttc/home/home_feature_2_img.jpg" alt="TĂNG NĂNG SUẤT VƯỢT TRỘI" />
+                </div>
+                <div className="feature-block__title">
+                  <h4>TĂNG NĂNG SUẤT VƯỢT TRỘI</h4>
+                </div>
+                <div className="feature-block__content">
+                  <p>
+                    Sản phẩm của TTC Nông Nghiệp giúp tăng năng suất cây trồng vượt
+                    trội, cải thiện chất lượng nông sản, tối ưu chi phí đầu tư và
+                    mang lại hiệu quả kinh tế bền vững cho nhà nông.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="feature-block">
+              <div className="feature-block__inner image-use-effect4">
+                <div className="feature-block__img">
+                  <img src="/ttc/home/home_feature_3_img.jpg" alt="HỖ TRỢ 24/7" />
+                </div>
+                <div className="feature-block__title">
+                  <h4>HỖ TRỢ 24/7</h4>
+                </div>
+                <div className="feature-block__content">
+                  <p>
+                    TTC Nông Nghiệp cam kết hỗ trợ 24/7 cho khách hàng, tư vấn
+                    nhanh chóng về phân bón, chai xử lý tuyến trùng và các sản phẩm
+                    nông nghiệp chất lượng cao.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="section-shell pb-16 pt-10">
-        <div className="grid gap-6 rounded-[32px] border border-forest/10 bg-white/90 p-8 md:grid-cols-[1.1fr_1fr]">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Lien he</p>
-            <h2 className="mt-3 text-2xl font-semibold">Can tu van nong san?</h2>
-            <p className="mt-2 text-sm text-ink/70">Doi ngu TTC luon san sang ho tro.</p>
+      <section className="section-home-collection collection-product collection-product-slide">
+        <div className="container">
+          <div className="section-title text-center">
+            <span className="sub-title style-italic">Sản phẩm nổi bật</span>
+            <h2 className="title">
+              <Link href="/collections/hot-products">Sản phẩm của TTC</Link>
+            </h2>
           </div>
-          <div className="space-y-2 text-sm text-ink/70">
-            <p>{siteConfig.address}</p>
-            <p>{siteConfig.phone}</p>
-            <p>{siteConfig.email}</p>
+          <div className="section-content">
+            <div className="collection-grid">
+              <ProductGrid products={featuredProducts} />
+            </div>
           </div>
         </div>
       </section>
-    </div>
+
+      <section className="section-home-aboutus">
+        <div className="container">
+          <div className="section-content">
+            <div className="aboutus-block text-center">
+              <div className="aboutus-block__text">
+                <h4>Nông nghiệp xanh TTC</h4>
+                <h3>Nông nghiệp hữu cơ bền vững</h3>
+                <p>Giải pháp cho tương lai thông minh</p>
+              </div>
+              <div className="aboutus-block__link">
+                <span className="link1">
+                  <Link href="/pages/lien-he" className="button">
+                    Liên hệ đặt hàng
+                  </Link>
+                </span>
+                <span className="link2">
+                  <Link href="/pages/locations" className="button">
+                    Tìm hiểu thêm
+                  </Link>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section-home-blogs">
+        <div className="container">
+          <div className="section-title text-center">
+            <h2 className="title">
+              <Link href="/blogs/news">Bài viết mới nhất</Link>
+            </h2>
+          </div>
+          <div className="section-content">
+            <div className="home-blogs">
+              {posts.slice(0, 5).map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section-home-newsletter">
+        <div className="container">
+          <div className="section-title text-center">
+            <span className="sub-title style-italic">Tin tức của chúng tôi</span>
+            <h2 className="title">Đăng ký nhận tin</h2>
+          </div>
+          <div className="section-content">
+            <div className="newsletter-block">
+              <div className="newsletter-content newsletter-form">
+                <form className="newsletter-form" action="#" method="post">
+                  <div className="form-group">
+                    <span className="icon-email" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 512 512">
+                        <path d="M485.743 85.333H26.257C11.815 85.333 0 97.148 0 111.589V400.41C0 414.85 11.815 426.667 26.257 426.667h459.487C500.185 426.667 512 414.85 512 400.41V111.589c0-14.441-11.815-26.256-26.257-26.256zM475.89 105.024 271.104 258.626c-3.682 2.802-9.334 4.555-15.105 4.529-5.77.026-11.421-1.727-15.104-4.529L36.109 105.024H475.89zM366.5 268.761l111.59 137.847c.112.138.249.243.368.368H33.542c.118-.131.256-.23.368-.368L145.5 268.761c3.419-4.227 2.771-10.424-1.464-13.851-4.227-3.419-10.424-2.771-13.844 1.457L19.692 392.868V117.332l209.394 157.046c7.871 5.862 17.447 8.442 26.912 8.468 9.452-.02 19.036-2.6 26.912-8.468L492.304 117.332v275.534L381.807 256.367c-3.42-4.227-9.623-4.877-13.844-1.457-4.234 3.419-4.884 9.624-1.463 13.851z" />
+                      </svg>
+                    </span>
+                    <input
+                      required
+                      type="email"
+                      name="contact[email]"
+                      className="newsletter-input"
+                      placeholder="Nhập email của bạn"
+                      aria-label="Email"
+                    />
+                    <button type="submit" className="button newsletter-btn">
+                      Đăng ký
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

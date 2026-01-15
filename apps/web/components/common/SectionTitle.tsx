@@ -12,11 +12,11 @@ export default function SectionTitle({
   className?: string;
 }) {
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("space-y-2", className)}>
       {eyebrow ? (
-        <p className="text-xs uppercase tracking-[0.2em] text-forest/70">{eyebrow}</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-ink/50">{eyebrow}</p>
       ) : null}
-      <h2 className="text-2xl font-semibold md:text-3xl">{title}</h2>
+      <h2 className="text-xl font-semibold md:text-2xl">{title}</h2>
       {description ? <p className="text-sm text-ink/70">{description}</p> : null}
     </div>
   );

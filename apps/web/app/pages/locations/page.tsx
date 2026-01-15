@@ -4,8 +4,8 @@ import { getLocations } from "@/lib/api";
 import LocationsClient from "./LocationsClient";
 
 export const metadata = {
-  title: "Cua hang | Nong Nghiep TTC",
-  description: "Danh sach diem nhan hang va cua hang TTC."
+  title: "Cửa hàng | Nông nghiệp TTC",
+  description: "Danh sách điểm nhận hàng và cửa hàng TTC."
 };
 
 export default async function LocationsPage() {
@@ -15,9 +15,9 @@ export default async function LocationsPage() {
     <div>
       <section className="section-shell pb-6 pt-14">
         <SectionTitle
-          eyebrow="Cua hang"
-          title="Diem nhan hang TTC"
-          description="Tim kiem dia diem gan ban nhat va nhan hang tai cua hang."
+          eyebrow="Cửa hàng"
+          title="Điểm nhận hàng TTC"
+          description="Tìm kiếm địa điểm gần bạn nhất và nhận hàng tại cửa hàng."
         />
       </section>
 

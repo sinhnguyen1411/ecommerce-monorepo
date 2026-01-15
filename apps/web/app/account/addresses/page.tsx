@@ -84,13 +84,13 @@ export default function AddressesPage() {
     return (
       <div className="section-shell pb-16 pt-14">
         <SectionTitle
-          eyebrow="Tai khoan"
-          title="Dang nhap de quan ly dia chi"
-          description="Vui long dang nhap bang Google."
+          eyebrow="Tài khoản"
+          title="Đăng nhập để quản lý địa chỉ"
+          description="Vui lòng đăng nhập bằng Google."
         />
         <div className="mt-6">
           <Link className="btn-primary" href="/login">
-            Di den trang dang nhap
+            Đi đến trang đăng nhập
           </Link>
         </div>
       </div>
@@ -101,21 +101,21 @@ export default function AddressesPage() {
     <div>
       <section className="section-shell pb-6 pt-14">
         <SectionTitle
-          eyebrow="Tai khoan"
-          title="Dia chi giao hang"
-          description="Quan ly dia chi giao hang cua ban."
+          eyebrow="Tài khoản"
+          title="Địa chỉ giao hàng"
+          description="Quản lý địa chỉ giao hàng của bạn."
         />
       </section>
 
       <section className="section-shell pb-16">
         {error ? <p className="text-sm text-clay">{error}</p> : null}
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-            <h2 className="text-lg font-semibold">Danh sach dia chi</h2>
+          <div className="border border-forest/10 bg-white p-6">
+            <h2 className="text-lg font-semibold">Danh sách địa chỉ</h2>
             {loading ? (
-              <p className="mt-4 text-sm text-ink/70">Dang tai...</p>
+              <p className="mt-4 text-sm text-ink/70">Đang tải...</p>
             ) : items.length === 0 ? (
-              <p className="mt-4 text-sm text-ink/70">Chua co dia chi.</p>
+              <p className="mt-4 text-sm text-ink/70">Chưa có địa chỉ.</p>
             ) : (
               <div className="mt-4 space-y-4">
                 {items.map((item) => (
@@ -124,7 +124,7 @@ export default function AddressesPage() {
                       <h3 className="text-sm font-semibold">{item.full_name}</h3>
                       {item.is_default ? (
                         <span className="rounded-full bg-forest/10 px-3 py-1 text-xs font-semibold text-forest">
-                          Mac dinh
+                          Mặc định
                         </span>
                       ) : null}
                     </div>
@@ -139,10 +139,10 @@ export default function AddressesPage() {
                         size="sm"
                         onClick={() => handleUpdate({ ...item, is_default: true })}
                       >
-                        Dat mac dinh
+                        Đặt mặc định
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)}>
-                        Xoa
+                        Xóa
                       </Button>
                     </div>
                   </div>
@@ -151,38 +151,38 @@ export default function AddressesPage() {
             )}
           </div>
 
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-            <h2 className="text-lg font-semibold">Them dia chi</h2>
+          <div className="border border-forest/10 bg-white p-6">
+            <h2 className="text-lg font-semibold">Thêm địa chỉ</h2>
             <div className="mt-4 grid gap-3">
               <input
                 className="field"
                 value={form.full_name}
                 onChange={(event) => setForm({ ...form, full_name: event.target.value })}
-                placeholder="Ho va ten"
+                placeholder="Họ và tên"
               />
               <input
                 className="field"
                 value={form.phone}
                 onChange={(event) => setForm({ ...form, phone: event.target.value })}
-                placeholder="So dien thoai"
+                placeholder="Số điện thoại"
               />
               <input
                 className="field"
                 value={form.address_line}
                 onChange={(event) => setForm({ ...form, address_line: event.target.value })}
-                placeholder="Dia chi"
+                placeholder="Địa chỉ"
               />
               <input
                 className="field"
                 value={form.district}
                 onChange={(event) => setForm({ ...form, district: event.target.value })}
-                placeholder="Quan / Huyen"
+                placeholder="Quận / Huyện"
               />
               <input
                 className="field"
                 value={form.province}
                 onChange={(event) => setForm({ ...form, province: event.target.value })}
-                placeholder="Tinh / Thanh"
+                placeholder="Tỉnh / Thành"
               />
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -190,9 +190,9 @@ export default function AddressesPage() {
                   checked={form.is_default}
                   onChange={(event) => setForm({ ...form, is_default: event.target.checked })}
                 />
-                Dat lam dia chi mac dinh
+                Đặt làm địa chỉ mặc định
               </label>
-              <Button onClick={handleCreate}>Them dia chi</Button>
+              <Button onClick={handleCreate}>Thêm địa chỉ</Button>
             </div>
           </div>
         </div>

@@ -1,61 +1,147 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { formatCurrency } from "@/lib/format";
-import { siteConfig } from "@/lib/site";
 import { getCartSubtotal, useCartStore } from "@/store/cart";
+
+const deliverySlots = [
+  "08:00 - 09:00",
+  "09:00 - 10:00",
+  "10:00 - 11:00",
+  "11:00 - 12:00",
+  "13:00 - 14:00",
+  "14:00 - 15:00",
+  "15:00 - 16:00",
+  "16:00 - 17:00",
+  "17:00 - 18:00"
+];
 
 export default function CartSummary() {
   const items = useCartStore((state) => state.items);
+  const deliveryTime = useCartStore((state) => state.deliveryTime);
+  const setDeliveryTime = useCartStore((state) => state.setDeliveryTime);
   const subtotal = getCartSubtotal(items);
-  const freeThreshold = siteConfig.freeShippingThreshold;
   const minOrder = siteConfig.minOrderAmount;
-  const progress = freeThreshold > 0 ? Math.min(subtotal / freeThreshold, 1) : 0;
   const meetsMinOrder = minOrder === 0 || subtotal >= minOrder;
+  const [deliveryMode, setDeliveryMode] = useState("standard");
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliverySlot, setDeliverySlot] = useState("");
+
+  useEffect(() => {
+    if (deliveryMode === "scheduled") {
+      const value = [deliveryDate, deliverySlot].filter(Boolean).join(" ");
+      setDeliveryTime(value);
+    } else {
+      setDeliveryTime("Giao khi có hàng");
+    }
+  }, [deliveryMode, deliveryDate, deliverySlot, setDeliveryTime]);
 
   return (
-    <div className="rounded-[28px] border border-forest/10 bg-white/80 p-6">
-      <h3 className="text-lg font-semibold">Tong quan</h3>
-      <div className="mt-4 space-y-2 text-sm text-ink/70">
-        <div className="flex items-center justify-between">
-          <span>Tam tinh</span>
-          <span>{formatCurrency(subtotal)}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Phi van chuyen</span>
-          <span>
-            {freeThreshold > 0 && subtotal >= freeThreshold ? "Mien phi" : "Tinh khi giao"}
-          </span>
-        </div>
-      </div>
-      {freeThreshold > 0 ? (
-        <div className="mt-5">
-          <div className="flex items-center justify-between text-xs text-ink/60">
-            <span>Free ship</span>
-            <span>{Math.round(progress * 100)}%</span>
+    <>
+      <div className="order-summary-block">
+        <h2 className="summary-title">Thông tin đơn hàng</h2>
+        <div className="summary-time">
+          <div className="summary-time__row">
+            <div className="boxtime-title">
+              <p className="txt-title">Thời gian giao hàng</p>
+              <p className="txt-time">
+                <span>{deliveryMode === "scheduled" ? "Chọn thời gian" : "Giao khi có hàng"}</span>
+              </p>
+            </div>
+            <div className="boxtime-radio">
+              <label className="radio-item">
+                <input
+                  className="input-radio"
+                  type="radio"
+                  name="delivery-mode"
+                  value="standard"
+                  checked={deliveryMode === "standard"}
+                  onChange={(event) => setDeliveryMode(event.target.value)}
+                />
+                Giao khi có hàng
+              </label>
+              <label className="radio-item">
+                <input
+                  className="input-radio"
+                  type="radio"
+                  name="delivery-mode"
+                  value="scheduled"
+                  checked={deliveryMode === "scheduled"}
+                  onChange={(event) => setDeliveryMode(event.target.value)}
+                />
+                Chọn thời gian
+              </label>
+            </div>
           </div>
-          <div className="mt-2 h-2 rounded-full bg-mist">
-            <div className="h-2 rounded-full bg-forest" style={{ width: `${progress * 100}%` }} />
-          </div>
-          {subtotal < freeThreshold ? (
-            <p className="mt-2 text-xs text-ink/60">
-              Can them {formatCurrency(freeThreshold - subtotal)} de duoc free ship.
-            </p>
+          {deliveryMode === "scheduled" ? (
+            <div className="summary-time__row">
+              <div className="boxtime-select">
+                <div className="select-box">
+                  <label>Ngày giao</label>
+                  <input
+                    className="form-control"
+                    type="date"
+                    value={deliveryDate}
+                    onChange={(event) => setDeliveryDate(event.target.value)}
+                  />
+                </div>
+                <div className="select-box">
+                  <label>Thời gian giao</label>
+                  <select
+                    className="form-control"
+                    value={deliverySlot}
+                    onChange={(event) => setDeliverySlot(event.target.value)}
+                  >
+                    <option value="">Chọn thời gian</option>
+                    {deliverySlots.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {deliveryTime ? <p className="summary-time__note">Lịch giao: {deliveryTime}</p> : null}
+        </div>
+
+        <div className="summary-total">
+          <p>
+            Tổng tiền: <span>{formatCurrency(subtotal)}</span>
+          </p>
+        </div>
+        <div className="summary-action">
+          <p>Phí vận chuyển sẽ được tính ở trang thanh toán.</p>
+          <p>Bạn cũng có thể nhập mã giảm giá ở trang thanh toán.</p>
+          {!meetsMinOrder ? (
+            <div className="summary-alert">Giỏ hàng của bạn hiện chưa đạt mức tối thiểu để thanh toán.</div>
           ) : null}
         </div>
-      ) : null}
+        <div className="summary-button">
+          <Link
+            href="/checkout"
+            className={`checkout-btn btnred ${meetsMinOrder ? "" : "disabled"}`}
+          >
+            THANH TOÁN
+          </Link>
+        </div>
+      </div>
       {minOrder > 0 ? (
-        <p className="mt-4 text-xs text-ink/60">Don hang toi thieu: {formatCurrency(minOrder)}</p>
+        <div className="order-summary-block order-summary-notify">
+          <div className="summary-warning">
+            <p className="textmr">
+              <strong>Chính sách mua hàng</strong>:
+            </p>
+            <p>
+              Hiện chúng tôi chỉ áp dụng thanh toán với đơn hàng có giá trị tối thiểu{" "}
+              <strong>{formatCurrency(minOrder)}</strong> trở lên.
+            </p>
+          </div>
+        </div>
       ) : null}
-      <Link
-        href="/checkout"
-        className={`mt-6 inline-flex w-full items-center justify-center rounded-full bg-forest px-5 py-2 text-sm font-semibold text-white ${
-          meetsMinOrder ? "" : "pointer-events-none opacity-50"
-        }`}
-      >
-        Thanh toan
-      </Link>
-    </div>
+    </>
   );
 }

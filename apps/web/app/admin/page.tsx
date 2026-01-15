@@ -93,12 +93,12 @@ export default function AdminDashboardPage() {
       <div className="section-shell pb-16 pt-14">
         <SectionTitle
           eyebrow="Admin"
-          title="Dang nhap quan tri"
-          description="Vui long dang nhap de quan ly noi dung."
+          title="Đăng nhập quản trị"
+          description="Vui lòng đăng nhập để quản lý nội dung."
         />
         <div className="mt-6">
           <Link className="btn-primary" href="/admin/login">
-            Di den trang dang nhap
+            Đi đến trang đăng nhập
           </Link>
         </div>
       </div>
@@ -111,7 +111,7 @@ export default function AdminDashboardPage() {
         <SectionTitle
           eyebrow="Admin"
           title="Bang dieu khien"
-          description="Quan ly san pham, bai viet, don hang va thanh toan."
+          description="Quản lý sản phẩm, bài viết, đơn hàng và thanh toán."
         />
       </section>
 
@@ -121,7 +121,7 @@ export default function AdminDashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Tai len hinh anh</h2>
-              <p className="text-sm text-ink/70">Dung URL nay cho anh san pham/bai viet.</p>
+              <p className="text-sm text-ink/70">Dùng URL này cho ảnh sản phẩm/bài viết.</p>
             </div>
             <input type="file" onChange={(event) => handleUpload(event.target.files?.[0] || null)} />
           </div>
@@ -132,12 +132,12 @@ export default function AdminDashboardPage() {
 
         <Tabs defaultValue="products">
           <TabsList>
-            <TabsTrigger value="products">San pham</TabsTrigger>
-            <TabsTrigger value="categories">Danh muc</TabsTrigger>
-            <TabsTrigger value="posts">Tin tuc</TabsTrigger>
-            <TabsTrigger value="qna">Hoi dap</TabsTrigger>
-            <TabsTrigger value="orders">Don hang</TabsTrigger>
-            <TabsTrigger value="payments">Thanh toan</TabsTrigger>
+            <TabsTrigger value="products">Sản phẩm</TabsTrigger>
+            <TabsTrigger value="categories">Danh mục</TabsTrigger>
+            <TabsTrigger value="posts">Tin tức</TabsTrigger>
+            <TabsTrigger value="qna">Hỏi đáp</TabsTrigger>
+            <TabsTrigger value="orders">Đơn hàng</TabsTrigger>
+            <TabsTrigger value="payments">Thanh toán</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products" className="pt-6">
@@ -178,7 +178,7 @@ export default function AdminDashboardPage() {
               window.location.reload();
             }}
           >
-            Dang xuat admin
+            Đăng xuất admin
           </Button>
         </div>
       </section>
@@ -257,7 +257,7 @@ function AdminProducts({
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Danh sach san pham</h3>
+        <h3 className="text-lg font-semibold">Danh sách sản phẩm</h3>
         <div className="mt-4 space-y-4">
           {products.map((product) => (
             <div key={product.id} className="rounded-2xl border border-forest/10 bg-white/80 p-4">
@@ -288,7 +288,7 @@ function AdminProducts({
                       )
                   }
                 >
-                  Xoa
+                  Xóa
                 </Button>
               </div>
             </div>
@@ -297,9 +297,9 @@ function AdminProducts({
       </div>
 
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Them san pham</h3>
+        <h3 className="text-lg font-semibold">Thêm sản phẩm</h3>
         <div className="mt-4 grid gap-3">
-          <input className="field" placeholder="Ten san pham" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+          <input className="field" placeholder="Tên sản phẩm" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
           <input className="field" placeholder="Slug" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} />
           <input className="field" placeholder="Gia" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
           <input className="field" placeholder="Gia giam" value={form.compare_at_price} onChange={(event) => setForm({ ...form, compare_at_price: event.target.value })} />
@@ -310,11 +310,11 @@ function AdminProducts({
           <input className="field" placeholder="Image URL" value={form.image_url} onChange={(event) => setForm({ ...form, image_url: event.target.value })} />
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.featured} onChange={(event) => setForm({ ...form, featured: event.target.checked })} />
-            San pham noi bat
+            Sản phẩm nổi bật
           </label>
-          <Button onClick={handleCreate}>Tao san pham</Button>
+          <Button onClick={handleCreate}>Tạo sản phẩm</Button>
         </div>
-        <p className="mt-4 text-xs text-ink/60">Danh muc co san: {categories.map((cat) => `${cat.id}:${cat.name}`).join(" | ")}</p>
+        <p className="mt-4 text-xs text-ink/60">Danh mục có sẵn: {categories.map((cat) => `${cat.id}:${cat.name}`).join(" | ")}</p>
       </div>
     </div>
   );
@@ -349,7 +349,7 @@ function AdminCategories({
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Danh sach danh muc</h3>
+        <h3 className="text-lg font-semibold">Danh sách danh mục</h3>
         <div className="mt-4 space-y-3">
           {categories.map((category) => (
             <div key={category.id} className="flex items-center justify-between rounded-2xl border border-forest/10 bg-white/80 p-4 text-sm">
@@ -368,20 +368,20 @@ function AdminCategories({
                     )
                 }
               >
-                Xoa
+                Xóa
               </Button>
             </div>
           ))}
         </div>
       </div>
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Them danh muc</h3>
+        <h3 className="text-lg font-semibold">Thêm danh mục</h3>
         <div className="mt-4 grid gap-3">
-          <input className="field" placeholder="Ten" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+          <input className="field" placeholder="Tên" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
           <input className="field" placeholder="Slug" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} />
           <input className="field" placeholder="Thu tu" value={form.sort_order} onChange={(event) => setForm({ ...form, sort_order: event.target.value })} />
           <textarea className="field h-24" placeholder="Mo ta" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-          <Button onClick={handleCreate}>Tao danh muc</Button>
+          <Button onClick={handleCreate}>Tạo danh mục</Button>
         </div>
       </div>
     </div>
@@ -442,7 +442,7 @@ function AdminPosts({
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Danh sach bai viet</h3>
+        <h3 className="text-lg font-semibold">Danh sách bài viết</h3>
         <div className="mt-4 space-y-3">
           {posts.map((post) => (
             <div key={post.id} className="rounded-2xl border border-forest/10 bg-white/80 p-4">
@@ -462,7 +462,7 @@ function AdminPosts({
                       )
                   }
                 >
-                  Xoa
+                  Xóa
                 </Button>
               </div>
             </div>
@@ -470,7 +470,7 @@ function AdminPosts({
         </div>
       </div>
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Them bai viet</h3>
+        <h3 className="text-lg font-semibold">Thêm bài viết</h3>
         <div className="mt-4 grid gap-3">
           <input className="field" placeholder="Tieu de" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
           <input className="field" placeholder="Slug" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} />
@@ -479,7 +479,7 @@ function AdminPosts({
           <input className="field" placeholder="Published at (YYYY-MM-DD HH:MM:SS)" value={form.published_at} onChange={(event) => setForm({ ...form, published_at: event.target.value })} />
           <textarea className="field h-20" placeholder="Excerpt" value={form.excerpt} onChange={(event) => setForm({ ...form, excerpt: event.target.value })} />
           <textarea className="field h-32" placeholder="Content" value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} />
-          <Button onClick={handleCreate}>Tao bai viet</Button>
+          <Button onClick={handleCreate}>Tạo bài viết</Button>
         </div>
       </div>
     </div>
@@ -515,7 +515,7 @@ function AdminQnASection({
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Danh sach hoi dap</h3>
+        <h3 className="text-lg font-semibold">Danh sách hỏi đáp</h3>
         <div className="mt-4 space-y-3">
           {items.map((item) => (
             <div key={item.id} className="rounded-2xl border border-forest/10 bg-white/80 p-4">
@@ -532,18 +532,18 @@ function AdminQnASection({
                     )
                 }
               >
-                Xoa
+                Xóa
               </Button>
             </div>
           ))}
         </div>
       </div>
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Them hoi dap</h3>
+        <h3 className="text-lg font-semibold">Thêm hỏi đáp</h3>
         <div className="mt-4 grid gap-3">
-          <input className="field" placeholder="Cau hoi" value={form.question} onChange={(event) => setForm({ ...form, question: event.target.value })} />
+          <input className="field" placeholder="Câu hỏi" value={form.question} onChange={(event) => setForm({ ...form, question: event.target.value })} />
           <textarea className="field h-24" placeholder="Tra loi" value={form.answer} onChange={(event) => setForm({ ...form, answer: event.target.value })} />
-          <Button onClick={handleCreate}>Tao hoi dap</Button>
+          <Button onClick={handleCreate}>Tạo hỏi đáp</Button>
         </div>
       </div>
     </div>
@@ -614,7 +614,7 @@ function AdminOrders({
               </select>
             </label>
             <label className="text-sm">
-              Thanh toan
+              Thanh toán
               <select
                 className="field mt-2"
                 defaultValue={order.payment_status}
@@ -695,7 +695,7 @@ function AdminPayments({
 
   return (
     <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-      <h3 className="text-lg font-semibold">Cau hinh thanh toan</h3>
+      <h3 className="text-lg font-semibold">Cấu hình thanh toán</h3>
       <div className="mt-4 grid gap-3">
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -721,7 +721,7 @@ function AdminPayments({
           />
           QR Ngan hang
         </label>
-        <input className="field" placeholder="Ten ngan hang" value={form.bank_name} onChange={(event) => setForm({ ...form, bank_name: event.target.value })} />
+        <input className="field" placeholder="Tên ngân hàng" value={form.bank_name} onChange={(event) => setForm({ ...form, bank_name: event.target.value })} />
         <input className="field" placeholder="So tai khoan" value={form.bank_account} onChange={(event) => setForm({ ...form, bank_account: event.target.value })} />
         <input className="field" placeholder="Chu tai khoan" value={form.bank_holder} onChange={(event) => setForm({ ...form, bank_holder: event.target.value })} />
         <input className="field" placeholder="QR payload" value={form.bank_qr_payload} onChange={(event) => setForm({ ...form, bank_qr_payload: event.target.value })} />

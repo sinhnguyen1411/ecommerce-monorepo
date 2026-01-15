@@ -23,7 +23,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="relative overflow-hidden rounded-2xl bg-mist">
         {onSale ? (
           <span className="absolute left-4 top-4 z-10 rounded-full bg-clay px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cream">
-            Giam gia
+            Giảm giá
           </span>
         ) : null}
         <Link href={`/products/${product.slug}`} className="block">
@@ -36,7 +36,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-sm text-ink/50">
-                Chua co anh
+                Chưa có ảnh
               </div>
             )}
           </div>
@@ -56,7 +56,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <p className="mt-2 text-sm text-ink/70">
           {product.description
             ? product.description.slice(0, 90).trim() + "..."
-            : "San pham duoc lua chon tu cac vuon trong doi tac."}
+            : "Sản phẩm được lựa chọn từ các vườn trồng đối tác."}
         </p>
         <div className="mt-4 flex items-baseline gap-2">
           <span className="text-lg font-semibold">

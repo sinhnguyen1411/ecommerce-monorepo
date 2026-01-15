@@ -40,7 +40,7 @@ func (s *Server) ListProducts(c *gin.Context) {
 	limitParam := c.Query("limit")
 
 	query := strings.Builder{}
-	query.WriteString("SELECT DISTINCT p.id, p.name, p.slug, IFNULL(p.description, ''), p.price, p.compare_at_price, p.featured ")
+	query.WriteString("SELECT DISTINCT p.id, p.name, p.slug, IFNULL(p.description, ''), p.price, p.compare_at_price, p.featured, p.created_at ")
 	query.WriteString("FROM products p ")
 
 	args := make([]any, 0)
@@ -88,7 +88,8 @@ func (s *Server) ListProducts(c *gin.Context) {
 	for rows.Next() {
 		var product Product
 		var compareAt sql.NullFloat64
-		if err := rows.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured); err != nil {
+		var createdAt sql.NullTime
+		if err := rows.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured, &createdAt); err != nil {
 			respondError(c, http.StatusInternalServerError, "db_error", "Failed to parse products")
 			return
 		}

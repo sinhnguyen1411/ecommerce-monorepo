@@ -4,14 +4,14 @@ export default function NotFound() {
   return (
     <section className="section-shell py-20">
       <div className="card-surface mx-auto max-w-2xl p-10 text-center">
-        <p className="pill mx-auto w-fit">Khong tim thay</p>
-        <h1 className="mt-6 text-3xl font-semibold">Trang ban tim khong ton tai.</h1>
+        <p className="pill mx-auto w-fit">Không tìm thấy</p>
+        <h1 className="mt-6 text-3xl font-semibold">Trang bạn tìm không tồn tại.</h1>
         <p className="mt-4 text-ink/70">
-          Hay quay ve trang chu hoac tiep tuc mua sam.
+          Hãy quay về trang chủ hoặc tiếp tục mua sắm.
         </p>
         <div className="mt-8">
           <Link className="btn-primary" href="/">
-            Ve trang chu
+            Về trang chủ
           </Link>
         </div>
       </div>

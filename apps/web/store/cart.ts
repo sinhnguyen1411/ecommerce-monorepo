@@ -1,4 +1,4 @@
-﻿import { create } from "zustand";
+import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type CartItem = {
@@ -17,7 +17,7 @@ type CartState = {
   promoCode: string;
   deliveryTime: string;
   isOpen: boolean;
-  addItem: (item: Omit<CartItem, "quantity">) => void;
+  addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   removeItem: (id: number) => void;
   incQty: (id: number) => void;
   decQty: (id: number) => void;
@@ -40,12 +40,14 @@ export const useCartStore = create<CartState>()(
       isOpen: false,
       addItem: (item) => {
         const items = get().items;
+        const amount = item.quantity && item.quantity > 0 ? item.quantity : 1;
+        const { quantity: _quantity, ...rest } = item;
         const existing = items.find((entry) => entry.id === item.id);
         if (existing) {
           set({
             items: items.map((entry) =>
               entry.id === item.id
-                ? { ...entry, quantity: entry.quantity + 1 }
+                ? { ...entry, quantity: entry.quantity + amount }
                 : entry
             ),
             isOpen: true
@@ -53,7 +55,10 @@ export const useCartStore = create<CartState>()(
           return;
         }
 
-        set({ items: [...items, { ...item, quantity: 1 }], isOpen: true });
+        set({
+          items: [...items, { ...rest, quantity: amount }],
+          isOpen: true
+        });
       },
       removeItem: (id) => {
         set({ items: get().items.filter((item) => item.id !== id) });

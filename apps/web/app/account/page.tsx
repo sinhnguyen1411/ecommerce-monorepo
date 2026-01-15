@@ -59,16 +59,16 @@ export default function AccountPage() {
     return (
       <div>
         <section className="section-shell pb-10 pt-14">
-          <SectionTitle
-            eyebrow="Tai khoan"
-            title="Dang nhap de tiep tuc"
-            description="Dang nhap bang Google de quan ly tai khoan va don hang."
-          />
+        <SectionTitle
+          eyebrow="Tài khoản"
+          title="Đăng nhập để tiếp tục"
+          description="Đăng nhập bằng Google để quản lý tài khoản và đơn hàng."
+        />
         </section>
         <section className="section-shell pb-16">
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-8 text-center">
-            <Link className="btn-primary" href="/login">
-              Di den trang dang nhap
+          <div className="border border-forest/10 bg-white p-8 text-center">
+            <Link className="button" href="/login">
+              Đi đến trang đăng nhập
             </Link>
           </div>
         </section>
@@ -80,35 +80,35 @@ export default function AccountPage() {
     <div>
       <section className="section-shell pb-6 pt-14">
         <SectionTitle
-          eyebrow="Tai khoan"
-          title="Thong tin tai khoan"
-          description="Cap nhat thong tin ca nhan va quan ly don hang."
+          eyebrow="Tài khoản"
+          title="Thông tin tài khoản"
+          description="Cập nhật thông tin cá nhân và quản lý đơn hàng."
         />
       </section>
 
       <section className="section-shell pb-16">
         <div className="grid gap-6 lg:grid-cols-[1fr_0.4fr]">
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-            <h2 className="text-lg font-semibold">Ho so</h2>
+          <div className="border border-forest/10 bg-white p-6">
+            <h2 className="text-lg font-semibold">Hồ sơ</h2>
             {error ? <p className="mt-3 text-sm text-clay">{error}</p> : null}
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <input
                 className="field"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Ho va ten"
+                placeholder="Họ và tên"
               />
               <input
                 className="field"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
-                placeholder="So dien thoai"
+                placeholder="Số điện thoại"
               />
               <input className="field" value={profile?.email || ""} readOnly />
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Dang luu..." : "Luu thay doi"}
+                {saving ? "Đang lưu..." : "Lưu thay đổi"}
               </Button>
               <Button
                 variant="outline"
@@ -117,19 +117,19 @@ export default function AccountPage() {
                   window.location.reload();
                 }}
               >
-                Dang xuat
+                Đăng xuất
               </Button>
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-            <h3 className="text-lg font-semibold">Quan ly</h3>
+          <div className="border border-forest/10 bg-white p-6">
+            <h3 className="text-lg font-semibold">Quản lý</h3>
             <div className="mt-4 space-y-2 text-sm text-ink/70">
               <Link className="block text-forest" href="/account/addresses">
-                Dia chi giao hang
+                Địa chỉ giao hàng
               </Link>
               <Link className="block text-forest" href="/account/orders">
-                Don hang cua toi
+                Đơn hàng của tôi
               </Link>
             </div>
           </div>

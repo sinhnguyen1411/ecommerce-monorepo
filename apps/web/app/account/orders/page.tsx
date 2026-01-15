@@ -28,13 +28,13 @@ export default function OrdersPage() {
     return (
       <div className="section-shell pb-16 pt-14">
         <SectionTitle
-          eyebrow="Tai khoan"
-          title="Dang nhap de xem don hang"
-          description="Vui long dang nhap bang Google."
+          eyebrow="Tài khoản"
+          title="Đăng nhập để xem đơn hàng"
+          description="Vui lòng đăng nhập bằng Google."
         />
         <div className="mt-6">
           <Link className="btn-primary" href="/login">
-            Di den trang dang nhap
+            Đi đến trang đăng nhập
           </Link>
         </div>
       </div>
@@ -45,32 +45,32 @@ export default function OrdersPage() {
     <div>
       <section className="section-shell pb-6 pt-14">
         <SectionTitle
-          eyebrow="Tai khoan"
-          title="Don hang cua toi"
-          description="Theo doi trang thai don hang va thanh toan."
+          eyebrow="Tài khoản"
+          title="Đơn hàng của tôi"
+          description="Theo dõi trạng thái đơn hàng và thanh toán."
         />
       </section>
 
       <section className="section-shell pb-16">
         {error ? <p className="text-sm text-clay">{error}</p> : null}
         {loading ? (
-          <p className="text-sm text-ink/70">Dang tai...</p>
+          <p className="text-sm text-ink/70">Đang tải...</p>
         ) : orders.length === 0 ? (
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6 text-sm text-ink/70">
-            Chua co don hang.
+          <div className="border border-forest/10 bg-white p-6 text-sm text-ink/70">
+            Chưa có đơn hàng.
           </div>
         ) : (
           <div className="space-y-4">
             {orders.map((order) => (
-              <div key={order.id} className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
+              <div key={order.id} className="border border-forest/10 bg-white p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-ink/50">{order.order_number}</p>
                     <p className="mt-2 text-lg font-semibold">{formatCurrency(order.total)}</p>
                   </div>
                   <div className="text-sm text-ink/70">
-                    <p>Trang thai: {order.status}</p>
-                    <p>Thanh toan: {order.payment_status}</p>
+                    <p>Trạng thái: {order.status}</p>
+                    <p>Thanh toán: {order.payment_status}</p>
                   </div>
                 </div>
                 <div className="mt-4 space-y-2 text-sm text-ink/70">

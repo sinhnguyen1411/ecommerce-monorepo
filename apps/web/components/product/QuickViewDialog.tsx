@@ -25,14 +25,16 @@ export default function QuickViewDialog({ product }: { product: Product }) {
             {image ? (
               <img src={image} alt={product.name} className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-64 items-center justify-center text-sm text-ink/50">Dang cap nhat anh</div>
+              <div className="flex h-64 items-center justify-center text-sm text-ink/50">
+                Đang cập nhật ảnh
+              </div>
             )}
           </div>
           <div>
             <DialogHeader>
               <DialogTitle>{product.name}</DialogTitle>
               <DialogDescription>
-                {product.description || "San pham duoc chon tu cac nha vuon doi tac."}
+                {product.description || "Sản phẩm được chọn từ các nhà vườn đối tác."}
               </DialogDescription>
             </DialogHeader>
             <div className="mt-4">
@@ -51,9 +53,9 @@ export default function QuickViewDialog({ product }: { product: Product }) {
                   })
                 }
               >
-                Them vao gio
+                Thêm vào giỏ
               </Button>
-              <Button variant="outline">Them vao danh sach</Button>
+              <Button variant="outline">Thêm vào danh sách</Button>
             </div>
           </div>
         </div>

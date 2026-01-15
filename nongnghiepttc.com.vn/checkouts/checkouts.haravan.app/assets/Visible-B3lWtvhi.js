@@ -1,0 +1,1 @@
+import{j as i,K as a,L as e}from"./index-Dp9kFD3k.js";const r={opacity:1,display:"block",transition:{duration:.4}},c={opacity:0,transition:{duration:.3},transitionEnd:{display:"none"}},l=t=>{const{children:n,motionKey:s,className:o=""}=t;return i.jsx(a,{children:i.jsx(e.div,{initial:{opacity:0},animate:r,exit:c,className:o,children:n},s)})};export{l as V,c as h,r as s};

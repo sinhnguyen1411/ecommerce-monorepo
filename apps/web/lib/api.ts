@@ -1,4 +1,7 @@
-﻿const serverUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const serverUrl =
+  process.env.API_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:8080";
 const browserUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const API_BASE_URL = typeof window === "undefined" ? serverUrl : browserUrl;
 
@@ -33,6 +36,22 @@ export type ProductImage = {
   sort_order: number;
 };
 
+export type ProductOption = {
+  name: string;
+  values: string[];
+};
+
+export type ProductVariant = {
+  id: number;
+  title: string;
+  price: number;
+  compare_at_price?: number | null;
+  available?: boolean;
+  inventory_quantity?: number;
+  sku?: string | null;
+  options?: string[];
+};
+
 export type Product = {
   id: number;
   name: string;
@@ -43,6 +62,14 @@ export type Product = {
   featured: boolean;
   images: ProductImage[];
   categories: ProductCategory[];
+  vendor?: string | null;
+  available?: boolean;
+  inventory_quantity?: number | null;
+  tags?: string[];
+  options?: ProductOption[];
+  variants?: ProductVariant[];
+  updated_at?: string;
+  created_at?: string;
 };
 
 export type Post = {
@@ -140,14 +167,22 @@ export function getCategories() {
 export function getProducts(params?: {
   category?: string;
   sort?: string;
+  sort_by?: string;
   featured?: boolean;
   limit?: number;
+  q?: string;
+  vendor?: string;
+  price_min?: number;
+  price_max?: number;
+  tags?: string[];
 }) {
   const search = new URLSearchParams();
   if (params?.category) {
     search.set("category", params.category);
   }
-  if (params?.sort) {
+  if (params?.sort_by) {
+    search.set("sort_by", params.sort_by);
+  } else if (params?.sort) {
     search.set("sort", params.sort);
   }
   if (typeof params?.featured === "boolean") {
@@ -155,6 +190,21 @@ export function getProducts(params?: {
   }
   if (params?.limit) {
     search.set("limit", String(params.limit));
+  }
+  if (params?.q) {
+    search.set("q", params.q);
+  }
+  if (params?.vendor) {
+    search.set("vendor", params.vendor);
+  }
+  if (typeof params?.price_min === "number") {
+    search.set("price_min", String(params.price_min));
+  }
+  if (typeof params?.price_max === "number") {
+    search.set("price_max", String(params.price_max));
+  }
+  if (params?.tags?.length) {
+    search.set("tags", params.tags.join(","));
   }
 
   const suffix = search.toString();
@@ -202,7 +252,9 @@ export async function uploadPaymentProof(orderId: number, file: File) {
     body: formData
   });
 
-  const payload = (await response.json()) as ApiEnvelope<{ payment_proof_url: string }>;
+  const payload = (await response.json()) as ApiEnvelope<{
+    payment_proof_url: string;
+  }>;
   if (!response.ok || !payload.success) {
     const message = payload?.error?.message || "Upload failed";
     throw new Error(message);

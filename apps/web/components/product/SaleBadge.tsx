@@ -1,9 +1,33 @@
 "use client";
 
-export default function SaleBadge() {
+export default function SaleBadge({ percent }: { percent?: number }) {
+  if (!percent) {
+    return (
+      <span className="pro-sale">
+        <span className="inline-flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 512.002 512.002">
+            <path
+              d="m201.498 512.002c-1.992 0-4.008-.398-5.934-1.229-6.741-2.907-10.387-10.266-8.617-17.39l50.724-204.178h-136.67c-4.947 0-9.576-2.439-12.373-6.52s-3.402-9.278-1.617-13.892l100.262-259.204c2.235-5.779 7.793-9.589 13.989-9.589h137.961c5.069 0 9.795 2.56 12.565 6.806 2.768 4.246 3.206 9.603 1.162 14.242l-59.369 134.76h117.42c5.486 0 10.534 2.995 13.164 7.81 2.63 4.814 2.422 10.68-.543 15.296l-209.496 326.192c-2.833 4.412-7.651 6.896-12.628 6.896z"
+              fill="#ffffff"
+            />
+          </svg>
+          Sale
+        </span>
+      </span>
+    );
+  }
+
   return (
-    <span className="inline-flex items-center rounded-full bg-clay px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-      Sale
+    <span className="pro-sale">
+      <span className="inline-flex items-center gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 512.002 512.002">
+          <path
+            d="m201.498 512.002c-1.992 0-4.008-.398-5.934-1.229-6.741-2.907-10.387-10.266-8.617-17.39l50.724-204.178h-136.67c-4.947 0-9.576-2.439-12.373-6.52s-3.402-9.278-1.617-13.892l100.262-259.204c2.235-5.779 7.793-9.589 13.989-9.589h137.961c5.069 0 9.795 2.56 12.565 6.806 2.768 4.246 3.206 9.603 1.162 14.242l-59.369 134.76h117.42c5.486 0 10.534 2.995 13.164 7.81 2.63 4.814 2.422 10.68-.543 15.296l-209.496 326.192c-2.833 4.412-7.651 6.896-12.628 6.896z"
+            fill="#ffffff"
+          />
+        </svg>
+        -{percent}%
+      </span>
     </span>
   );
 }

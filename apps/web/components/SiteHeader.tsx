@@ -20,19 +20,19 @@ export default function SiteHeader() {
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-semibold text-ink/70 lg:flex">
           <Link href="/products" className="transition hover:text-ink">
-            San pham
+            Sản phẩm
           </Link>
           <Link href="/blog" className="transition hover:text-ink">
-            Tin tuc
+            Tin tức
           </Link>
           <Link href="/pages/about-us" className="transition hover:text-ink">
-            Gioi thieu
+            Giới thiệu
           </Link>
           <Link href="/pages/hoi-dap-cung-nha-nong" className="transition hover:text-ink">
-            Hoi dap
+            Hỏi đáp
           </Link>
           <Link href="/pages/locations" className="transition hover:text-ink">
-            Cua hang
+            Cửa hàng
           </Link>
         </nav>
         <div className="flex items-center gap-3">
@@ -42,9 +42,9 @@ export default function SiteHeader() {
           <button
             onClick={open}
             className="btn-primary relative"
-            aria-label="Open cart"
+            aria-label="Mở giỏ hàng"
           >
-            Gio hang
+            Giỏ hàng
             <span className="rounded-full bg-cream/20 px-2 text-xs font-semibold">
               {itemCount}
             </span>

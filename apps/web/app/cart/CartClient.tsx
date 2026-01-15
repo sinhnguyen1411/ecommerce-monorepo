@@ -1,18 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 
 import CartLineItem from "@/components/cart/CartLineItem";
 import CartSummary from "@/components/cart/CartSummary";
 import ProductGrid from "@/components/product/ProductGrid";
 import { Product } from "@/lib/api";
-import { useCartStore } from "@/store/cart";
-
-const deliverySlots = [
-  "Sang (08:00 - 11:00)",
-  "Chieu (13:00 - 17:00)",
-  "Toi (18:00 - 20:00)"
-];
+import { formatCurrency } from "@/lib/format";
+import { siteConfig } from "@/lib/site";
+import { getCartCount, getCartSubtotal, useCartStore } from "@/store/cart";
 
 type CartClientProps = {
   suggestedProducts: Product[];
@@ -21,83 +18,193 @@ type CartClientProps = {
 export default function CartClient({ suggestedProducts }: CartClientProps) {
   const items = useCartStore((state) => state.items);
   const note = useCartStore((state) => state.note);
-  const promoCode = useCartStore((state) => state.promoCode);
-  const deliveryTime = useCartStore((state) => state.deliveryTime);
   const setNote = useCartStore((state) => state.setNote);
-  const setPromoCode = useCartStore((state) => state.setPromoCode);
-  const setDeliveryTime = useCartStore((state) => state.setDeliveryTime);
+
+  const [invoiceEnabled, setInvoiceEnabled] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [taxCode, setTaxCode] = useState("");
+  const [invoiceEmail, setInvoiceEmail] = useState("");
+  const [invoiceAddress, setInvoiceAddress] = useState("");
+
+  const subtotal = getCartSubtotal(items);
+  const itemCount = getCartCount(items);
+  const freeThreshold = siteConfig.freeShippingThreshold;
+  const progress = freeThreshold > 0 ? Math.min(subtotal / freeThreshold, 1) : 0;
 
   return (
-    <div className="section-shell pb-16">
-      <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
-        <div className="space-y-6">
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">San pham da chon</h2>
-              <Link className="text-sm text-forest" href="/products">
-                Tiep tuc mua sam
-              </Link>
-            </div>
-            <div className="mt-6 space-y-4">
-              {items.length === 0 ? (
-                <p className="text-sm text-ink/70">Gio hang dang trong.</p>
-              ) : (
-                items.map((item) => <CartLineItem key={item.id} item={item} />)
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-            <h3 className="text-lg font-semibold">Uu dai trong gio</h3>
-            <ul className="mt-4 space-y-2 text-sm text-ink/70">
-              <li>Giam 5% cho don hang tu 500.000</li>
-              <li>Free ship khu vuc noi thanh</li>
-            </ul>
-            <div className="mt-4 flex flex-col gap-3 md:flex-row">
-              <input
-                className="field"
-                value={promoCode}
-                onChange={(event) => setPromoCode(event.target.value)}
-                placeholder="Nhap ma giam gia"
-              />
-              <button className="btn-ghost">Ap dung</button>
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-            <h3 className="text-lg font-semibold">Ghi chu don hang</h3>
-            <textarea
-              className="field h-24"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder="Ghi chu them cho don hang"
-            />
-            <div className="mt-4">
-              <label className="text-sm font-semibold">Chon khung gio giao</label>
-              <select
-                className="field mt-2"
-                value={deliveryTime}
-                onChange={(event) => setDeliveryTime(event.target.value)}
-              >
-                <option value="">Chon thoi gian</option>
-                {deliverySlots.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
-            </div>
+    <div className="wrapper-mainCart">
+      <div className="breadcrumb-shop">
+        <div className="container">
+          <div className="breadcrumb-list">
+            <ol className="breadcrumb breadcrumb-arrows">
+              <li>
+                <Link href="/">Trang chủ</Link>
+              </li>
+              <li className="active">
+                <span>
+                  <strong>Giỏ hàng ({itemCount})</strong>
+                </span>
+              </li>
+            </ol>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-6">
-          <CartSummary />
+      <div className="content-bodyCart pb-16">
+        <div className="container">
+          <div className="cart-layout">
+          <div className="contentCart-detail">
+            <div className="mainCart-detail">
+              <div className="heading-cart heading-row">
+                <h1>Giỏ hàng của bạn</h1>
+                <p className="title-number-cart">
+                  Bạn đang có <strong className="count-cart">{itemCount} sản phẩm</strong> trong giỏ hàng
+                </p>
+                {freeThreshold > 0 ? (
+                  <div className="cart-shipping">
+                    <div className="cart-shipping__title">
+                      Bạn cần mua thêm{" "}
+                      <span className="price">{formatCurrency(Math.max(freeThreshold - subtotal, 0))}</span>{" "}
+                      để được <span className="free-ship">miễn phí vận chuyển</span>
+                    </div>
+                    <div className="cart-shipping__bar">
+                      <span className="shipping-bar" style={{ width: `${progress * 100}%` }}>
+                        <span className="icon" aria-hidden="true">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect x="1" y="3" width="15" height="13" />
+                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                            <circle cx="5.5" cy="18.5" r="2.5" />
+                            <circle cx="18.5" cy="18.5" r="2.5" />
+                          </svg>
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
 
-          <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-            <h3 className="text-lg font-semibold">San pham lien quan</h3>
-            <div className="mt-4">
-              <ProductGrid products={suggestedProducts.slice(0, 3)} />
+              <div className="list-pageform-cart">
+                <div className="cart-row">
+                  <div className="table-cart">
+                    {items.length === 0 ? (
+                      <div className="cart-empty">
+                        <img src="/ttc/cart/cart_banner_image.jpg" alt="empty" />
+                        <p>Giỏ hàng đang trống.</p>
+                        <Link className="button" href="/collections/all">
+                          Mua sản phẩm
+                        </Link>
+                      </div>
+                    ) : (
+                      items.map((item) => <CartLineItem key={item.id} item={item} />)
+                    )}
+                  </div>
+                </div>
+
+                <div className="cart-row">
+                  <div className="order-noted-block">
+                    <div className="container-pd15">
+                      <label htmlFor="note" className="note-label">
+                        Ghi chú đơn hàng
+                      </label>
+                      <textarea
+                        className="form-control"
+                        id="note"
+                        name="note"
+                        rows={5}
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="cart-row">
+                  <div className="order-invoice-block">
+                    <div className="checkbox">
+                      <input
+                        type="checkbox"
+                        id="invoice"
+                        checked={invoiceEnabled}
+                        onChange={(event) => setInvoiceEnabled(event.target.checked)}
+                      />
+                      <label htmlFor="invoice" className="title">
+                        Xuất hóa đơn doanh nghiệp
+                      </label>
+                    </div>
+                    {invoiceEnabled ? (
+                      <div className="bill-field">
+                        <div className="form-group">
+                          <input
+                            className="form-control"
+                            value={companyName}
+                            onChange={(event) => setCompanyName(event.target.value)}
+                            placeholder="Tên công ty"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <input
+                            className="form-control"
+                            value={taxCode}
+                            onChange={(event) => setTaxCode(event.target.value)}
+                            placeholder="Mã số thuế"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <input
+                            className="form-control"
+                            value={invoiceEmail}
+                            onChange={(event) => setInvoiceEmail(event.target.value)}
+                            placeholder="Email nhận hóa đơn"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <input
+                            className="form-control"
+                            value={invoiceAddress}
+                            onChange={(event) => setInvoiceAddress(event.target.value)}
+                            placeholder="Địa chỉ công ty"
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+              </div>
             </div>
+          </div>
+
+          <div className="sidebarCart-sticky">
+            <div className="wrap-order-summary">
+              <CartSummary />
+            </div>
+            <div className="order-summary-block">
+              <div className="cart-coupon">
+                <div className="coupon-initial bgWhite">
+                  <div className="title-coupon">
+                    <h2>Khuyến mãi dành cho bạn</h2>
+                  </div>
+                  <div className="cart-coupon__empty">Đang cập nhật chương trình khuyến mãi.</div>
+                </div>
+              </div>
+            </div>
+            <div className="cart-collection">
+              <div className="collectionCart-detail">
+                <h3>Sản phẩm liên quan</h3>
+                <ProductGrid products={suggestedProducts.slice(0, 3)} />
+              </div>
+            </div>
+          </div>
           </div>
         </div>
       </div>

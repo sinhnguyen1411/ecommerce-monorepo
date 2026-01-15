@@ -40,7 +40,7 @@ export default function QuickViewModal({ product }: QuickViewModalProps) {
 
   return (
     <>
-      <button className="btn-ghost" onClick={() => setOpen(true)}>
+      <button className="button btnlight" onClick={() => setOpen(true)}>
         Xem nhanh
       </button>
       {open ? (
@@ -49,9 +49,9 @@ export default function QuickViewModal({ product }: QuickViewModalProps) {
             className="absolute inset-0 bg-ink/50"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-3xl overflow-hidden rounded-3xl bg-cream shadow-lg">
+          <div className="relative z-10 w-full max-w-3xl overflow-hidden border border-forest/10 bg-white shadow-lg">
             <div className="grid gap-6 p-8 md:grid-cols-[1.1fr_1fr]">
-              <div className="relative h-64 overflow-hidden rounded-2xl bg-mist md:h-full">
+              <div className="relative h-64 overflow-hidden border border-forest/10 bg-white md:h-full">
                 {image ? (
                   <img
                     src={image}
@@ -60,24 +60,24 @@ export default function QuickViewModal({ product }: QuickViewModalProps) {
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm text-ink/50">
-                    Chua co anh
+                    Chưa có ảnh
                   </div>
                 )}
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center justify-between">
-                  <p className="pill">Xem nhanh</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Xem nhanh</p>
                   <button
                     onClick={() => setOpen(false)}
-                    className="rounded-full border border-forest/20 px-3 py-1 text-xs font-semibold"
+                    className="button btnlight"
                   >
-                    Dong
+                    Đóng
                   </button>
                 </div>
                 <h3 className="mt-5 text-2xl font-semibold">{product.name}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-ink/70">
                   {product.description ||
-                    "San pham duoc thu hoach tu vuon doi tac trong ngay."}
+                    "Sản phẩm được thu hoạch từ vườn đối tác trong ngày."}
                 </p>
                 <div className="mt-5 flex items-baseline gap-2">
                   <span className="text-xl font-semibold">
@@ -94,7 +94,7 @@ export default function QuickViewModal({ product }: QuickViewModalProps) {
                   <AddToCartButton
                     product={product}
                     variant="ghost"
-                    label="Them & tiep tuc"
+                    label="Thêm & tiếp tục"
                   />
                 </div>
               </div>

@@ -38,7 +38,7 @@ const SheetContent = React.forwardRef<
       {...props}
     >
       {children}
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 text-ink/60 hover:text-ink">
+      <SheetPrimitive.Close className="absolute right-4 top-4 p-2 text-ink/60 hover:text-ink">
         <X className="h-4 w-4" />
       </SheetPrimitive.Close>
     </SheetPrimitive.Content>

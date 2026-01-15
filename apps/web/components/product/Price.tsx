@@ -12,13 +12,9 @@ export default function Price({
   const onSale = typeof compareAt === "number" && compareAt > price;
 
   return (
-    <div className="flex items-baseline gap-2">
-      <span className="text-lg font-semibold text-forest">{formatCurrency(price)}</span>
-      {onSale ? (
-        <span className="text-sm text-ink/50 line-through">
-          {formatCurrency(compareAt)}
-        </span>
-      ) : null}
+    <div className="price-block">
+      <span className="price">{formatCurrency(price)}</span>
+      {onSale ? <span className="price-del">{formatCurrency(compareAt)}</span> : null}
     </div>
   );
 }

@@ -10,13 +10,13 @@ import { siteConfig } from "@/lib/site";
 import { getCartSubtotal, useCartStore } from "@/store/cart";
 
 const paymentOptions = [
-  { value: "cod", label: "Thanh toan khi nhan hang" },
-  { value: "bank_transfer", label: "Chuyen khoan ngan hang" },
-  { value: "bank_qr", label: "Thanh toan QR" }
+  { value: "cod", label: "Thanh toán khi nhận hàng" },
+  { value: "bank_transfer", label: "Chuyển khoản ngân hàng" },
+  { value: "bank_qr", label: "Thanh toán QR" }
 ];
 
 const shippingOptions = [
-  { value: "standard", label: "Giao tieu chuan (24-48h)" },
+  { value: "standard", label: "Giao tiêu chuẩn (24-48h)" },
   { value: "express", label: "Giao nhanh (2-4h)" }
 ];
 
@@ -35,6 +35,11 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState("");
   const [shippingMethod, setShippingMethod] = useState("standard");
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [invoiceEnabled, setInvoiceEnabled] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [taxCode, setTaxCode] = useState("");
+  const [invoiceEmail, setInvoiceEmail] = useState("");
+  const [invoiceAddress, setInvoiceAddress] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -51,17 +56,17 @@ export default function CheckoutPage() {
     setError("");
 
     if (!meetsMinOrder) {
-      setError("Don hang chua dat gia tri toi thieu.");
+      setError("Đơn hàng chưa đạt giá trị tối thiểu.");
       return;
     }
 
     if (!customerName || !email || !phone || !address) {
-      setError("Vui long dien day du thong tin giao hang.");
+      setError("Vui lòng điền đầy đủ thông tin giao hàng.");
       return;
     }
 
     if (items.length === 0) {
-      setError("Gio hang dang trong.");
+      setError("Giỏ hàng đang trống.");
       return;
     }
 
@@ -73,7 +78,14 @@ export default function CheckoutPage() {
         email,
         phone,
         address,
-        note,
+        note: [
+          note,
+          invoiceEnabled
+            ? `Hoa don: ${companyName} | ${taxCode} | ${invoiceEmail} | ${invoiceAddress}`
+            : ""
+        ]
+          .filter(Boolean)
+          .join(" - "),
         delivery_time: deliveryTime || shippingMethod,
         payment_method: paymentMethod,
         promo_code: promoCode,
@@ -97,7 +109,7 @@ export default function CheckoutPage() {
       clear();
       router.push("/checkout/thank-you");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Thanh toan that bai.");
+      setError(err instanceof Error ? err.message : "Thanh toán thất bại.");
     } finally {
       setIsSubmitting(false);
     }
@@ -107,10 +119,10 @@ export default function CheckoutPage() {
     <div>
       <section className="section-shell pb-6 pt-14">
         <div>
-          <p className="pill">Thanh toan</p>
-          <h1 className="mt-4 text-4xl font-semibold">Hoan tat don hang</h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-ink/50">Thanh toán</p>
+          <h1 className="mt-3 text-2xl font-semibold">Hoàn tất đơn hàng</h1>
           <p className="mt-3 max-w-xl text-sm text-ink/70">
-            Dien thong tin giao hang va chon hinh thuc thanh toan.
+            Điền thông tin giao hàng và chọn hình thức thanh toán.
           </p>
         </div>
       </section>
@@ -118,14 +130,14 @@ export default function CheckoutPage() {
       <section className="section-shell pb-16">
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
-            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-              <h2 className="text-lg font-semibold">Thong tin giao hang</h2>
+            <div className="border border-forest/10 bg-white p-6">
+              <h2 className="text-lg font-semibold">Thông tin giao hàng</h2>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <input
                   className="field"
                   value={customerName}
                   onChange={(event) => setCustomerName(event.target.value)}
-                  placeholder="Ho va ten"
+                  placeholder="Họ và tên"
                 />
                 <input
                   className="field"
@@ -138,24 +150,61 @@ export default function CheckoutPage() {
                   className="field"
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
-                  placeholder="So dien thoai"
+                  placeholder="Số điện thoại"
                 />
                 <input
                   className="field"
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
-                  placeholder="Dia chi giao hang"
+                  placeholder="Địa chỉ giao hàng"
                 />
               </div>
+              <div className="mt-4 flex items-center gap-3 text-sm font-semibold">
+                <input
+                  id="invoice"
+                  type="checkbox"
+                  checked={invoiceEnabled}
+                  onChange={(event) => setInvoiceEnabled(event.target.checked)}
+                />
+                <label htmlFor="invoice">Xuất hóa đơn doanh nghiệp</label>
+              </div>
+              {invoiceEnabled ? (
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <input
+                    className="field"
+                    value={companyName}
+                    onChange={(event) => setCompanyName(event.target.value)}
+                    placeholder="Tên công ty"
+                  />
+                  <input
+                    className="field"
+                    value={taxCode}
+                    onChange={(event) => setTaxCode(event.target.value)}
+                    placeholder="Mã số thuế"
+                  />
+                  <input
+                    className="field"
+                    value={invoiceEmail}
+                    onChange={(event) => setInvoiceEmail(event.target.value)}
+                    placeholder="Email nhận hóa đơn"
+                  />
+                  <input
+                    className="field"
+                    value={invoiceAddress}
+                    onChange={(event) => setInvoiceAddress(event.target.value)}
+                    placeholder="Địa chỉ công ty"
+                  />
+                </div>
+              ) : null}
             </div>
 
-            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-              <h2 className="text-lg font-semibold">Phuong thuc giao hang</h2>
+            <div className="border border-forest/10 bg-white p-6">
+              <h2 className="text-lg font-semibold">Phương thức giao hàng</h2>
               <div className="mt-4 grid gap-3">
                 {shippingOptions.map((option) => (
                   <label
                     key={option.value}
-                    className="flex items-center justify-between rounded-2xl border border-forest/20 bg-white/80 px-4 py-3 text-sm"
+                    className="flex items-center justify-between border border-forest/20 bg-white px-4 py-3 text-sm"
                   >
                     <span>{option.label}</span>
                     <input
@@ -170,13 +219,13 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-              <h2 className="text-lg font-semibold">Phuong thuc thanh toan</h2>
+            <div className="border border-forest/10 bg-white p-6">
+              <h2 className="text-lg font-semibold">Phương thức thanh toán</h2>
               <div className="mt-4 grid gap-3">
                 {paymentOptions.map((option) => (
                   <label
                     key={option.value}
-                    className="flex items-center justify-between rounded-2xl border border-forest/20 bg-white/80 px-4 py-3 text-sm"
+                    className="flex items-center justify-between border border-forest/20 bg-white px-4 py-3 text-sm"
                   >
                     <span>{option.label}</span>
                     <input
@@ -191,45 +240,69 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-              <h2 className="text-lg font-semibold">Khuyen mai</h2>
+            <div className="border border-forest/10 bg-white p-6">
+              <h2 className="text-lg font-semibold">Khuyến mãi</h2>
               <div className="mt-4 flex flex-col gap-3 md:flex-row">
                 <input
                   className="field"
                   value={promoCode}
                   onChange={(event) => setPromoCode(event.target.value)}
-                  placeholder="Nhap ma khuyen mai"
+                  placeholder="Nhập mã khuyến mãi"
                 />
-                <button className="btn-ghost">Ap dung</button>
+                <button className="button btnlight">Áp dụng</button>
               </div>
             </div>
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-              <h3 className="text-lg font-semibold">Tong don hang</h3>
+            <div className="border border-forest/10 bg-white p-6">
+              <h3 className="text-lg font-semibold">Đơn hàng</h3>
+              <div className="mt-4 space-y-3 text-sm text-ink/70">
+                {items.length === 0 ? (
+                  <p>Giỏ hàng đang trống.</p>
+                ) : (
+                  items.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-ink">{item.name}</p>
+                        <p className="text-xs text-ink/60">Số lượng: {item.quantity}</p>
+                      </div>
+                      <span className="text-sm">{formatCurrency(item.price * item.quantity)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
               <div className="mt-4 space-y-2 text-sm text-ink/70">
                 <div className="flex items-center justify-between">
-                  <span>So luong san pham</span>
+                  <span>Số lượng sản phẩm</span>
                   <span>{totalItems}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Tam tinh</span>
+                  <span>Tạm tính</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
-                {minOrderAmount > 0 ? (
-                  <p className="text-xs text-ink/60">
-                    Don hang toi thieu {formatCurrency(minOrderAmount)}
-                  </p>
-                ) : null}
+                <div className="flex items-center justify-between">
+                  <span>Phí vận chuyển</span>
+                  <span>
+                    {siteConfig.freeShippingThreshold > 0 &&
+                    subtotal >= siteConfig.freeShippingThreshold
+                      ? "Miễn phí"
+                      : "Tính khi giao"}
+                  </span>
+                </div>
               </div>
+              {minOrderAmount > 0 ? (
+                <p className="mt-3 text-xs text-ink/60">
+                  Đơn hàng tối thiểu {formatCurrency(minOrderAmount)}
+                </p>
+              ) : null}
               {error ? <p className="mt-4 text-sm text-clay">{error}</p> : null}
               <Button
                 className="mt-6 w-full"
                 onClick={handleSubmit}
                 disabled={isSubmitting || !meetsMinOrder}
               >
-                {isSubmitting ? "Dang xu ly..." : "Dat hang"}
+                {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
               </Button>
             </div>
           </div>

@@ -23,24 +23,24 @@ export default function LocationsClient({ locations }: { locations: Location[] }
 
   return (
     <div className="section-shell pb-16">
-      <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
+      <div className="border border-forest/10 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold">Diem nhan hang</h2>
+          <h2 className="text-lg font-semibold">Điểm nhận hàng</h2>
           <input
             className="field max-w-sm"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Tim theo tinh, quan, dia diem"
+            placeholder="Tìm theo tỉnh, quận, địa điểm"
           />
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           {filtered.length === 0 ? (
-            <p className="text-sm text-ink/70">Khong tim thay dia diem phu hop.</p>
+            <p className="text-sm text-ink/70">Không tìm thấy địa điểm phù hợp.</p>
           ) : (
             filtered.map((location) => (
               <div
                 key={location.id}
-                className="rounded-[24px] border border-forest/10 bg-white/80 p-5"
+                className="border border-forest/10 bg-white p-5"
               >
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-semibold">{location.name}</h3>

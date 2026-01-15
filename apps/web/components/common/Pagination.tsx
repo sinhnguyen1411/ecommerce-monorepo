@@ -24,7 +24,7 @@ export default function Pagination({
           key={value}
           onClick={() => onPageChange?.(value)}
           className={cn(
-            "h-9 w-9 rounded-full border border-forest/20 text-sm font-semibold",
+            "h-9 w-9 rounded-[2px] border border-forest/20 text-sm font-semibold",
             value === page ? "bg-forest text-white" : "text-forest"
           )}
         >

@@ -26,23 +26,23 @@ export default function LoginPage() {
     <div>
       <section className="section-shell pb-10 pt-14">
         <SectionTitle
-          eyebrow="Tai khoan"
-          title="Dang nhap"
-          description="Su dung Google de truy cap tai khoan mua hang cua ban."
+          eyebrow="Tài khoản"
+          title="Đăng nhập"
+          description="Sử dụng Google để truy cập tài khoản mua hàng của bạn."
         />
       </section>
 
       <section className="section-shell pb-16">
-        <div className="rounded-[28px] border border-forest/10 bg-white/90 p-8 text-center">
+        <div className="border border-forest/10 bg-white p-8 text-center">
           <p className="text-sm text-ink/70">
-            Nhap vao Google de quan ly don hang, dia chi va uu dai.
+            Nhập vào Google để quản lý đơn hàng, địa chỉ và ưu đãi.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Button asChild disabled={!loginUrl}>
-              <a href={loginUrl || "#"}>Dang nhap bang Google</a>
+              <a href={loginUrl || "#"}>Đăng nhập bằng Google</a>
             </Button>
-            <Link href="/" className="btn-ghost">
-              Quay ve trang chu
+            <Link href="/" className="button btnlight">
+              Quay về trang chủ
             </Link>
           </div>
         </div>
