@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
+	"ecommerce-monorepo/apps/api/internal/auth"
 )
 
 type UserProfile struct {
@@ -64,19 +66,30 @@ type OrderSummary struct {
 
 func (s *Server) GetProfile(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
-	row := s.DB.QueryRow(`SELECT id, email, name, avatar_url, phone FROM users WHERE id = ?`, userID)
+	row := s.DB.QueryRow(`SELECT id, email, full_name, avatar_url, phone_national, phone_e164 FROM users WHERE id = ?`, userID)
 	var profile UserProfile
+	var email sql.NullString
+	var name sql.NullString
 	var avatar sql.NullString
-	var phone sql.NullString
-	if err := row.Scan(&profile.ID, &profile.Email, &profile.Name, &avatar, &phone); err != nil {
+	var phoneNational sql.NullString
+	var phoneE164 sql.NullString
+	if err := row.Scan(&profile.ID, &email, &name, &avatar, &phoneNational, &phoneE164); err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load profile")
 		return
+	}
+	if email.Valid {
+		profile.Email = email.String
+	}
+	if name.Valid {
+		profile.Name = name.String
 	}
 	if avatar.Valid {
 		profile.AvatarURL = &avatar.String
 	}
-	if phone.Valid {
-		profile.Phone = &phone.String
+	if phoneNational.Valid {
+		profile.Phone = &phoneNational.String
+	} else if phoneE164.Valid {
+		profile.Phone = &phoneE164.String
 	}
 
 	respondOK(c, profile)
@@ -90,8 +103,26 @@ func (s *Server) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	_, err := s.DB.Exec(`UPDATE users SET name = ?, phone = ? WHERE id = ?`, strings.TrimSpace(input.Name), strings.TrimSpace(input.Phone), userID)
-	if err != nil {
+	name := strings.TrimSpace(input.Name)
+	phone := strings.TrimSpace(input.Phone)
+	if phone != "" {
+		current := sql.NullString{}
+		if err := s.DB.QueryRow(`SELECT phone_e164 FROM users WHERE id = ?`, userID).Scan(&current); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to update profile")
+			return
+		}
+		normalized, _, err := auth.NormalizeVNPhone(phone)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, "invalid_phone", "Invalid phone number")
+			return
+		}
+		if !current.Valid || current.String != normalized {
+			respondError(c, http.StatusBadRequest, "phone_verification_required", "Use phone verification to update phone number")
+			return
+		}
+	}
+
+	if _, err := s.DB.Exec(`UPDATE users SET full_name = ? WHERE id = ?`, name, userID); err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update profile")
 		return
 	}

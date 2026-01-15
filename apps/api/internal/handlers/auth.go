@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"context"
+	"crypto/rand"
+	"database/sql"
+	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,6 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+
+	"ecommerce-monorepo/apps/api/internal/auth"
 )
 
 type GoogleUserInfo struct {
@@ -21,22 +26,42 @@ type GoogleUserInfo struct {
 	Picture string `json:"picture"`
 }
 
-func (s *Server) GoogleLogin(c *gin.Context) {
-	if s.Config.GoogleClientID == "" || s.Config.GoogleClientSecret == "" {
+type OAuthStartInput struct {
+	Redirect string `json:"redirect"`
+}
+
+func (s *Server) GoogleStart(c *gin.Context) {
+	if !s.isGoogleConfigured() {
 		respondError(c, http.StatusBadRequest, "oauth_not_configured", "Google OAuth is not configured")
 		return
 	}
 
-	redirect := c.Query("redirect")
-	if redirect == "" {
-		redirect = s.Config.FrontendBaseURL + "/account"
+	var input OAuthStartInput
+	_ = c.ShouldBindJSON(&input)
+
+	redirect := s.sanitizeRedirect(input.Redirect)
+	authURL, err := s.buildGoogleAuthURL(c, redirect)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "oauth_failed", "Failed to start OAuth")
+		return
 	}
 
-	state := fmt.Sprintf("%d", time.Now().UnixNano())
-	c.SetCookie("oauth_state", state, 3600, "/", "", false, true)
-	c.SetCookie("oauth_redirect", url.QueryEscape(redirect), 3600, "/", "", false, true)
+	respondOK(c, gin.H{"url": authURL})
+}
 
-	authURL := s.googleOAuthConfig().AuthCodeURL(state, oauth2.AccessTypeOffline)
+func (s *Server) GoogleLogin(c *gin.Context) {
+	if !s.isGoogleConfigured() {
+		respondError(c, http.StatusBadRequest, "oauth_not_configured", "Google OAuth is not configured")
+		return
+	}
+
+	redirect := s.sanitizeRedirect(c.Query("redirect"))
+	authURL, err := s.buildGoogleAuthURL(c, redirect)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "oauth_failed", "Failed to start OAuth")
+		return
+	}
+
 	c.Redirect(http.StatusFound, authURL)
 }
 
@@ -47,6 +72,9 @@ func (s *Server) GoogleCallback(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "invalid_state", "Invalid OAuth state")
 		return
 	}
+	secure := isProdEnv(s.Config.AppEnv)
+	c.SetCookie("oauth_state", "", -1, "/", "", secure, true)
+	c.SetCookie("oauth_redirect", "", -1, "/", "", secure, true)
 
 	code := c.Query("code")
 	if code == "" {
@@ -84,45 +112,49 @@ func (s *Server) GoogleCallback(c *gin.Context) {
 		return
 	}
 
+	normalizedEmail, err := auth.NormalizeEmail(userInfo.Email)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "oauth_failed", "Invalid Google email")
+		return
+	}
+	userInfo.Email = normalizedEmail
+
 	userID, err := s.upsertGoogleUser(userInfo)
 	if err != nil {
+		if errors.Is(err, ErrAccountInactive) {
+			respondError(c, http.StatusForbidden, "account_locked", "Account is not active")
+			return
+		}
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to save user profile")
 		return
 	}
 
-	jwtToken, err := s.signToken(userID, "user", s.Config.UserTokenTTL)
+	accessToken, refreshToken, err := s.issueTokens(c, userID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "token_error", "Failed to issue token")
 		return
 	}
 
-	redirect := s.Config.FrontendBaseURL + "/account"
-	rawRedirect, _ := c.Cookie("oauth_redirect")
-	if rawRedirect != "" {
-		if decoded, err := url.QueryUnescape(rawRedirect); err == nil {
-			redirect = decoded
-		}
-	}
-
-	finalURL := redirect
-	separator := "?"
-	if strings.Contains(redirect, "?") {
-		separator = "&"
-	}
-	finalURL = fmt.Sprintf("%s%stoken=%s", redirect, separator, url.QueryEscape(jwtToken))
-	c.Redirect(http.StatusFound, finalURL)
-}
-
-func (s *Server) GetAuthMe(c *gin.Context) {
-	claims := c.MustGet("user_id").(int)
-	row := s.DB.QueryRow(`SELECT id, email, name, avatar_url, phone FROM users WHERE id = ?`, claims)
-	var profile UserProfile
-	if err := row.Scan(&profile.ID, &profile.Email, &profile.Name, &profile.AvatarURL, &profile.Phone); err != nil {
+	user, err := s.loadUserByID(userID)
+	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load profile")
 		return
 	}
 
-	respondOK(c, profile)
+	s.logAudit(c, &userID, "google_login", nil)
+
+	if wantsJSON(c) {
+		respondOK(c, gin.H{
+			"access_token":  accessToken,
+			"refresh_token": refreshToken,
+			"user":          authUserResponse(user),
+		})
+		return
+	}
+
+	redirect := s.sanitizeRedirect(s.readRedirectCookie(c))
+	finalURL := buildRedirectURL(redirect, accessToken, refreshToken)
+	c.Redirect(http.StatusFound, finalURL)
 }
 
 func (s *Server) googleOAuthConfig() *oauth2.Config {
@@ -135,24 +167,162 @@ func (s *Server) googleOAuthConfig() *oauth2.Config {
 	}
 }
 
-func (s *Server) upsertGoogleUser(info GoogleUserInfo) (int, error) {
-	var userID int
-	row := s.DB.QueryRow(`SELECT id FROM users WHERE google_id = ? OR email = ? LIMIT 1`, info.ID, info.Email)
-	err := row.Scan(&userID)
-	if err == nil {
-		_, err = s.DB.Exec(`UPDATE users SET google_id = ?, email = ?, name = ?, avatar_url = ? WHERE id = ?`, info.ID, info.Email, info.Name, info.Picture, userID)
-		return userID, err
-	}
+var ErrAccountInactive = errors.New("account inactive")
 
-	result, err := s.DB.Exec(`INSERT INTO users (google_id, email, name, avatar_url) VALUES (?, ?, ?, ?)`, info.ID, info.Email, info.Name, info.Picture)
+func (s *Server) upsertGoogleUser(info GoogleUserInfo) (int, error) {
+	tx, err := s.DB.Begin()
 	if err != nil {
 		return 0, err
 	}
+	defer tx.Rollback()
 
+	var userID int
+	var status string
+	row := tx.QueryRow(`
+    SELECT u.id, u.status
+    FROM users u
+    JOIN auth_identities a ON a.user_id = u.id
+    WHERE a.provider = 'google' AND a.provider_user_id = ?
+    LIMIT 1
+  `, info.ID)
+	if err := row.Scan(&userID, &status); err != nil {
+		if err != sql.ErrNoRows {
+			return 0, err
+		}
+	} else {
+		if status != "active" {
+			return 0, ErrAccountInactive
+		}
+		if _, err := tx.Exec(`UPDATE users SET google_id = ?, email = ?, full_name = ?, avatar_url = ?, is_email_verified = TRUE WHERE id = ?`, info.ID, info.Email, info.Name, info.Picture, userID); err != nil {
+			return 0, err
+		}
+		if err := tx.Commit(); err != nil {
+			return 0, err
+		}
+		return userID, nil
+	}
+
+	row = tx.QueryRow(`SELECT id, status FROM users WHERE email = ? LIMIT 1`, info.Email)
+	if err := row.Scan(&userID, &status); err != nil {
+		if err != sql.ErrNoRows {
+			return 0, err
+		}
+	} else {
+		if status != "active" {
+			return 0, ErrAccountInactive
+		}
+		if _, err := tx.Exec(`UPDATE users SET google_id = ?, full_name = ?, avatar_url = ?, is_email_verified = TRUE WHERE id = ?`, info.ID, info.Name, info.Picture, userID); err != nil {
+			return 0, err
+		}
+		if _, err := tx.Exec(`INSERT INTO auth_identities (user_id, provider, provider_user_id) VALUES (?, 'google', ?) ON DUPLICATE KEY UPDATE provider_user_id = VALUES(provider_user_id)`, userID, info.ID); err != nil {
+			return 0, err
+		}
+		if err := tx.Commit(); err != nil {
+			return 0, err
+		}
+		return userID, nil
+	}
+
+	result, err := tx.Exec(`INSERT INTO users (google_id, email, full_name, avatar_url, is_email_verified, status) VALUES (?, ?, ?, ?, TRUE, 'active')`, info.ID, info.Email, info.Name, info.Picture)
+	if err != nil {
+		return 0, err
+	}
 	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
+	userID = int(id)
+	if _, err := tx.Exec(`INSERT INTO auth_identities (user_id, provider, provider_user_id) VALUES (?, 'google', ?)`, userID, info.ID); err != nil {
+		return 0, err
+	}
 
-	return int(id), nil
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return userID, nil
+}
+
+func (s *Server) buildGoogleAuthURL(c *gin.Context, redirect string) (string, error) {
+	state, err := generateState()
+	if err != nil {
+		return "", err
+	}
+
+	secure := isProdEnv(s.Config.AppEnv)
+	maxAge := int((10 * time.Minute).Seconds())
+	c.SetCookie("oauth_state", state, maxAge, "/", "", secure, true)
+	c.SetCookie("oauth_redirect", url.QueryEscape(redirect), maxAge, "/", "", secure, true)
+
+	return s.googleOAuthConfig().AuthCodeURL(state, oauth2.AccessTypeOffline), nil
+}
+
+func generateState() (string, error) {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+func (s *Server) sanitizeRedirect(raw string) string {
+	defaultRedirect := s.Config.FrontendBaseURL + "/account"
+	if raw == "" {
+		return defaultRedirect
+	}
+	if strings.HasPrefix(raw, "/") {
+		return s.Config.FrontendBaseURL + raw
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return defaultRedirect
+	}
+	base, err := url.Parse(s.Config.FrontendBaseURL)
+	if err != nil {
+		return defaultRedirect
+	}
+	if parsed.IsAbs() {
+		if !strings.EqualFold(parsed.Host, base.Host) || parsed.Scheme != base.Scheme {
+			return defaultRedirect
+		}
+		return raw
+	}
+	return defaultRedirect
+}
+
+func (s *Server) readRedirectCookie(c *gin.Context) string {
+	rawRedirect, _ := c.Cookie("oauth_redirect")
+	if rawRedirect == "" {
+		return s.Config.FrontendBaseURL + "/account"
+	}
+	decoded, err := url.QueryUnescape(rawRedirect)
+	if err != nil {
+		return s.Config.FrontendBaseURL + "/account"
+	}
+	return decoded
+}
+
+func buildRedirectURL(redirect, accessToken, refreshToken string) string {
+	parsed, err := url.Parse(redirect)
+	if err != nil {
+		return redirect
+	}
+	query := parsed.Query()
+	query.Set("token", accessToken)
+	parsed.RawQuery = query.Encode()
+	if refreshToken != "" {
+		parsed.Fragment = "refresh_token=" + url.QueryEscape(refreshToken)
+	}
+	return parsed.String()
+}
+
+func wantsJSON(c *gin.Context) bool {
+	if strings.EqualFold(c.Query("response_type"), "json") {
+		return true
+	}
+	accept := c.GetHeader("Accept")
+	return strings.Contains(accept, "application/json")
+}
+
+func (s *Server) isGoogleConfigured() bool {
+	return s.Config.GoogleClientID != "" && s.Config.GoogleClientSecret != ""
 }

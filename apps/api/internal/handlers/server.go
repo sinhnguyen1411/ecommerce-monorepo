@@ -11,12 +11,29 @@ import (
 )
 
 type Server struct {
-	DB     *sql.DB
-	Config config.Config
+	DB          *sql.DB
+	Config      config.Config
+	EmailSender EmailSender
+	SMSSender   SMSSender
 }
 
-func New(db *sql.DB, cfg config.Config) *Server {
-	return &Server{DB: db, Config: cfg}
+func New(db *sql.DB, cfg config.Config) (*Server, error) {
+	emailSender, err := buildEmailSender(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	smsSender, err := buildSMSSender(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Server{
+		DB:          db,
+		Config:      cfg,
+		EmailSender: emailSender,
+		SMSSender:   smsSender,
+	}, nil
 }
 
 func (s *Server) RegisterRoutes(router *gin.Engine) {
@@ -26,9 +43,33 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 
 	api := router.Group("/api")
 	{
-		api.GET("/auth/google/login", s.GoogleLogin)
-		api.GET("/auth/google/callback", s.GoogleCallback)
-		api.GET("/auth/me", s.requireRole("user"), s.GetProfile)
+		auth := api.Group("/auth")
+		auth.Use(s.authRateLimitMiddleware())
+		{
+			auth.POST("/signup/request-otp", s.SignupRequestOTP)
+			auth.POST("/signup/verify-otp", s.SignupVerifyOTP)
+			auth.POST("/signup/complete", s.SignupComplete)
+			auth.POST("/login", s.Login)
+			auth.POST("/logout", s.Logout)
+			auth.POST("/refresh", s.Refresh)
+			auth.POST("/forgot-password/request-otp", s.ForgotPasswordRequestOTP)
+			auth.POST("/forgot-password/verify-otp", s.ForgotPasswordVerifyOTP)
+			auth.POST("/forgot-password/reset", s.ForgotPasswordReset)
+			auth.POST("/change-password", s.requireRole("user"), s.ChangePassword)
+			auth.GET("/sessions", s.requireRole("user"), s.ListSessions)
+			auth.POST("/sessions/:id/revoke", s.requireRole("user"), s.RevokeSession)
+			auth.POST("/link-email/request-otp", s.requireRole("user"), s.LinkEmailRequestOTP)
+			auth.POST("/link-email/verify-otp", s.LinkEmailVerifyOTP)
+			auth.POST("/link-email/complete", s.requireRole("user"), s.LinkEmailComplete)
+			auth.POST("/link-phone/request-otp", s.requireRole("user"), s.LinkPhoneRequestOTP)
+			auth.POST("/link-phone/verify-otp", s.LinkPhoneVerifyOTP)
+			auth.POST("/link-phone/complete", s.requireRole("user"), s.LinkPhoneComplete)
+			auth.POST("/google/start", s.GoogleStart)
+			auth.GET("/google/login", s.GoogleLogin)
+			auth.GET("/google/callback", s.GoogleCallback)
+			auth.GET("/me", s.requireRole("user"), s.GetMe)
+			auth.PATCH("/me", s.requireRole("user"), s.UpdateMe)
+		}
 
 		api.GET("/account/profile", s.requireRole("user"), s.GetProfile)
 		api.PATCH("/account/profile", s.requireRole("user"), s.UpdateProfile)

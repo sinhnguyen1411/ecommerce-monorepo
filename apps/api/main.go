@@ -49,7 +49,10 @@ func main() {
 
 	router.Static("/uploads", cfg.UploadDir)
 
-	server := handlers.New(database, cfg)
+	server, err := handlers.New(database, cfg)
+	if err != nil {
+		log.Fatalf("failed to initialize handlers: %v", err)
+	}
 	server.RegisterRoutes(router)
 
 	if err := router.Run(":" + cfg.Port); err != nil {
