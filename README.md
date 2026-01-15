@@ -78,7 +78,17 @@ Required files:
 
 Key variables:
 - `DB_*`: database connection (api)
-- `JWT_SECRET`: reserved for Phase 2 admin auth
+- `JWT_SECRET`: access token signing secret
+- `OTP_SECRET`: OTP + verification token signing secret (defaults to `JWT_SECRET` if empty)
+- `USER_TOKEN_TTL`: access token TTL (default 15m)
+- `REFRESH_TOKEN_TTL`: refresh token TTL (default 30d)
+- `VERIFICATION_TOKEN_TTL`: OTP verification token TTL (default 10m)
+- `OTP_TTL`, `OTP_SEND_WINDOW`, `OTP_COOLDOWN`, `OTP_MAX_ATTEMPTS`, `OTP_SEND_MAX`
+- `PASSWORD_MIN_LENGTH`, `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCKOUT_DURATION`
+- `AUTH_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_WINDOW`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URL`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_FROM_NAME`
+- `SMS_PROVIDER` (default `dev`)
 - `MIN_ORDER_AMOUNT`: minimum order total (api, frontend)
 - `FREE_SHIPPING_THRESHOLD`: free shipping threshold (api, frontend)
 - `PUBLIC_BASE_URL`: public API base used for image URLs
@@ -116,7 +126,7 @@ docker compose down -v
 - Seeds run once if `SEED_ON_START=true` and products table is empty.
 - SQL files live in `migrations/` and `seed/`.
 
-## API Summary (Phase 1)
+## API Summary
 Base URL: `http://localhost:8080`
 
 Response format:
@@ -139,9 +149,82 @@ Endpoints:
 - `POST /api/orders`
 - `POST /api/orders/:id/payment-proof` (multipart form, field name `file`)
 
+Auth endpoints:
+- `POST /api/auth/signup/request-otp`
+- `POST /api/auth/signup/verify-otp`
+- `POST /api/auth/signup/complete`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `POST /api/auth/refresh`
+- `POST /api/auth/forgot-password/request-otp`
+- `POST /api/auth/forgot-password/verify-otp`
+- `POST /api/auth/forgot-password/reset`
+- `POST /api/auth/change-password`
+- `GET /api/auth/me`
+- `PATCH /api/auth/me`
+- `GET /api/auth/sessions`
+- `POST /api/auth/sessions/:id/revoke`
+- `POST /api/auth/link-email/request-otp`
+- `POST /api/auth/link-email/verify-otp`
+- `POST /api/auth/link-email/complete`
+- `POST /api/auth/link-phone/request-otp`
+- `POST /api/auth/link-phone/verify-otp`
+- `POST /api/auth/link-phone/complete`
+- `POST /api/auth/google/start`
+- `GET /api/auth/google/login`
+- `GET /api/auth/google/callback`
+
 Uploads:
 - Stored under `apps/api/uploads` (mapped to Docker volume).
 - Served publicly via `/uploads/...`.
+
+## Auth Notes
+- Access tokens use the `Authorization: Bearer <token>` header.
+- Refresh tokens are returned in JSON responses. For Google redirect flow, `token` is appended as a query param and `refresh_token` as a URL fragment.
+- OTPs are logged to the API console in non-production environments. In production, configure SMTP before enabling email OTP.
+
+## Auth Examples
+Signup (email):
+```
+curl -X POST http://localhost:8080/api/auth/signup/request-otp ^
+  -H "Content-Type: application/json" ^
+  -d "{\"channel\":\"email\",\"email\":\"user@example.com\"}"
+```
+
+Verify OTP:
+```
+curl -X POST http://localhost:8080/api/auth/signup/verify-otp ^
+  -H "Content-Type: application/json" ^
+  -d "{\"request_id\":123,\"code\":\"123456\"}"
+```
+
+Complete signup:
+```
+curl -X POST http://localhost:8080/api/auth/signup/complete ^
+  -H "Content-Type: application/json" ^
+  -d "{\"verification_token\":\"...\",\"password\":\"Secret123\",\"full_name\":\"Jane Doe\"}"
+```
+
+Login:
+```
+curl -X POST http://localhost:8080/api/auth/login ^
+  -H "Content-Type: application/json" ^
+  -d "{\"identifier\":\"user@example.com\",\"password\":\"Secret123\"}"
+```
+
+Refresh:
+```
+curl -X POST http://localhost:8080/api/auth/refresh ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refresh_token\":\"...\"}"
+```
+
+Forgot password (phone):
+```
+curl -X POST http://localhost:8080/api/auth/forgot-password/request-otp ^
+  -H "Content-Type: application/json" ^
+  -d "{\"channel\":\"sms\",\"phone\":\"0912345678\"}"
+```
 
 ## Frontend Routes
 - `/` home
@@ -203,5 +286,5 @@ Get-Content backup.sql | docker exec -i ttc_mysql mysql -u root -pYOUR_ROOT_PASS
 - `docs/HANDOVER_GUIDE.md` client handover and content edits
 
 ## Roadmap
-- Phase 2: Google OAuth, user accounts, admin dashboard, payment verification
+- Phase 2: admin dashboard, payment verification
 - Phase 3: store location search improvements, promotions, delivery slots
