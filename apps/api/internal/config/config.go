@@ -16,6 +16,7 @@ type Config struct {
 	DBUser                string
 	DBPassword            string
 	JWTSecret             string
+	OTPSecret             string
 	MinOrderAmount        float64
 	FreeShippingThreshold float64
 	UploadDir             string
@@ -27,8 +28,27 @@ type Config struct {
 	GoogleClientSecret    string
 	GoogleRedirectURL     string
 	UserTokenTTL          time.Duration
+	RefreshTokenTTL       time.Duration
+	VerificationTokenTTL  time.Duration
+	OTPTTL                time.Duration
+	OTPSendWindow         time.Duration
+	OTPCooldown           time.Duration
+	OTPMaxAttempts        int
+	OTPSendMax            int
+	PasswordMinLength     int
+	LoginMaxAttempts      int
+	LoginLockoutDuration  time.Duration
+	AuthRateLimitMax      int
+	AuthRateLimitWindow   time.Duration
 	AdminTokenTTL         time.Duration
 	AllowedOrigins        []string
+	SMTPHost              string
+	SMTPPort              string
+	SMTPUsername          string
+	SMTPPassword          string
+	SMTPFrom              string
+	SMTPFromName          string
+	SMSProvider           string
 }
 
 func Load() Config {
@@ -41,6 +61,7 @@ func Load() Config {
 		DBUser:                getEnv("DB_USER", "ttc"),
 		DBPassword:            getEnv("DB_PASSWORD", "ttc"),
 		JWTSecret:             getEnv("JWT_SECRET", "change-me"),
+		OTPSecret:             getEnv("OTP_SECRET", getEnv("JWT_SECRET", "change-me")),
 		MinOrderAmount:        getFloat("MIN_ORDER_AMOUNT", 0),
 		FreeShippingThreshold: getFloat("FREE_SHIPPING_THRESHOLD", 0),
 		UploadDir:             getEnv("UPLOAD_DIR", "./uploads"),
@@ -51,9 +72,28 @@ func Load() Config {
 		GoogleClientID:        getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret:    getEnv("GOOGLE_CLIENT_SECRET", ""),
 		GoogleRedirectURL:     getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/api/auth/google/callback"),
-		UserTokenTTL:          getDuration("USER_TOKEN_TTL", 72*time.Hour),
+		UserTokenTTL:          getDuration("USER_TOKEN_TTL", 15*time.Minute),
+		RefreshTokenTTL:       getDuration("REFRESH_TOKEN_TTL", 30*24*time.Hour),
+		VerificationTokenTTL:  getDuration("VERIFICATION_TOKEN_TTL", 10*time.Minute),
+		OTPTTL:                getDuration("OTP_TTL", 5*time.Minute),
+		OTPSendWindow:         getDuration("OTP_SEND_WINDOW", 10*time.Minute),
+		OTPCooldown:           getDuration("OTP_COOLDOWN", 60*time.Second),
+		OTPMaxAttempts:        getInt("OTP_MAX_ATTEMPTS", 5),
+		OTPSendMax:            getInt("OTP_SEND_MAX", 3),
+		PasswordMinLength:     getInt("PASSWORD_MIN_LENGTH", 8),
+		LoginMaxAttempts:      getInt("LOGIN_MAX_ATTEMPTS", 5),
+		LoginLockoutDuration:  getDuration("LOGIN_LOCKOUT_DURATION", 15*time.Minute),
+		AuthRateLimitMax:      getInt("AUTH_RATE_LIMIT_MAX", 20),
+		AuthRateLimitWindow:   getDuration("AUTH_RATE_LIMIT_WINDOW", 1*time.Minute),
 		AdminTokenTTL:         getDuration("ADMIN_TOKEN_TTL", 24*time.Hour),
 		AllowedOrigins:        getList("ALLOWED_ORIGINS", "http://localhost:3000"),
+		SMTPHost:              getEnv("SMTP_HOST", ""),
+		SMTPPort:              getEnv("SMTP_PORT", ""),
+		SMTPUsername:          getEnv("SMTP_USERNAME", ""),
+		SMTPPassword:          getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:              getEnv("SMTP_FROM", ""),
+		SMTPFromName:          getEnv("SMTP_FROM_NAME", ""),
+		SMSProvider:           getEnv("SMS_PROVIDER", "dev"),
 	}
 }
 
@@ -95,6 +135,18 @@ func getDuration(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	parsed, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func getInt(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
 	if err != nil {
 		return fallback
 	}
