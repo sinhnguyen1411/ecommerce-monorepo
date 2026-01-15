@@ -1,30 +1,4 @@
-import { getUserToken } from "./auth";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
-function buildUrl(path: string) {
-  return `${API_BASE_URL.replace(/\/$/, "")}${path}`;
-}
-
-async function authRequest<T>(path: string, options?: RequestInit) {
-  const token = getUserToken();
-  const response = await fetch(buildUrl(path), {
-    ...options,
-    headers: {
-      ...(options?.headers || {}),
-      Authorization: token ? `Bearer ${token}` : "",
-      "Content-Type": "application/json"
-    }
-  });
-
-  const payload = await response.json();
-  if (!response.ok || !payload?.success) {
-    const message = payload?.error?.message || "Request failed";
-    throw new Error(message);
-  }
-
-  return payload.data as T;
-}
+import { authRequest } from "./auth-client";
 
 export type UserProfile = {
   id: number;
@@ -66,40 +40,56 @@ export type OrderSummary = {
 };
 
 export function getProfile() {
-  return authRequest<UserProfile>("/api/account/profile");
+  return authRequest<UserProfile>("/api/account/profile", undefined, { auth: true });
 }
 
 export function updateProfile(input: { name: string; phone: string }) {
-  return authRequest<UserProfile>("/api/account/profile", {
-    method: "PATCH",
-    body: JSON.stringify(input)
-  });
+  return authRequest<UserProfile>(
+    "/api/account/profile",
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    },
+    { auth: true }
+  );
 }
 
 export function listAddresses() {
-  return authRequest<Address[]>("/api/account/addresses");
+  return authRequest<Address[]>("/api/account/addresses", undefined, { auth: true });
 }
 
 export function createAddress(input: Omit<Address, "id">) {
-  return authRequest<Address[]>("/api/account/addresses", {
-    method: "POST",
-    body: JSON.stringify(input)
-  });
+  return authRequest<Address[]>(
+    "/api/account/addresses",
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    },
+    { auth: true }
+  );
 }
 
 export function updateAddress(id: number, input: Omit<Address, "id"> | Address) {
-  return authRequest<Address[]>(`/api/account/addresses/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(input)
-  });
+  return authRequest<Address[]>(
+    `/api/account/addresses/${id}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    },
+    { auth: true }
+  );
 }
 
 export function deleteAddress(id: number) {
-  return authRequest<{ deleted: boolean }>(`/api/account/addresses/${id}`, {
-    method: "DELETE"
-  });
+  return authRequest<{ deleted: boolean }>(
+    `/api/account/addresses/${id}`,
+    {
+      method: "DELETE"
+    },
+    { auth: true }
+  );
 }
 
 export function listOrders() {
-  return authRequest<OrderSummary[]>("/api/account/orders");
+  return authRequest<OrderSummary[]>("/api/account/orders", undefined, { auth: true });
 }

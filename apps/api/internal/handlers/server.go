@@ -42,6 +42,7 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 	})
 
 	api := router.Group("/api")
+	api.Use(s.apiRateLimitMiddleware())
 	{
 		auth := api.Group("/auth")
 		auth.Use(s.authRateLimitMiddleware())

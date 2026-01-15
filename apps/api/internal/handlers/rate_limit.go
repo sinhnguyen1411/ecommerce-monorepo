@@ -29,9 +29,47 @@ func (s *Server) enforceAuthRateLimit(c *gin.Context) bool {
 	return true
 }
 
+func (s *Server) enforceAPIRateLimit(c *gin.Context) bool {
+	if s.Config.APIRateLimitMax <= 0 {
+		return true
+	}
+	key := fmt.Sprintf("api:%s:%s", c.FullPath(), c.ClientIP())
+	allowed, retryAfter, err := s.checkRateLimit(key, s.Config.APIRateLimitMax, s.Config.APIRateLimitWindow)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "rate_limit_error", "Rate limit check failed")
+		return false
+	}
+	if !allowed {
+		if retryAfter > 0 {
+			c.Header("Retry-After", fmt.Sprintf("%d", int(retryAfter.Seconds())))
+		}
+		respondError(c, http.StatusTooManyRequests, "rate_limited", "Too many requests")
+		return false
+	}
+	return true
+}
+
 func (s *Server) authRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if c.Request.Method == http.MethodOptions {
+			c.Next()
+			return
+		}
 		if !s.enforceAuthRateLimit(c) {
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func (s *Server) apiRateLimitMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Method == http.MethodOptions {
+			c.Next()
+			return
+		}
+		if !s.enforceAPIRateLimit(c) {
 			c.Abort()
 			return
 		}

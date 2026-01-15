@@ -40,8 +40,12 @@ type Config struct {
 	LoginLockoutDuration  time.Duration
 	AuthRateLimitMax      int
 	AuthRateLimitWindow   time.Duration
+	APIRateLimitMax       int
+	APIRateLimitWindow    time.Duration
 	AdminTokenTTL         time.Duration
 	AllowedOrigins        []string
+	CORSAllowCredentials  bool
+	TrustedProxies        []string
 	SMTPHost              string
 	SMTPPort              string
 	SMTPUsername          string
@@ -85,8 +89,12 @@ func Load() Config {
 		LoginLockoutDuration:  getDuration("LOGIN_LOCKOUT_DURATION", 15*time.Minute),
 		AuthRateLimitMax:      getInt("AUTH_RATE_LIMIT_MAX", 20),
 		AuthRateLimitWindow:   getDuration("AUTH_RATE_LIMIT_WINDOW", 1*time.Minute),
+		APIRateLimitMax:       getInt("API_RATE_LIMIT_MAX", 300),
+		APIRateLimitWindow:    getDuration("API_RATE_LIMIT_WINDOW", 1*time.Minute),
 		AdminTokenTTL:         getDuration("ADMIN_TOKEN_TTL", 24*time.Hour),
 		AllowedOrigins:        getList("ALLOWED_ORIGINS", "http://localhost:3000"),
+		CORSAllowCredentials:  getBool("CORS_ALLOW_CREDENTIALS", false),
+		TrustedProxies:        getList("TRUSTED_PROXIES", ""),
 		SMTPHost:              getEnv("SMTP_HOST", ""),
 		SMTPPort:              getEnv("SMTP_PORT", ""),
 		SMTPUsername:          getEnv("SMTP_USERNAME", ""),

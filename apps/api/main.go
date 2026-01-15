@@ -37,14 +37,30 @@ func main() {
 		}
 	}
 
+	if cfg.CORSAllowCredentials {
+		for _, origin := range cfg.AllowedOrigins {
+			if origin == "*" {
+				log.Fatal("CORS_ALLOW_CREDENTIALS requires explicit ALLOWED_ORIGINS (no wildcard)")
+			}
+		}
+	}
+
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
+
+	trustedProxies := cfg.TrustedProxies
+	if len(trustedProxies) == 0 {
+		trustedProxies = nil
+	}
+	if err := router.SetTrustedProxies(trustedProxies); err != nil {
+		log.Fatalf("failed to set trusted proxies: %v", err)
+	}
 
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.AllowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		AllowCredentials: true,
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Device-ID"},
+		AllowCredentials: cfg.CORSAllowCredentials,
 	}))
 
 	router.Static("/uploads", cfg.UploadDir)

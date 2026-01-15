@@ -86,6 +86,7 @@ Key variables:
 - `OTP_TTL`, `OTP_SEND_WINDOW`, `OTP_COOLDOWN`, `OTP_MAX_ATTEMPTS`, `OTP_SEND_MAX`
 - `PASSWORD_MIN_LENGTH`, `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCKOUT_DURATION`
 - `AUTH_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_WINDOW`
+- `API_RATE_LIMIT_MAX`, `API_RATE_LIMIT_WINDOW`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URL`
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_FROM_NAME`
 - `SMS_PROVIDER` (default `dev`)
@@ -93,6 +94,8 @@ Key variables:
 - `FREE_SHIPPING_THRESHOLD`: free shipping threshold (api, frontend)
 - `PUBLIC_BASE_URL`: public API base used for image URLs
 - `ALLOWED_ORIGINS`: CORS origin list for the API
+- `CORS_ALLOW_CREDENTIALS`: set true when using cookie-based auth
+- `TRUSTED_PROXIES`: comma-separated CIDRs/IPs for reverse proxies
 - `NEXT_PUBLIC_API_URL`: API base for the browser
 - `API_INTERNAL_URL`: API base for server-side fetches (Docker: `http://api:8080`)
 - `NEXT_PUBLIC_SITE_URL`: base URL for sitemap/robots
@@ -182,6 +185,9 @@ Uploads:
 - Access tokens use the `Authorization: Bearer <token>` header.
 - Refresh tokens are returned in JSON responses. For Google redirect flow, `token` is appended as a query param and `refresh_token` as a URL fragment.
 - OTPs are logged to the API console in non-production environments. In production, configure SMTP before enabling email OTP.
+- If you move refresh tokens to cookies, set `CORS_ALLOW_CREDENTIALS=true` and implement CSRF protection (double-submit or same-site tokens).
+- When `CORS_ALLOW_CREDENTIALS=true`, keep `ALLOWED_ORIGINS` explicit (no `*`).
+- Set `TRUSTED_PROXIES` when running behind Nginx/ELB so `ClientIP` and rate limits use `X-Forwarded-For`.
 
 ## Auth Examples
 Signup (email):
