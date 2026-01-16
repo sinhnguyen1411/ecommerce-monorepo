@@ -19,12 +19,12 @@ import MobileMenu from "./MobileMenu";
 import SearchDialog from "./SearchDialog";
 
 const navLinks = [
-  { href: "/", label: "Trang ch?" },
-  { href: "/pages/about-us", label: "Gi?i thi?u" },
-  { href: "/collections/all", label: "S?n ph?m" },
-  { href: "/blogs/news", label: "Ki?n th?c n?ng nghi?p" },
-  { href: "/pages/hoi-dap-cung-nha-nong", label: "H?i ??p c?ng nh? n?ng" },
-  { href: "/pages/lien-he", label: "Li?n h?" }
+  { href: "/", label: "Trang chủ" },
+  { href: "/pages/about-us", label: "Giới thiệu" },
+  { href: "/collections/all", label: "Sản phẩm" },
+  { href: "/blogs/news", label: "Kiến thức nông nghiệp" },
+  { href: "/pages/hoi-dap-cung-nha-nong", label: "Hỏi đáp cùng nhà nông" },
+  { href: "/pages/lien-he", label: "Liên hệ" }
 ];
 
 export default function Header() {
@@ -69,30 +69,30 @@ export default function Header() {
                 <SearchDialog />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="header-action-btn" aria-label="T?i kho?n">
+                    <button className="header-action-btn" aria-label="Tài khoản">
                       <User className="h-4 w-4" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 p-2">
-                    <div className="px-2 py-2 text-xs text-ink/60">T?i kho?n c?a b?n</div>
+                    <div className="px-2 py-2 text-xs text-ink/60">Tài khoản của bạn</div>
                     <DropdownMenuItem asChild>
-                      <Link href="/login">??ng nh?p</Link>
+                      <Link href="/login">Đăng nhập</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/signup">??ng k?</Link>
+                      <Link href="/signup">Đăng ký</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/account">T?i kho?n c?a t?i</Link>
+                      <Link href="/account">Tài khoản của tôi</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/forgot-password">Qu?n m?t kh?u</Link>
+                      <Link href="/forgot-password">Quên mật khẩu</Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <button onClick={open} className="header-action-cart">
                   <ShoppingBag className="h-4 w-4" />
-                  Gi? h?ng
+                  Giỏ hàng
                   <span>({count})</span>
                 </button>
               </div>

@@ -52,7 +52,7 @@ export default function AccountPage() {
         setName(data.name || "");
         setPhone(data.phone || "");
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Kh?ng th? t?i h? s?"));
+      .catch((err) => setError(err instanceof Error ? err.message : "Không thể tải hồ sơ"));
   }, []);
 
   const handleSave = async () => {
@@ -62,7 +62,7 @@ export default function AccountPage() {
       const updated = await updateProfile({ name, phone });
       setProfile(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kh?ng th? c?p nh?t h? s?");
+      setError(err instanceof Error ? err.message : "Không thể cập nhật hồ sơ");
     } finally {
       setSaving(false);
     }
@@ -73,15 +73,15 @@ export default function AccountPage() {
       <div>
         <section className="section-shell pb-10 pt-14">
           <SectionTitle
-            eyebrow="T?i kho?n"
-            title="??ng nh?p ?? ti?p t?c"
-            description="??ng nh?p ?? qu?n l? t?i kho?n v? ??n h?ng."
+            eyebrow="Tài khoản"
+            title="Đăng nhập để tiếp tục"
+            description="Đăng nhập để quản lý tài khoản và đơn hàng."
           />
         </section>
         <section className="section-shell pb-16">
           <div className="border border-forest/10 bg-white p-8 text-center">
             <Link className="button" href="/login">
-              ?i t?i trang ??ng nh?p
+              Đi tới trang đăng nhập
             </Link>
           </div>
         </section>
@@ -93,35 +93,35 @@ export default function AccountPage() {
     <div>
       <section className="section-shell pb-6 pt-14">
         <SectionTitle
-          eyebrow="T?i kho?n"
-          title="Th?ng tin t?i kho?n"
-          description="C?p nh?t th?ng tin c? nh?n v? qu?n l? ??n h?ng."
+          eyebrow="Tài khoản"
+          title="Thông tin tài khoản"
+          description="Cập nhật thông tin cá nhân và quản lý đơn hàng."
         />
       </section>
 
       <section className="section-shell pb-16">
         <div className="grid gap-6 lg:grid-cols-[1fr_0.4fr]">
           <div className="border border-forest/10 bg-white p-6">
-            <h2 className="text-lg font-semibold">H? s?</h2>
+            <h2 className="text-lg font-semibold">Hồ sơ</h2>
             {error ? <p className="mt-3 text-sm text-clay">{error}</p> : null}
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <input
                 className="field"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="H? v? t?n"
+                placeholder="Họ và tên"
               />
               <input
                 className="field"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
-                placeholder="S? ?i?n tho?i"
+                placeholder="Số điện thoại"
               />
               <input className="field" value={profile?.email || ""} readOnly />
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "?ang l?u..." : "L?u thay ??i"}
+                {saving ? "Đang lưu..." : "Lưu thay đổi"}
               </Button>
               <Button
                 variant="outline"
@@ -137,7 +137,7 @@ export default function AccountPage() {
                       await logout(refreshToken);
                     }
                   } catch (err) {
-                    setError(err instanceof Error ? err.message : "Kh?ng th? ??ng xu?t");
+                    setError(err instanceof Error ? err.message : "Không thể đăng xuất");
                   } finally {
                     clearAuthTokens();
                     setLoggingOut(false);
@@ -145,19 +145,19 @@ export default function AccountPage() {
                   }
                 }}
               >
-                {loggingOut ? "?ang ??ng xu?t..." : "??ng xu?t"}
+                {loggingOut ? "Đang đăng xuất..." : "Đăng xuất"}
               </Button>
             </div>
           </div>
 
           <div className="border border-forest/10 bg-white p-6">
-            <h3 className="text-lg font-semibold">Qu?n l?</h3>
+            <h3 className="text-lg font-semibold">Quản lý</h3>
             <div className="mt-4 space-y-2 text-sm text-ink/70">
               <Link className="block text-forest" href="/account/addresses">
-                ??a ch? giao h?ng
+                Địa chỉ giao hàng
               </Link>
               <Link className="block text-forest" href="/account/orders">
-                ??n h?ng c?a t?i
+                Đơn hàng của tôi
               </Link>
             </div>
           </div>

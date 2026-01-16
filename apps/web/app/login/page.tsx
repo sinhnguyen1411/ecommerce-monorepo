@@ -45,7 +45,7 @@ export default function LoginPage() {
       setAuthTokens(result.access_token, result.refresh_token);
       router.push("/account");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "??ng nh?p th?t b?i");
+      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
     } finally {
       setLoading(false);
     }
@@ -55,9 +55,9 @@ export default function LoginPage() {
     <div>
       <section className="section-shell pb-10 pt-14">
         <SectionTitle
-          eyebrow="T?i kho?n"
-          title="??ng nh?p"
-          description="??ng nh?p b?ng email ho?c s? ?i?n tho?i v? m?t kh?u."
+          eyebrow="Tài khoản"
+          title="Đăng nhập"
+          description="Đăng nhập bằng email hoặc số điện thoại và mật khẩu."
         />
       </section>
 
@@ -69,34 +69,34 @@ export default function LoginPage() {
               className="field"
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
-              placeholder="Email ho?c s? ?i?n tho?i"
+              placeholder="Email hoặc số điện thoại"
             />
             <input
               className="field"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="M?t kh?u"
+              placeholder="Mật khẩu"
             />
             <Button type="submit" disabled={loading}>
-              {loading ? "?ang ??ng nh?p..." : "??ng nh?p"}
+              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
           </form>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-ink/70">
             <Link className="text-forest" href="/signup">
-              T?o t?i kho?n
+              Tạo tài khoản
             </Link>
             <span className="text-ink/40">|</span>
             <Link className="text-forest" href="/forgot-password">
-              Qu?n m?t kh?u
+              Quên mật khẩu
             </Link>
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Button asChild disabled={!loginUrl}>
-              <a href={loginUrl || "#"}>??ng nh?p b?ng Google</a>
+              <a href={loginUrl || "#"}>Đăng nhập bằng Google</a>
             </Button>
             <Link href="/" className="button btnlight">
-              V? trang ch?
+              Về trang chủ
             </Link>
           </div>
         </div>

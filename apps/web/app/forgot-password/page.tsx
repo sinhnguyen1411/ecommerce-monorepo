@@ -49,8 +49,8 @@ export default function ForgotPasswordPage() {
 
   const helperText = useMemo(() => {
     return channel === "email"
-      ? "Ch?ng t?i s? g?i m? ??n email c?a b?n."
-      : "Ch?ng t?i s? g?i m? ??n s? ?i?n tho?i di ??ng Vi?t Nam c?a b?n.";
+      ? "Chúng tôi sẽ gửi mã đến email của bạn."
+      : "Chúng tôi sẽ gửi mã đến số điện thoại di động Việt Nam của bạn.";
   }, [channel]);
 
   const handleRequest = async (event?: React.FormEvent<HTMLFormElement>) => {
@@ -70,10 +70,10 @@ export default function ForgotPasswordPage() {
         setRequestId(result.request_id);
         setStep("verify");
       } else {
-        setNotice("N?u t?i kho?n t?n t?i, m? ?? ???c g?i.");
+        setNotice("Nếu tài khoản tồn tại, mã đã được gửi.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kh?ng th? g?i OTP");
+      setError(err instanceof Error ? err.message : "Không thể gửi OTP");
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     try {
       if (!requestId) {
-        throw new Error("Thi?u m? y?u c?u");
+        throw new Error("Thiếu mã yêu cầu");
       }
       const result = await verifyForgotPasswordOTP({
         request_id: requestId,
@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
       setVerificationToken(result.verification_token);
       setStep("reset");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kh?ng th? x?c minh OTP");
+      setError(err instanceof Error ? err.message : "Không thể xác minh OTP");
     } finally {
       setLoading(false);
     }
@@ -113,7 +113,7 @@ export default function ForgotPasswordPage() {
       });
       setStep("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kh?ng th? ??t l?i m?t kh?u");
+      setError(err instanceof Error ? err.message : "Không thể đặt lại mật khẩu");
     } finally {
       setLoading(false);
     }
@@ -123,9 +123,9 @@ export default function ForgotPasswordPage() {
     <div>
       <section className="section-shell pb-10 pt-14">
         <SectionTitle
-          eyebrow="T?i kho?n"
-          title="Qu?n m?t kh?u"
-          description="X?c minh email ho?c s? ?i?n tho?i ?? ??t l?i m?t kh?u."
+          eyebrow="Tài khoản"
+          title="Quên mật khẩu"
+          description="Xác minh email hoặc số điện thoại để đặt lại mật khẩu."
         />
       </section>
 
@@ -155,7 +155,7 @@ export default function ForgotPasswordPage() {
                     checked={channel === "sms"}
                     onChange={() => setChannel("sms")}
                   />
-                  S? ?i?n tho?i
+                  Số điện thoại
                 </label>
               </div>
               {channel === "email" ? (
@@ -163,19 +163,19 @@ export default function ForgotPasswordPage() {
                   className="field"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="??a ch? email"
+                  placeholder="Địa chỉ email"
                 />
               ) : (
                 <input
                   className="field"
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
-                  placeholder="S? ?i?n tho?i Vi?t Nam (0xxxxxxxxx)"
+                  placeholder="Số điện thoại Việt Nam (0xxxxxxxxx)"
                 />
               )}
               <p className="text-xs text-ink/60">{helperText}</p>
               <Button type="submit" disabled={loading}>
-                {loading ? "?ang g?i..." : "G?i m?"}
+                {loading ? "Đang gửi..." : "Gửi mã"}
               </Button>
             </form>
           ) : null}
@@ -186,11 +186,11 @@ export default function ForgotPasswordPage() {
                 className="field"
                 value={otpCode}
                 onChange={(event) => setOtpCode(event.target.value)}
-                placeholder="M? 6 ch? s?"
+                placeholder="Mã 6 chữ số"
               />
               <div className="flex flex-wrap items-center gap-3">
                 <Button type="submit" disabled={loading}>
-                  {loading ? "?ang x?c minh..." : "X?c minh OTP"}
+                  {loading ? "Đang xác minh..." : "Xác minh OTP"}
                 </Button>
                 <Button
                   type="button"
@@ -198,7 +198,7 @@ export default function ForgotPasswordPage() {
                   disabled={loading || cooldown > 0}
                   onClick={() => handleRequest()}
                 >
-                  {cooldown > 0 ? `G?i l?i sau ${cooldown}s` : "G?i l?i"}
+                  {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại"}
                 </Button>
               </div>
             </form>
@@ -211,27 +211,27 @@ export default function ForgotPasswordPage() {
                 type="password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
-                placeholder="M?t kh?u m?i"
+                placeholder="Mật khẩu mới"
               />
               <Button type="submit" disabled={loading}>
-                {loading ? "?ang ??t l?i..." : "??t l?i m?t kh?u"}
+                {loading ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
               </Button>
             </form>
           ) : null}
 
           {step === "done" ? (
             <div className="grid gap-3 text-sm">
-              <p>M?t kh?u ?? ???c ??t l?i.</p>
+              <p>Mật khẩu đã được đặt lại.</p>
               <Link className="text-forest" href="/login">
-                Quay l?i ??ng nh?p
+                Quay lại Đăng nhập
               </Link>
             </div>
           ) : null}
 
           <div className="mt-6 text-xs text-ink/70">
-            Nh? m?t kh?u?{" "}
+            Nhớ mật khẩu?{" "}
             <Link className="text-forest" href="/login">
-              ??ng nh?p
+              Đăng nhập
             </Link>
           </div>
         </div>

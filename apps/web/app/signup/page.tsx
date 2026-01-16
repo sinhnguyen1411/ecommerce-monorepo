@@ -51,8 +51,8 @@ export default function SignupPage() {
 
   const helperText = useMemo(() => {
     return channel === "email"
-      ? "Ch?ng t?i s? g?i m? ??n email c?a b?n."
-      : "Ch?ng t?i s? g?i m? ??n s? ?i?n tho?i di ??ng Vi?t Nam c?a b?n.";
+      ? "Chúng tôi sẽ gửi mã đến email của bạn."
+      : "Chúng tôi sẽ gửi mã đến số điện thoại di động Việt Nam của bạn.";
   }, [channel]);
 
   const handleRequest = async (event?: React.FormEvent<HTMLFormElement>) => {
@@ -69,7 +69,7 @@ export default function SignupPage() {
       setCooldown(result.cooldown_seconds || 0);
       setStep("verify");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kh?ng th? g?i OTP");
+      setError(err instanceof Error ? err.message : "Không thể gửi OTP");
     } finally {
       setLoading(false);
     }
@@ -81,13 +81,13 @@ export default function SignupPage() {
     setLoading(true);
     try {
       if (!requestId) {
-        throw new Error("Thi?u m? y?u c?u");
+        throw new Error("Thiếu mã yêu cầu");
       }
       const result = await verifySignupOTP({ request_id: requestId, code: otpCode.trim() });
       setVerificationToken(result.verification_token);
       setStep("complete");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kh?ng th? x?c minh OTP");
+      setError(err instanceof Error ? err.message : "Không thể xác minh OTP");
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export default function SignupPage() {
       setAuthTokens(result.access_token, result.refresh_token);
       router.push("/account");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kh?ng th? ho?n t?t ??ng k?");
+      setError(err instanceof Error ? err.message : "Không thể hoàn tất đăng ký");
     } finally {
       setLoading(false);
     }
@@ -117,9 +117,9 @@ export default function SignupPage() {
     <div>
       <section className="section-shell pb-10 pt-14">
         <SectionTitle
-          eyebrow="T?i kho?n"
-          title="T?o t?i kho?n"
-          description="X?c minh email ho?c s? ?i?n tho?i ?? ho?n t?t ??ng k?."
+          eyebrow="Tài khoản"
+          title="Tạo tài khoản"
+          description="Xác minh email hoặc số điện thoại để hoàn tất đăng ký."
         />
       </section>
 
@@ -147,7 +147,7 @@ export default function SignupPage() {
                     checked={channel === "sms"}
                     onChange={() => setChannel("sms")}
                   />
-                  S? ?i?n tho?i
+                  Số điện thoại
                 </label>
               </div>
               {channel === "email" ? (
@@ -155,19 +155,19 @@ export default function SignupPage() {
                   className="field"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="??a ch? email"
+                  placeholder="Địa chỉ email"
                 />
               ) : (
                 <input
                   className="field"
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
-                  placeholder="S? ?i?n tho?i Vi?t Nam (0xxxxxxxxx)"
+                  placeholder="Số điện thoại Việt Nam (0xxxxxxxxx)"
                 />
               )}
               <p className="text-xs text-ink/60">{helperText}</p>
               <Button type="submit" disabled={loading}>
-                {loading ? "?ang g?i..." : "G?i m?"}
+                {loading ? "Đang gửi..." : "Gửi mã"}
               </Button>
             </form>
           ) : null}
@@ -178,11 +178,11 @@ export default function SignupPage() {
                 className="field"
                 value={otpCode}
                 onChange={(event) => setOtpCode(event.target.value)}
-                placeholder="M? 6 ch? s?"
+                placeholder="Mã 6 chữ số"
               />
               <div className="flex flex-wrap items-center gap-3">
                 <Button type="submit" disabled={loading}>
-                  {loading ? "?ang x?c minh..." : "X?c minh OTP"}
+                  {loading ? "Đang xác minh..." : "Xác minh OTP"}
                 </Button>
                 <Button
                   type="button"
@@ -190,7 +190,7 @@ export default function SignupPage() {
                   disabled={loading || cooldown > 0}
                   onClick={() => handleRequest()}
                 >
-                  {cooldown > 0 ? `G?i l?i sau ${cooldown}s` : "G?i l?i"}
+                  {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại"}
                 </Button>
               </div>
             </form>
@@ -202,29 +202,29 @@ export default function SignupPage() {
                 className="field"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
-                placeholder="H? v? t?n"
+                placeholder="Họ và tên"
               />
               <input
                 className="field"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="M?t kh?u"
+                placeholder="Mật khẩu"
               />
               <input
                 className="field"
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
-                placeholder="??a ch? (t?y ch?n)"
+                placeholder="Địa chỉ (tùy chọn)"
               />
               <Button type="submit" disabled={loading}>
-                {loading ? "?ang t?o t?i kho?n..." : "Ho?n t?t ??ng k?"}
+                {loading ? "Đang tạo tài khoản..." : "Hoàn tất đăng ký"}
               </Button>
             </form>
           ) : null}
 
           <div className="mt-6 text-xs text-ink/70">
-            ?? c? t?i kho?n? <Link className="text-forest" href="/login">??ng nh?p</Link>
+            Đã có tài khoản? <Link className="text-forest" href="/login">Đăng nhập</Link>
           </div>
         </div>
       </section>
