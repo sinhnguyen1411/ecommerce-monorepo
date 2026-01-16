@@ -3,8 +3,8 @@ import { getCategories, getProducts } from "@/lib/api";
 import ProductsClient from "../../products/ProductsClient";
 
 export const metadata = {
-  title: "Tất cả sản phẩm | Nông nghiệp TTC",
-  description: "Danh sách sản phẩm nông nghiệp và mức giá tại TTC."
+  title: "Tất cả sản phẩm | Nông Dược Tam Bố",
+  description: "Danh sách sản phẩm nông nghiệp và mức giá tại Tam Bố."
 };
 
 type CollectionsAllPageProps = {

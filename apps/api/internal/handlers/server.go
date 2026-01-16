@@ -150,6 +150,9 @@ func (s *Server) buildAssetURL(raw string) string {
 	}
 
 	if strings.HasPrefix(raw, "/") {
+		if strings.HasPrefix(raw, "/tam-bo/") {
+			return s.Config.FrontendBaseURL + raw
+		}
 		return s.Config.PublicBaseURL + raw
 	}
 

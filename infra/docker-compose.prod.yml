@@ -1,9 +1,9 @@
-﻿version: "3.9"
+version: "3.9"
 
 services:
   mysql:
     image: mysql:8.0
-    container_name: ttc_mysql
+    container_name: tambo_mysql
     restart: unless-stopped
     env_file:
       - ./env/mysql.env
@@ -15,7 +15,7 @@ services:
       context: ../apps/api
       dockerfile: Dockerfile
       target: prod
-    container_name: ttc_api
+    container_name: tambo_api
     restart: unless-stopped
     env_file:
       - ./env/api.env
@@ -48,7 +48,7 @@ services:
         NEXT_PUBLIC_BANK_NAME: ${NEXT_PUBLIC_BANK_NAME}
         NEXT_PUBLIC_BANK_ACCOUNT: ${NEXT_PUBLIC_BANK_ACCOUNT}
         NEXT_PUBLIC_BANK_HOLDER: ${NEXT_PUBLIC_BANK_HOLDER}
-    container_name: ttc_web
+    container_name: tambo_web
     restart: unless-stopped
     env_file:
       - ./env/web.env
@@ -57,7 +57,7 @@ services:
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: ttc_nginx
+    container_name: tambo_nginx
     restart: unless-stopped
     depends_on:
       - web

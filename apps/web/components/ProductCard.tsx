@@ -1,6 +1,9 @@
-﻿"use client";
+"use client";
 
+import { useEffect, useMemo, useState } from "react";
+import type { MouseEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Product } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -13,13 +16,64 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const image = product.images?.[0]?.url;
+  const placeholderImages = [
+    "/tam-bo/products/placeholder_1.svg",
+    "/tam-bo/products/placeholder_2.svg",
+    "/tam-bo/products/placeholder_3.svg"
+  ];
+  const images = useMemo(() => {
+    const sources = [...(product.images || [])]
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((item) => item.url)
+      .filter(Boolean);
+    const fallback = [...sources];
+    while (fallback.length < 3) {
+      fallback.push(placeholderImages[fallback.length % placeholderImages.length]);
+    }
+    return fallback;
+  }, [product.images]);
+  const [activeImage, setActiveImage] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
+  const router = useRouter();
   const onSale =
     typeof product.compare_at_price === "number" &&
     product.compare_at_price > product.price;
 
+  useEffect(() => {
+    if (!isHovering || images.length < 2) {
+      return undefined;
+    }
+    setActiveImage(0);
+    const timeoutId = window.setTimeout(() => {
+      setActiveImage(1);
+    }, 450);
+    const intervalId = window.setInterval(() => {
+      setActiveImage((prev) => (prev + 1) % images.length);
+    }, 1200);
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
+  }, [images.length, isHovering]);
+
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, select")) {
+      return;
+    }
+    router.push(`/products/${product.slug}`);
+  };
+
   return (
-    <div className="card-surface flex h-full flex-col overflow-hidden p-5">
+    <div
+      className="card-surface flex h-full flex-col overflow-hidden p-5"
+      onClick={handleCardClick}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => {
+        setIsHovering(false);
+        setActiveImage(0);
+      }}
+    >
       <div className="relative overflow-hidden rounded-2xl bg-mist">
         {onSale ? (
           <span className="absolute left-4 top-4 z-10 rounded-full bg-clay px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cream">
@@ -28,17 +82,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         ) : null}
         <Link href={`/products/${product.slug}`} className="block">
           <div className="relative h-52 w-full">
-            {image ? (
-              <img
-                src={image}
-                alt={product.name}
-                className="h-full w-full object-cover transition duration-300 hover:scale-105"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm text-ink/50">
-                Chưa có ảnh
-              </div>
-            )}
+            <img
+              src={images[activeImage]}
+              alt={product.name}
+              className="h-full w-full object-cover transition duration-300 hover:scale-105"
+            />
           </div>
         </Link>
       </div>

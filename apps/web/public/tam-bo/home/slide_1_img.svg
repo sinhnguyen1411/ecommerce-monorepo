@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" role="img" aria-labelledby="title desc">
+  <title id="title">Nông dược Tam Bố - Nông nghiệp xanh</title>
+  <desc id="desc">Banner Tam Bố với nền cánh đồng xanh, điểm nhấn tròn và thông điệp nông nghiệp xanh.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#d9f2ff"/>
+      <stop offset="55%" stop-color="#a6d9ff"/>
+      <stop offset="100%" stop-color="#7bbf87"/>
+    </linearGradient>
+    <linearGradient id="fieldLeft" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2f7d32"/>
+      <stop offset="100%" stop-color="#7cb342"/>
+    </linearGradient>
+    <linearGradient id="fieldRight" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#386f1d"/>
+      <stop offset="100%" stop-color="#a7d96b"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#396b16"/>
+      <stop offset="100%" stop-color="#4c8b1f"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1400" height="560" fill="url(#sky)"/>
+
+  <path d="M0 300 C240 220 420 220 700 290 C980 360 1160 360 1400 300 V560 H0 Z" fill="url(#fieldLeft)"/>
+  <path d="M0 360 C220 300 420 300 700 360 C980 420 1180 420 1400 360 V560 H0 Z" fill="#5a9f3a" opacity="0.9"/>
+  <path d="M0 430 C240 380 420 380 700 430 C980 480 1180 480 1400 430 V560 H0 Z" fill="#76b947" opacity="0.9"/>
+
+  <rect x="900" y="0" width="500" height="560" fill="url(#fieldRight)"/>
+  <path d="M900 0 L1080 0 L980 220 L900 220 Z" fill="url(#panel)"/>
+
+  <circle cx="1030" cy="270" r="170" fill="#ffffff" stroke="#3f7f1c" stroke-width="6"/>
+  <circle cx="1030" cy="270" r="145" fill="#eaf7d9"/>
+  <g transform="translate(1030 270)">
+    <path d="M0 -70 C40 -70 70 -35 70 0 C70 40 35 70 0 70 C-35 70 -70 40 -70 0 C-70 -35 -40 -70 0 -70 Z" fill="#b8e36d"/>
+    <path d="M-10 -25 C10 -50 40 -50 50 -20 C30 -10 10 10 -10 35 C-25 20 -30 -5 -10 -25 Z" fill="#4c8b1f"/>
+    <path d="M-30 -15 C-15 -35 10 -40 20 -15 C5 -5 -10 15 -25 30 C-35 20 -38 0 -30 -15 Z" fill="#3f7f1c"/>
+    <circle cx="35" cy="25" r="12" fill="#4c8b1f"/>
+    <circle cx="-35" cy="35" r="8" fill="#3f7f1c"/>
+  </g>
+
+  <g fill="#ffffff" font-family="Roboto, Arial, sans-serif">
+    <text x="70" y="120" font-size="26" font-weight="600" letter-spacing="1">Nông dược Tam Bố</text>
+    <text x="70" y="200" font-size="46" font-weight="800">NÔNG NGHIỆP XANH</text>
+    <text x="70" y="260" font-size="42" font-weight="800">GIẢI PHÁP CHO TƯƠNG LAI</text>
+    <text x="70" y="320" font-size="40" font-weight="800">THÔNG MINH</text>
+  </g>
+
+  <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" transform="translate(70 345)">
+    <path d="M0 0 H40"/>
+    <path d="M60 0 H100"/>
+    <path d="M120 0 H160"/>
+    <path d="M180 0 H220"/>
+  </g>
+</svg>

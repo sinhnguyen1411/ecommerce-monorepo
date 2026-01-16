@@ -2,30 +2,30 @@
 
 const sellingPolicies = [
   {
-    icon: "/ttc/product/product_info1_desc1_img.png",
+    icon: "/tam-bo/product/product_info1_desc1_img.png",
     label: "Miễn phí giao hàng"
   },
   {
-    icon: "/ttc/product/product_info1_desc2_img.png",
+    icon: "/tam-bo/product/product_info1_desc2_img.png",
     label: "Cam kết hàng chính hãng 100%"
   },
   {
-    icon: "/ttc/product/product_info1_desc3_img.png",
+    icon: "/tam-bo/product/product_info1_desc3_img.png",
     label: "Hỗ trợ 24/7"
   }
 ];
 
 const extraInfo = [
   {
-    icon: "/ttc/product/product_info2_desc1_img.png",
+    icon: "/tam-bo/product/product_info2_desc1_img.png",
     label: "Đổi trả trong 7 ngày"
   },
   {
-    icon: "/ttc/product/product_info2_desc2_img.png",
+    icon: "/tam-bo/product/product_info2_desc2_img.png",
     label: "Mở hộp kiểm tra nhận hàng"
   },
   {
-    icon: "/ttc/product/product_info2_desc3_img.png",
+    icon: "/tam-bo/product/product_info2_desc3_img.png",
     label: "Thanh toán nhanh chóng"
   }
 ];

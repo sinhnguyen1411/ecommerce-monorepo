@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "Chính sách bảo mật | Nông nghiệp TTC",
-  description: "Quy định bảo mật thông tin khách hàng tại TTC."
+  title: "Chính sách bảo mật | Nông Dược Tam Bố",
+  description: "Quy định bảo mật thông tin khách hàng tại Tam Bố."
 };
 
 export default function PrivacyPolicyPage() {

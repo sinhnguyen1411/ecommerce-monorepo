@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 
 import { siteConfig } from "@/lib/site";
 
@@ -44,7 +44,7 @@ export default function SiteFooter() {
             Đăng ký bản tin
           </p>
           <p className="text-ink/70">
-            Nhận thông tin về mùa vụ mới và ưu đãi từ TTC.
+            Nhận thông tin về mùa vụ mới và ưu đãi từ Tam Bố.
           </p>
           <div className="flex flex-col gap-3">
             <input className="field" placeholder="Email của bạn" />

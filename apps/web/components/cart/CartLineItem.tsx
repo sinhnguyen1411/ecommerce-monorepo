@@ -15,7 +15,7 @@ export default function CartLineItem({ item }: { item: CartItem }) {
           {item.imageUrl ? (
             <img src={item.imageUrl} alt={item.name} />
           ) : (
-            <img src="/ttc/cart/no_image.jpg" alt="No image" />
+            <img src="/tam-bo/cart/no_image.jpg" alt="No image" />
           )}
         </div>
         <div className="item-remove">

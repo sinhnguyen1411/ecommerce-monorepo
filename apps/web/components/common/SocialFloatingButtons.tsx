@@ -11,7 +11,7 @@ export default function SocialFloatingButtons() {
         target="_blank"
         rel="noreferrer"
         aria-label="Zalo"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-forest text-white shadow-lg transition hover:scale-105"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0068ff] text-white shadow-lg transition hover:scale-105"
       >
         <MessageCircle className="h-5 w-5" />
       </Link>
@@ -20,7 +20,7 @@ export default function SocialFloatingButtons() {
         target="_blank"
         rel="noreferrer"
         aria-label="Messenger"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-sun text-ink shadow-lg transition hover:scale-105"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0084ff] text-white shadow-lg transition hover:scale-105"
       >
         <MessageSquare className="h-5 w-5" />
       </Link>
@@ -29,7 +29,7 @@ export default function SocialFloatingButtons() {
         target="_blank"
         rel="noreferrer"
         aria-label="Facebook"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-clay text-white shadow-lg transition hover:scale-105"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1877f2] text-white shadow-lg transition hover:scale-105"
       >
         <Facebook className="h-5 w-5" />
       </Link>

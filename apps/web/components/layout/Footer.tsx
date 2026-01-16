@@ -12,7 +12,7 @@ export default function Footer() {
             <div>
               <p className="footer-widget-title">Bản tin</p>
               <h3 className="text-lg font-semibold">
-                Đăng ký nhận thông tin ưu đãi từ TTC
+                Đăng ký nhận thông tin ưu đãi từ Tam Bố
               </h3>
               <p className="mt-2 text-sm text-white/70">
                 Nhập email để nhận tin về sản phẩm và khuyến mãi mới.
@@ -53,8 +53,8 @@ export default function Footer() {
             </Link>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
-            <img src="/ttc/footer/payment_1_img.png" alt="payment" className="h-7" />
-            <img src="/ttc/footer/payment_2_img.png" alt="payment" className="h-7" />
+            <img src="/tam-bo/footer/payment_1_img.png" alt="payment" className="h-7" />
+            <img src="/tam-bo/footer/payment_2_img.png" alt="payment" className="h-7" />
           </div>
         </div>
 
@@ -62,12 +62,12 @@ export default function Footer() {
           <p className="footer-widget-title">Liên hệ</p>
           <p>{siteConfig.address}</p>
           <p>Hotline: {siteConfig.phone}</p>
-          <p>Fax: {siteConfig.fax}</p>
+          <p>KTV: {siteConfig.fax}</p>
           <p>Email: {siteConfig.email}</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <img src="/ttc/footer/shipment_1_img.png" alt="shipping" className="h-8" />
-            <img src="/ttc/footer/shipment_2_img.png" alt="shipping" className="h-8" />
-            <img src="/ttc/footer/shipment_4_img.png" alt="shipping" className="h-8" />
+            <img src="/tam-bo/footer/shipment_1_img.png" alt="shipping" className="h-8" />
+            <img src="/tam-bo/footer/shipment_2_img.png" alt="shipping" className="h-8" />
+            <img src="/tam-bo/footer/shipment_4_img.png" alt="shipping" className="h-8" />
           </div>
         </div>
 
@@ -98,7 +98,7 @@ export default function Footer() {
           </Link>
         </div>
       </div>
-      <div className="footer-bottom">TTC Ecommerce. Bảo lưu mọi quyền.</div>
+      <div className="footer-bottom">Tam Bố Ecommerce. Bảo lưu mọi quyền.</div>
     </footer>
   );
 }

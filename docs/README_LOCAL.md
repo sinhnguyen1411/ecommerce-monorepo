@@ -1,4 +1,4 @@
-﻿# Local Development
+# Local Development
 
 This monorepo runs MySQL, the Go API, and the Next.js frontend with Docker Compose.
 
@@ -44,7 +44,7 @@ curl http://localhost:3000
 - Migrations run on API start (MIGRATE_ON_START=true).
 - Seed data loads on first start (SEED_ON_START=true).
 - Uploaded files are stored in the api_uploads volume.
-- Admin seed account (local): `admin@ttc.local` / `admin123`
+- Admin seed account (local): `admin@tambo.local` / `admin123`
 
 ## Reset data
 
@@ -72,6 +72,6 @@ User account:
 
 Admin:
 - Visit `http://localhost:3000/admin/login`.
-- Login with `admin@ttc.local` / `admin123`.
+- Login with `admin@tambo.local` / `admin123`.
 - Create a category and product, then verify it appears on the storefront.
 - Update order status and payment status in Admin > Orders.

@@ -10,7 +10,7 @@ import ProductTabs from "@/components/product/ProductTabs";
 import { getProduct, getProducts } from "@/lib/api";
 
 export const metadata = {
-  title: "Sản phẩm | Nông nghiệp TTC",
+  title: "Sản phẩm | Nông Dược Tam Bố",
   description: "Chi tiết sản phẩm và thông tin mua hàng."
 };
 

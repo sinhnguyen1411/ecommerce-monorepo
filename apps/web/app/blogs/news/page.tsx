@@ -5,8 +5,8 @@ import PostSidebar from "@/components/blog/PostSidebar";
 import { getPosts } from "@/lib/api";
 
 export const metadata = {
-  title: "Kiến thức nông nghiệp | Nông nghiệp TTC",
-  description: "Cập nhật tin tức mùa vụ và góc chia sẻ của TTC."
+  title: "Kiến thức nông nghiệp | Nông Dược Tam Bố",
+  description: "Cập nhật tin tức mùa vụ và góc chia sẻ của Tam Bố."
 };
 
 export default async function NewsPage() {

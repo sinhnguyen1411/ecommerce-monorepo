@@ -1,4 +1,4 @@
-﻿# Deployment Guide (VPS)
+# Deployment Guide (VPS)
 
 This is a production template. Update secrets, domains, and credentials before launch.
 
@@ -74,11 +74,11 @@ docker compose -f infra\docker-compose.prod.yml down
 Backup:
 
 ```
-docker exec ttc_mysql mysqldump -u root -pYOUR_ROOT_PASSWORD ttc > backup.sql
+docker exec tambo_mysql mysqldump -u root -pYOUR_ROOT_PASSWORD tambo > backup.sql
 ```
 
 Restore:
 
 ```
-Get-Content backup.sql | docker exec -i ttc_mysql mysql -u root -pYOUR_ROOT_PASSWORD ttc
+Get-Content backup.sql | docker exec -i tambo_mysql mysql -u root -pYOUR_ROOT_PASSWORD tambo
 ```

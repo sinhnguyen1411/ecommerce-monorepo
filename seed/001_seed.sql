@@ -1,4 +1,4 @@
-﻿INSERT INTO categories (name, slug, description, sort_order) VALUES
+INSERT INTO categories (name, slug, description, sort_order) VALUES
   ('Fresh Harvest', 'fresh-harvest', 'Seasonal vegetables and greens.', 1),
   ('Fruit Market', 'fruit-market', 'Tropical and orchard fruit.', 2),
   ('Pantry Staples', 'pantry-staples', 'Grains, spices, and pantry goods.', 3),
@@ -12,11 +12,21 @@ INSERT INTO products (name, slug, description, price, compare_at_price, featured
   ('Garden Starter Kit', 'garden-starter-kit', 'Hand tools and gloves for new growers.', 320000, 390000, false, 'published');
 
 INSERT INTO product_images (product_id, url, sort_order) VALUES
-  (1, 'https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=1200&q=80', 1),
-  (2, 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=1200&q=80', 1),
-  (3, 'https://images.unsplash.com/photo-1509358273864-3f7d5d2048a8?auto=format&fit=crop&w=1200&q=80', 1),
-  (4, 'https://images.unsplash.com/photo-1502740479091-635887520276?auto=format&fit=crop&w=1200&q=80', 1),
-  (5, 'https://images.unsplash.com/photo-1444392061186-9fc38f84f726?auto=format&fit=crop&w=1200&q=80', 1);
+  (1, '/tam-bo/products/placeholder_1.svg', 1),
+  (1, '/tam-bo/products/placeholder_2.svg', 2),
+  (1, '/tam-bo/products/placeholder_3.svg', 3),
+  (2, '/tam-bo/products/placeholder_2.svg', 1),
+  (2, '/tam-bo/products/placeholder_3.svg', 2),
+  (2, '/tam-bo/products/placeholder_1.svg', 3),
+  (3, '/tam-bo/products/placeholder_3.svg', 1),
+  (3, '/tam-bo/products/placeholder_1.svg', 2),
+  (3, '/tam-bo/products/placeholder_2.svg', 3),
+  (4, '/tam-bo/products/placeholder_1.svg', 1),
+  (4, '/tam-bo/products/placeholder_2.svg', 2),
+  (4, '/tam-bo/products/placeholder_3.svg', 3),
+  (5, '/tam-bo/products/placeholder_2.svg', 1),
+  (5, '/tam-bo/products/placeholder_1.svg', 2),
+  (5, '/tam-bo/products/placeholder_3.svg', 3);
 
 INSERT INTO product_categories (product_id, category_id) VALUES
   (1, 1),

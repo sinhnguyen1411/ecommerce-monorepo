@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="900" viewBox="0 0 750 900" role="img" aria-labelledby="title desc">
+  <title id="title">Nông dược Tam Bố - Nông nghiệp xanh</title>
+  <desc id="desc">Banner Tam Bố phiên bản di động với nền xanh và điểm nhấn tròn.</desc>
+  <defs>
+    <linearGradient id="skyMb" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#d9f2ff"/>
+      <stop offset="60%" stop-color="#a6d9ff"/>
+      <stop offset="100%" stop-color="#7bbf87"/>
+    </linearGradient>
+    <linearGradient id="fieldMb" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2f7d32"/>
+      <stop offset="100%" stop-color="#7cb342"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="750" height="900" fill="url(#skyMb)"/>
+  <path d="M0 460 C180 380 360 380 750 460 V900 H0 Z" fill="url(#fieldMb)"/>
+  <path d="M0 560 C180 500 360 500 750 560 V900 H0 Z" fill="#6fb144" opacity="0.95"/>
+  <path d="M0 650 C220 600 420 600 750 650 V900 H0 Z" fill="#86c455" opacity="0.95"/>
+
+  <circle cx="375" cy="510" r="170" fill="#ffffff" stroke="#3f7f1c" stroke-width="6"/>
+  <circle cx="375" cy="510" r="145" fill="#eaf7d9"/>
+  <g transform="translate(375 510)">
+    <path d="M0 -70 C40 -70 70 -35 70 0 C70 40 35 70 0 70 C-35 70 -70 40 -70 0 C-70 -35 -40 -70 0 -70 Z" fill="#b8e36d"/>
+    <path d="M-10 -25 C10 -50 40 -50 50 -20 C30 -10 10 10 -10 35 C-25 20 -30 -5 -10 -25 Z" fill="#4c8b1f"/>
+    <path d="M-30 -15 C-15 -35 10 -40 20 -15 C5 -5 -10 15 -25 30 C-35 20 -38 0 -30 -15 Z" fill="#3f7f1c"/>
+    <circle cx="35" cy="25" r="12" fill="#4c8b1f"/>
+    <circle cx="-35" cy="35" r="8" fill="#3f7f1c"/>
+  </g>
+
+  <g fill="#ffffff" font-family="Roboto, Arial, sans-serif" text-anchor="middle">
+    <text x="375" y="130" font-size="28" font-weight="600" letter-spacing="1">Nông dược Tam Bố</text>
+    <text x="375" y="210" font-size="44" font-weight="800">NÔNG NGHIỆP XANH</text>
+    <text x="375" y="270" font-size="40" font-weight="800">GIẢI PHÁP CHO TƯƠNG LAI</text>
+    <text x="375" y="330" font-size="38" font-weight="800">THÔNG MINH</text>
+  </g>
+
+  <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" transform="translate(220 360)">
+    <path d="M0 0 H40"/>
+    <path d="M60 0 H100"/>
+    <path d="M120 0 H160"/>
+    <path d="M180 0 H220"/>
+  </g>
+</svg>

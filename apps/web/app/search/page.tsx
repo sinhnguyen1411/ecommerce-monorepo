@@ -4,8 +4,8 @@ import ProductGrid from "@/components/product/ProductGrid";
 import { getProducts } from "@/lib/api";
 
 export const metadata = {
-  title: "Tìm kiếm | Nông nghiệp TTC",
-  description: "Kết quả tìm kiếm sản phẩm tại TTC."
+  title: "Tìm kiếm | Nông Dược Tam Bố",
+  description: "Kết quả tìm kiếm sản phẩm tại Tam Bố."
 };
 
 type SearchPageProps = {

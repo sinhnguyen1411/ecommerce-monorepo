@@ -1,4 +1,4 @@
-﻿# Handover Guide
+# Handover Guide
 
 ## Daily operations
 
@@ -47,7 +47,7 @@ See docs/README_DEPLOY.md for MySQL backup and restore commands.
 - Admin order management: status, payment verification, internal notes.
 
 Admin login (local seed):
-- Email: admin@ttc.local
+- Email: admin@tambo.local
 - Password: admin123
 
 ## Phase 3 (planned)

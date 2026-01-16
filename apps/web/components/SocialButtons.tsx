@@ -9,7 +9,7 @@ export default function SocialButtons() {
         href={siteConfig.social.zalo}
         target="_blank"
         rel="noreferrer"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-forest text-cream shadow-lg transition hover:scale-105"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0068ff] text-white shadow-lg transition hover:scale-105"
         aria-label="Zalo"
       >
         Z
@@ -18,7 +18,7 @@ export default function SocialButtons() {
         href={siteConfig.social.messenger}
         target="_blank"
         rel="noreferrer"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-sun text-ink shadow-lg transition hover:scale-105"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0084ff] text-white shadow-lg transition hover:scale-105"
         aria-label="Messenger"
       >
         M
@@ -27,7 +27,7 @@ export default function SocialButtons() {
         href={siteConfig.social.facebook}
         target="_blank"
         rel="noreferrer"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-clay text-cream shadow-lg transition hover:scale-105"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1877f2] text-white shadow-lg transition hover:scale-105"
         aria-label="Facebook"
       >
         F

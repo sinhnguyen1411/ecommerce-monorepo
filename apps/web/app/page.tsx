@@ -1,12 +1,13 @@
 import Link from "next/link";
 
 import PostCard from "@/components/blog/PostCard";
+import HomeSlider from "@/components/home/HomeSlider";
 import ProductGrid from "@/components/product/ProductGrid";
 import { getPosts, getProducts } from "@/lib/api";
 
 export const metadata = {
-  title: "Nông nghiệp xanh TTC | Nông nghiệp TTC",
-  description: "Sản phẩm nông nghiệp, tin tức mùa vụ và góc chia sẻ của TTC."
+  title: "Nông Dược Tam Bố | Nông Dược Tam Bố",
+  description: "Sản phẩm nông nghiệp, tin tức mùa vụ và góc chia sẻ của Tam Bố."
 };
 
 export default async function HomePage() {
@@ -15,42 +16,36 @@ export default async function HomePage() {
     getPosts()
   ]);
 
+  const slides = [
+    {
+      href: "/collections/all",
+      desktopSrc: "/tam-bo/home/slide_1_img.svg",
+      mobileSrc: "/tam-bo/home/slide_1_mb.svg",
+      alt: "Nông dược Tam Bố"
+    },
+    {
+      href: "/collections/all",
+      desktopSrc: "/tam-bo/home/slide_2_img.svg",
+      mobileSrc: "/tam-bo/home/slide_2_mb.svg",
+      alt: "Giải pháp sinh học Tam Bố"
+    },
+    {
+      href: "/collections/all",
+      desktopSrc: "/tam-bo/home/slide_3_img.svg",
+      mobileSrc: "/tam-bo/home/slide_3_mb.svg",
+      alt: "Đồng hành cùng nhà nông"
+    }
+  ];
+
   return (
     <main className="mainWrapper--content">
-      <section className="section-home-slider">
-        <div className="home-slider">
-          <div className="home-slider__track">
-            <div className="home-slide">
-              <Link href="/collections/all" className="home-slide__link">
-                <picture>
-                  <source media="(min-width: 768px)" srcSet="/ttc/home/slide_1_img.jpg" />
-                  <source media="(max-width: 767px)" srcSet="/ttc/home/slide_1_mb.jpg" />
-                  <img src="/ttc/home/slide_1_img.jpg" alt="Chương trình khuyến mãi 1" />
-                </picture>
-              </Link>
-            </div>
-            <div className="home-slide">
-              <Link href="/collections/all" className="home-slide__link">
-                <picture>
-                  <source media="(min-width: 768px)" srcSet="/ttc/home/slide_2_img.jpg" />
-                  <source media="(max-width: 767px)" srcSet="/ttc/home/slide_2_mb.jpg" />
-                  <img src="/ttc/home/slide_2_img.jpg" alt="Chương trình khuyến mãi 2" />
-                </picture>
-              </Link>
-            </div>
-          </div>
-          <div className="home-slider__pagination" aria-hidden="true">
-            <span />
-            <span />
-          </div>
-        </div>
-      </section>
+      <HomeSlider slides={slides} />
 
       <section className="section-home-introduce">
         <div className="container">
           <div className="section-title text-center">
             <span className="sub-title">Định hướng phát triển sản phẩm</span>
-            <h2 className="title">Nông nghiệp xanh TTC</h2>
+            <h2 className="title">Nông Dược Tam Bố</h2>
           </div>
           <div className="intro-grid">
             <div className="intro-content">
@@ -59,23 +54,23 @@ export default async function HomePage() {
                   Giải pháp cho tương lai thông minh
                 </div>
                 <div className="block-introduce__desc">
-                  TTC Nông Nghiệp tự hào là đơn vị tiên phong trong việc xây dựng nền
+                  Nông Dược Tam Bố tự hào là đơn vị tiên phong trong việc xây dựng nền
                   nông nghiệp xanh với giải pháp cho tương lai thông minh, bền vững.
-                  Với sứ mệnh đồng hành cùng nhà nông, TTC không ngừng nghiên cứu và
+                  Với sứ mệnh đồng hành cùng nhà nông, Tam Bố không ngừng nghiên cứu và
                   phát triển các dòng sản phẩm thân thiện với môi trường như phân
                   bón hữu cơ, chế phẩm sinh học và giải pháp xử lý đất trồng an
                   toàn. Chúng tôi hiểu rằng để phát triển lâu dài, nông nghiệp phải
                   đi đôi với bảo vệ tài nguyên thiên nhiên, cải thiện chất lượng
-                  đất, nước và hệ sinh thái canh tác. Định hướng của TTC Nông Nghiệp
+                  đất, nước và hệ sinh thái canh tác. Định hướng của Nông Dược Tam Bố
                   là ứng dụng công nghệ cao vào sản xuất, tối ưu năng suất mà vẫn
                   đảm bảo an toàn cho sức khỏe người tiêu dùng. Các sản phẩm như
-                  phân bón sinh học, chế phẩm xử lý tuyến trùng của TTC không chỉ
+                  phân bón sinh học, chế phẩm xử lý tuyến trùng của Tam Bố không chỉ
                   giúp cây trồng sinh trưởng mạnh mẽ mà còn góp phần giảm thiểu tác
                   động tiêu cực đến môi trường. Chúng tôi cam kết mang đến cho bà
                   con giải pháp canh tác hiệu quả, chi phí hợp lý và lợi ích lâu
-                  dài. Với TTC Nông Nghiệp, phát triển nông nghiệp xanh không chỉ
+                  dài. Với Nông Dược Tam Bố, phát triển nông nghiệp xanh không chỉ
                   là mục tiêu mà còn là trách nhiệm đối với thế hệ tương lai. Cùng
-                  TTC, vun đắp nền nông nghiệp bền vững từ hôm nay!
+                  Tam Bố, vun đắp nền nông nghiệp bền vững từ hôm nay!
                 </div>
                 <div className="block-introduce__link">
                   <span className="link1">
@@ -93,7 +88,7 @@ export default async function HomePage() {
             </div>
             <div className="intro-image">
               <Link href="/collections/all" className="image-use-effect3">
-                <img src="/ttc/home/home_introduce_img.jpg" alt="Nông nghiệp xanh TTC" />
+                <img src="/tam-bo/home/home_introduce_img.svg" alt="Nông Dược Tam Bố" />
               </Link>
             </div>
           </div>
@@ -105,7 +100,7 @@ export default async function HomePage() {
           <div className="banner-block banner-left">
             <div className="banner-block__left">
               <Link href="/collections/all" className="image-use-effect3">
-                <img src="/ttc/home/home_banner_1_img.jpg" alt="Organic Master" />
+                <img src="/tam-bo/home/home_banner_1_img.svg" alt="Organic Master" />
               </Link>
             </div>
             <div className="banner-block__right banner-block__info">
@@ -172,7 +167,7 @@ export default async function HomePage() {
             </div>
             <div className="banner-block__right">
               <Link href="/collections/all" className="image-use-effect3">
-                <img src="/ttc/home/home_banner_2_img.jpg" alt="Microbial" />
+                <img src="/tam-bo/home/home_banner_2_img.svg" alt="Microbial" />
               </Link>
             </div>
           </div>
@@ -185,14 +180,14 @@ export default async function HomePage() {
             <div className="feature-block">
               <div className="feature-block__inner image-use-effect4">
                 <div className="feature-block__img">
-                  <img src="/ttc/home/home_feature_1_img.jpg" alt="FREESHIP TOÀN QUỐC" />
+                  <img src="/tam-bo/home/home_feature_1_img.jpg" alt="FREESHIP TOÀN QUỐC" />
                 </div>
                 <div className="feature-block__title">
                   <h4>FREESHIP TOÀN QUỐC</h4>
                 </div>
                 <div className="feature-block__content">
                   <p>
-                    TTC Nông Nghiệp miễn phí vận chuyển toàn quốc cho các sản phẩm
+                    Nông Dược Tam Bố miễn phí vận chuyển toàn quốc cho các sản phẩm
                     như phân bón, chai xử lý tuyến trùng, hỗ trợ giao hàng nhanh
                     chóng, đảm bảo chất lượng đến tận tay khách hàng.
                   </p>
@@ -202,14 +197,14 @@ export default async function HomePage() {
             <div className="feature-block">
               <div className="feature-block__inner image-use-effect4">
                 <div className="feature-block__img">
-                  <img src="/ttc/home/home_feature_2_img.jpg" alt="TĂNG NĂNG SUẤT VƯỢT TRỘI" />
+                  <img src="/tam-bo/home/home_feature_2_img.jpg" alt="TĂNG NĂNG SUẤT VƯỢT TRỘI" />
                 </div>
                 <div className="feature-block__title">
                   <h4>TĂNG NĂNG SUẤT VƯỢT TRỘI</h4>
                 </div>
                 <div className="feature-block__content">
                   <p>
-                    Sản phẩm của TTC Nông Nghiệp giúp tăng năng suất cây trồng vượt
+                    Sản phẩm của Nông Dược Tam Bố giúp tăng năng suất cây trồng vượt
                     trội, cải thiện chất lượng nông sản, tối ưu chi phí đầu tư và
                     mang lại hiệu quả kinh tế bền vững cho nhà nông.
                   </p>
@@ -219,14 +214,14 @@ export default async function HomePage() {
             <div className="feature-block">
               <div className="feature-block__inner image-use-effect4">
                 <div className="feature-block__img">
-                  <img src="/ttc/home/home_feature_3_img.jpg" alt="HỖ TRỢ 24/7" />
+                  <img src="/tam-bo/home/home_feature_3_img.jpg" alt="HỖ TRỢ 24/7" />
                 </div>
                 <div className="feature-block__title">
                   <h4>HỖ TRỢ 24/7</h4>
                 </div>
                 <div className="feature-block__content">
                   <p>
-                    TTC Nông Nghiệp cam kết hỗ trợ 24/7 cho khách hàng, tư vấn
+                    Nông Dược Tam Bố cam kết hỗ trợ 24/7 cho khách hàng, tư vấn
                     nhanh chóng về phân bón, chai xử lý tuyến trùng và các sản phẩm
                     nông nghiệp chất lượng cao.
                   </p>
@@ -242,7 +237,7 @@ export default async function HomePage() {
           <div className="section-title text-center">
             <span className="sub-title style-italic">Sản phẩm nổi bật</span>
             <h2 className="title">
-              <Link href="/collections/hot-products">Sản phẩm của TTC</Link>
+              <Link href="/collections/hot-products">Sản phẩm của Tam Bố</Link>
             </h2>
           </div>
           <div className="section-content">
@@ -258,7 +253,7 @@ export default async function HomePage() {
           <div className="section-content">
             <div className="aboutus-block text-center">
               <div className="aboutus-block__text">
-                <h4>Nông nghiệp xanh TTC</h4>
+                <h4>Nông Dược Tam Bố</h4>
                 <h3>Nông nghiệp hữu cơ bền vững</h3>
                 <p>Giải pháp cho tương lai thông minh</p>
               </div>

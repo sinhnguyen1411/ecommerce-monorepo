@@ -98,7 +98,7 @@ export default function CartClient({ suggestedProducts }: CartClientProps) {
                   <div className="table-cart">
                     {items.length === 0 ? (
                       <div className="cart-empty">
-                        <img src="/ttc/cart/cart_banner_image.jpg" alt="empty" />
+                        <img src="/tam-bo/cart/cart_banner_image.jpg" alt="empty" />
                         <p>Giỏ hàng đang trống.</p>
                         <Link className="button" href="/collections/all">
                           Mua sản phẩm

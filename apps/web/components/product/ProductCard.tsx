@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { MouseEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
 
 import { Product } from "@/lib/api";
@@ -12,8 +14,24 @@ import QuickViewDialog from "./QuickViewDialog";
 import SaleBadge from "./SaleBadge";
 
 export default function ProductCard({ product }: { product: Product }) {
-  const image = product.images?.[0]?.url;
-  const hoverImage = product.images?.[1]?.url;
+  const placeholderImages = [
+    "/tam-bo/products/placeholder_1.svg",
+    "/tam-bo/products/placeholder_2.svg",
+    "/tam-bo/products/placeholder_3.svg"
+  ];
+  const images = useMemo(() => {
+    const sources = [...(product.images || [])]
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((item) => item.url)
+      .filter(Boolean);
+    const fallback = [...sources];
+    while (fallback.length < 3) {
+      fallback.push(placeholderImages[fallback.length % placeholderImages.length]);
+    }
+    return fallback;
+  }, [product.images]);
+  const [activeImage, setActiveImage] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
   const onSale =
     typeof product.compare_at_price === "number" &&
     product.compare_at_price > product.price;
@@ -31,27 +49,52 @@ export default function ProductCard({ product }: { product: Product }) {
         : product.inventory_quantity > 0;
   const addItem = useCartStore((state) => state.addItem);
   const [quantity, setQuantity] = useState(1);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isHovering || images.length < 2) {
+      return undefined;
+    }
+    setActiveImage(0);
+    const timeoutId = window.setTimeout(() => {
+      setActiveImage(1);
+    }, 500);
+    const intervalId = window.setInterval(() => {
+      setActiveImage((prev) => (prev + 1) % images.length);
+    }, 1500);
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
+  }, [images.length, isHovering]);
+
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, select")) {
+      return;
+    }
+    router.push(`/products/${product.slug}`);
+  };
 
   return (
     <div className="col-lg-4 col-md-6 col-6 product-loop" data-id={product.id}>
-      <div className="product-inner">
+      <div
+        className="product-inner"
+        onClick={handleCardClick}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => {
+          setIsHovering(false);
+          setActiveImage(0);
+        }}
+      >
         <div className="proloop-image">
           <div className="proloop-image__inner">
             <div className="lazy-img lazy-img__prod">
-              {image ? (
-                <>
-                  <img src={image} alt={product.name} className="product-img primary" />
-                  {hoverImage ? (
-                    <img
-                      src={hoverImage}
-                      alt={product.name}
-                      className="product-img hover"
-                    />
-                  ) : null}
-                </>
-              ) : (
-                <div className="no-image">Đang cập nhật ảnh</div>
-              )}
+              <img
+                src={images[activeImage]}
+                alt={product.name}
+                className="product-img product-img--carousel"
+              />
             </div>
           </div>
           <div className="proloop-image__position">
@@ -94,7 +137,7 @@ export default function ProductCard({ product }: { product: Product }) {
                     slug: product.slug,
                     price: product.price,
                     compareAtPrice: product.compare_at_price,
-                    imageUrl: image,
+                    imageUrl: images[0],
                     quantity
                   })
                 }
@@ -120,7 +163,7 @@ export default function ProductCard({ product }: { product: Product }) {
                         slug: product.slug,
                         price: product.price,
                         compareAtPrice: product.compare_at_price,
-                        imageUrl: image,
+                        imageUrl: images[0],
                         quantity
                       })
                     }

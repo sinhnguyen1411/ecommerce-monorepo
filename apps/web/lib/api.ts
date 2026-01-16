@@ -142,13 +142,19 @@ async function apiRequest<T>(
   options?: RequestInit,
   revalidate = 60
 ) {
+  const noStore = options?.cache === "no-store";
   const response = await fetch(buildUrl(path), {
     ...options,
     headers: {
       "Content-Type": "application/json",
       ...(options?.headers || {})
     },
-    next: options?.method && options.method !== "GET" ? undefined : { revalidate }
+    next:
+      options?.method && options.method !== "GET"
+        ? undefined
+        : noStore
+          ? undefined
+          : { revalidate }
   });
 
   const payload = (await response.json()) as ApiEnvelope<T>;
@@ -209,11 +215,11 @@ export function getProducts(params?: {
 
   const suffix = search.toString();
   const path = suffix ? `/api/products?${suffix}` : "/api/products";
-  return apiRequest<Product[]>(path);
+  return apiRequest<Product[]>(path, { cache: "no-store" });
 }
 
 export function getProduct(slug: string) {
-  return apiRequest<Product>(`/api/products/${slug}`);
+  return apiRequest<Product>(`/api/products/${slug}`, { cache: "no-store" });
 }
 
 export function getPosts() {

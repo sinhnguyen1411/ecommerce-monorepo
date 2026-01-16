@@ -3,7 +3,7 @@ import { getProducts } from "@/lib/api";
 import CartClient from "./CartClient";
 
 export const metadata = {
-  title: "Giỏ hàng | Nông nghiệp TTC",
+  title: "Giỏ hàng | Nông Dược Tam Bố",
   description: "Xem và cập nhật giỏ hàng mua sắm."
 };
 

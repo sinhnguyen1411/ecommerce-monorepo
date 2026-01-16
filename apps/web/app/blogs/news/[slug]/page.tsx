@@ -8,8 +8,8 @@ import { formatDate } from "@/lib/format";
 import { siteConfig } from "@/lib/site";
 
 export const metadata = {
-  title: "Kiến thức nông nghiệp | Nông nghiệp TTC",
-  description: "Bài viết và góc chia sẻ của TTC."
+  title: "Kiến thức nông nghiệp | Nông Dược Tam Bố",
+  description: "Bài viết và góc chia sẻ của Tam Bố."
 };
 
 type BlogDetailPageProps = {

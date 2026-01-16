@@ -136,7 +136,7 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		userID = claims.UserID
 	}
 
-	orderNumber := fmt.Sprintf("TTC%v", time.Now().Unix())
+	orderNumber := fmt.Sprintf("TB%v", time.Now().Unix())
 	result, err := tx.Exec(`
     INSERT INTO orders (order_number, user_id, customer_name, email, phone, address, note, delivery_time, subtotal, shipping_fee, discount_total, total, payment_method, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')

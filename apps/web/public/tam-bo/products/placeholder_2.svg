@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800" role="img" aria-labelledby="title desc">
+  <title id="title">Tam Bo Placeholder 2</title>
+  <desc id="desc">Temporary product image placeholder.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f1f8e9"/>
+      <stop offset="100%" stop-color="#dcedc8"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#bg)"/>
+  <path d="M0 540 C120 500 240 500 360 540 C460 570 520 590 600 570 V800 H0 Z" fill="#689f38"/>
+  <path d="M0 640 C120 610 240 610 360 640 C460 670 520 690 600 670 V800 H0 Z" fill="#7cb342" opacity="0.9"/>
+  <circle cx="160" cy="250" r="100" fill="#ffffff" stroke="#558b2f" stroke-width="6"/>
+  <circle cx="160" cy="250" r="70" fill="#e8f5e9"/>
+  <g fill="#2f6f16" font-family="Roboto, Arial, sans-serif">
+    <text x="330" y="180" font-size="28" font-weight="700">Tam Bo</text>
+    <text x="330" y="220" font-size="16">Temporary image</text>
+  </g>
+</svg>

@@ -54,7 +54,7 @@ export default function CartDrawer() {
             {items.length === 0 ? (
               <div className="border border-dashed border-forest/20 bg-white p-6 text-center text-sm text-ink/70">
                 <img
-                  src="/ttc/cart/no_image.jpg"
+                  src="/tam-bo/cart/no_image.jpg"
                   alt="empty"
                   className="mx-auto h-24 w-24 object-cover"
                 />

@@ -1,6 +1,6 @@
-﻿# TTC Ecommerce + Blog (Phase 1)
+# Tam Bố Ecommerce + Blog (Phase 1)
 
-Production-ready ecommerce + blog monorepo inspired by nongnghiepttc.com.vn.
+Production-ready ecommerce + blog monorepo inspired by nongduoctambo.com.vn.
 Phase 1 focuses on a clean API-driven storefront with cart and checkout, MySQL
 migrations, and seed data for immediate local demos and client handover.
 
@@ -278,12 +278,12 @@ image after changing them.
 ## Backup and Restore (MySQL)
 Backup:
 ```
-docker exec ttc_mysql mysqldump -u root -pYOUR_ROOT_PASSWORD ttc > backup.sql
+docker exec tambo_mysql mysqldump -u root -pYOUR_ROOT_PASSWORD tambo > backup.sql
 ```
 
 Restore:
 ```
-Get-Content backup.sql | docker exec -i ttc_mysql mysql -u root -pYOUR_ROOT_PASSWORD ttc
+Get-Content backup.sql | docker exec -i tambo_mysql mysql -u root -pYOUR_ROOT_PASSWORD tambo
 ```
 
 ## Documentation

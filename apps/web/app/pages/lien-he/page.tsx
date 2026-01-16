@@ -1,12 +1,14 @@
 import { siteConfig } from "@/lib/site";
 
 export const metadata = {
-  title: "Liên hệ | Nông nghiệp TTC",
-  description: "Thông tin liên hệ và hỗ trợ từ TTC."
+  title: `Liên hệ | ${siteConfig.name}`,
+  description: `Thông tin liên hệ và hỗ trợ từ ${siteConfig.name}.`
 };
 
 export default function ContactPage() {
-  const contactPhone = "0559.786.888";
+  const phoneLabel = `${siteConfig.phone} - ${siteConfig.fax}`;
+  const mapSrc =
+    "https://www.google.com/maps?q=11.6216306,108.2261405&hl=vi&z=16&output=embed";
 
   return (
     <div className="layout-pageContact">
@@ -30,7 +32,7 @@ export default function ContactPage() {
         <div className="contact-map">
           <div className="map">
             <iframe
-              src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d3718.740840420072!2d106.288038!3d21.242123!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjHCsDE0JzMxLjYiTiAxMDbCsDE3JzE2LjkiRQ!5e0!3m2!1svi!2s!4v1746326008011!5m2!1svi!2s"
+              src={mapSrc}
               width="100%"
               height="450"
               style={{ border: 0 }}
@@ -46,8 +48,8 @@ export default function ContactPage() {
               <div className="col-lg-6 col-md-12 col-12 column-left">
                 <h2>Gửi thắc mắc cho chúng tôi</h2>
                 <p>
-                  Nếu bạn có thắc mắc gì, có thể gửi yêu cầu cho chúng tôi, và
-                  chúng tôi sẽ liên lạc lại với bạn sớm nhất có thể .
+                  Nếu bạn có thắc mắc, vui lòng gửi yêu cầu để chúng tôi liên hệ lại
+                  sớm nhất.
                 </p>
                 <form className="contact-form">
                   <div className="row">
@@ -63,7 +65,10 @@ export default function ContactPage() {
                     </div>
                     <div className="col-lg-6 col-md-6 col-12">
                       <div className="input-group">
-                        <input className="form-control" placeholder="Số điện thoại của bạn" />
+                        <input
+                          className="form-control"
+                          placeholder="Số điện thoại của bạn"
+                        />
                       </div>
                     </div>
                     <div className="col-lg-12 col-md-12 col-12">
@@ -109,7 +114,7 @@ export default function ContactPage() {
                       <div className="right">
                         <strong>Điện thoại</strong>
                         <br />
-                        {contactPhone}
+                        {phoneLabel}
                       </div>
                     </div>
                     <div className="contact-info__item">

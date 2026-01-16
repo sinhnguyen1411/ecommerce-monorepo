@@ -29,7 +29,7 @@ export default function MobileMenu() {
         </SheetTrigger>
         <SheetContent className="max-w-xs">
           <SheetHeader>
-          <SheetTitle>Danh mục</SheetTitle>
+            <SheetTitle>Danh mục</SheetTitle>
           </SheetHeader>
           <nav className="mt-6 flex flex-col gap-3 text-sm font-semibold text-ink/80">
             {navLinks.map((link) => (
