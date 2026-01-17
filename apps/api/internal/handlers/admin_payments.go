@@ -19,18 +19,8 @@ type PaymentSettings struct {
 }
 
 func (s *Server) AdminGetPaymentSettings(c *gin.Context) {
-	row := s.DB.QueryRow(`SELECT id, cod_enabled, bank_transfer_enabled, bank_qr_enabled, IFNULL(bank_name, ''), IFNULL(bank_account, ''), IFNULL(bank_holder, ''), IFNULL(bank_qr_payload, '') FROM payment_settings LIMIT 1`)
-	var settings PaymentSettings
-	if err := row.Scan(&settings.ID, &settings.CODEnabled, &settings.BankTransferEnabled, &settings.BankQREnabled, &settings.BankName, &settings.BankAccount, &settings.BankHolder, &settings.BankQRPayload); err != nil {
-		if err == sql.ErrNoRows {
-			respondOK(c, PaymentSettings{
-				ID:                  1,
-				CODEnabled:          true,
-				BankTransferEnabled: true,
-				BankQREnabled:       true,
-			})
-			return
-		}
+	settings, err := s.loadPaymentSettings()
+	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load payment settings")
 		return
 	}
@@ -67,4 +57,44 @@ func (s *Server) AdminUpdatePaymentSettings(c *gin.Context) {
 	}
 
 	s.AdminGetPaymentSettings(c)
+}
+
+func (s *Server) GetPaymentSettings(c *gin.Context) {
+	settings, err := s.loadPaymentSettings()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load payment settings")
+		return
+	}
+
+	respondOK(c, settings)
+}
+
+func (s *Server) loadPaymentSettings() (PaymentSettings, error) {
+	row := s.DB.QueryRow(`SELECT id, cod_enabled, bank_transfer_enabled, bank_qr_enabled, IFNULL(bank_name, ''), IFNULL(bank_account, ''), IFNULL(bank_holder, ''), IFNULL(bank_qr_payload, '') FROM payment_settings LIMIT 1`)
+	var settings PaymentSettings
+	if err := row.Scan(&settings.ID, &settings.CODEnabled, &settings.BankTransferEnabled, &settings.BankQREnabled, &settings.BankName, &settings.BankAccount, &settings.BankHolder, &settings.BankQRPayload); err != nil {
+		if err == sql.ErrNoRows {
+			return PaymentSettings{
+				ID:                  1,
+				CODEnabled:          true,
+				BankTransferEnabled: true,
+				BankQREnabled:       true,
+			}, nil
+		}
+		return PaymentSettings{}, err
+	}
+	return settings, nil
+}
+
+func isPaymentMethodEnabled(method string, settings PaymentSettings) bool {
+	switch method {
+	case "cod":
+		return settings.CODEnabled
+	case "bank_transfer":
+		return settings.BankTransferEnabled
+	case "bank_qr":
+		return settings.BankQREnabled
+	default:
+		return false
+	}
 }

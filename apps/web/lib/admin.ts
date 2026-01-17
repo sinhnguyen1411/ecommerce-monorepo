@@ -89,6 +89,8 @@ export type AdminOrder = {
   address: string;
   note: string;
   delivery_time: string;
+  promo_code: string;
+  shipping_method: string;
   subtotal: number;
   shipping_fee: number;
   discount_total: number;
@@ -235,7 +237,20 @@ export function listAdminOrders(params?: { status?: string; payment_status?: str
   return adminRequest<AdminOrder[]>(suffix ? `/api/admin/orders?${suffix}` : "/api/admin/orders");
 }
 
-export function updateAdminOrder(id: number, input: { status?: string; payment_status?: string; admin_note?: string }) {
+export function updateAdminOrder(
+  id: number,
+  input: {
+    customer_name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    note?: string;
+    delivery_time?: string;
+    status?: string;
+    payment_status?: string;
+    admin_note?: string;
+  }
+) {
   return adminRequest<AdminOrder>(`/api/admin/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify(input)

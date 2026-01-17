@@ -283,44 +283,9 @@ export default async function HomePage() {
           </div>
           <div className="section-content">
             <div className="home-blogs">
-              {posts.slice(0, 5).map((post) => (
+              {posts.slice(0, 6).map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="section-home-newsletter">
-        <div className="container">
-          <div className="section-title text-center">
-            <span className="sub-title style-italic">Tin tức của chúng tôi</span>
-            <h2 className="title">Đăng ký nhận tin</h2>
-          </div>
-          <div className="section-content">
-            <div className="newsletter-block">
-              <div className="newsletter-content newsletter-form">
-                <form className="newsletter-form" action="#" method="post">
-                  <div className="form-group">
-                    <span className="icon-email" aria-hidden="true">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 512 512">
-                        <path d="M485.743 85.333H26.257C11.815 85.333 0 97.148 0 111.589V400.41C0 414.85 11.815 426.667 26.257 426.667h459.487C500.185 426.667 512 414.85 512 400.41V111.589c0-14.441-11.815-26.256-26.257-26.256zM475.89 105.024 271.104 258.626c-3.682 2.802-9.334 4.555-15.105 4.529-5.77.026-11.421-1.727-15.104-4.529L36.109 105.024H475.89zM366.5 268.761l111.59 137.847c.112.138.249.243.368.368H33.542c.118-.131.256-.23.368-.368L145.5 268.761c3.419-4.227 2.771-10.424-1.464-13.851-4.227-3.419-10.424-2.771-13.844 1.457L19.692 392.868V117.332l209.394 157.046c7.871 5.862 17.447 8.442 26.912 8.468 9.452-.02 19.036-2.6 26.912-8.468L492.304 117.332v275.534L381.807 256.367c-3.42-4.227-9.623-4.877-13.844-1.457-4.234 3.419-4.884 9.624-1.463 13.851z" />
-                      </svg>
-                    </span>
-                    <input
-                      required
-                      type="email"
-                      name="contact[email]"
-                      className="newsletter-input"
-                      placeholder="Nhập email của bạn"
-                      aria-label="Email"
-                    />
-                    <button type="submit" className="button newsletter-btn">
-                      Đăng ký
-                    </button>
-                  </div>
-                </form>
-              </div>
             </div>
           </div>
         </div>

@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { createOrder } from "@/lib/api";
+import { listAddresses, getProfile } from "@/lib/account";
+import { PaymentSettings, createOrder, getPaymentSettings, validatePromoCode } from "@/lib/api";
+import { getUserToken } from "@/lib/auth";
 import { formatCurrency } from "@/lib/format";
 import { siteConfig } from "@/lib/site";
 import { getCartSubtotal, useCartStore } from "@/store/cart";
@@ -26,6 +28,8 @@ export default function CheckoutPage() {
   const promoCode = useCartStore((state) => state.promoCode);
   const note = useCartStore((state) => state.note);
   const deliveryTime = useCartStore((state) => state.deliveryTime);
+  const storedShipping = useCartStore((state) => state.shippingMethod);
+  const setStoredShipping = useCartStore((state) => state.setShippingMethod);
   const clear = useCartStore((state) => state.clear);
   const setPromoCode = useCartStore((state) => state.setPromoCode);
 
@@ -33,7 +37,7 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [shippingMethod, setShippingMethod] = useState("standard");
+  const [shippingMethod, setShippingMethod] = useState(storedShipping || "standard");
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [invoiceEnabled, setInvoiceEnabled] = useState(false);
   const [companyName, setCompanyName] = useState("");
@@ -41,7 +45,15 @@ export default function CheckoutPage() {
   const [invoiceEmail, setInvoiceEmail] = useState("");
   const [invoiceAddress, setInvoiceAddress] = useState("");
   const [error, setError] = useState("");
+  const [promoFeedback, setPromoFeedback] = useState("");
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasAccountAddress, setHasAccountAddress] = useState(false);
+
+  const isLoggedIn = Boolean(getUserToken());
 
   const subtotal = getCartSubtotal(items);
   const minOrderAmount = siteConfig.minOrderAmount;
@@ -52,6 +64,134 @@ export default function CheckoutPage() {
     [items]
   );
 
+  const availablePaymentOptions = useMemo(() => {
+    if (!paymentSettings) {
+      return paymentOptions;
+    }
+    return paymentOptions.filter((option) => {
+      if (option.value === "cod") return paymentSettings.cod_enabled;
+      if (option.value === "bank_transfer") return paymentSettings.bank_transfer_enabled;
+      if (option.value === "bank_qr") return paymentSettings.bank_qr_enabled;
+      return false;
+    });
+  }, [paymentSettings]);
+
+  const shippingFee = useMemo(() => {
+    const standardFee = 30000;
+    const expressFee = 50000;
+    if (shippingMethod === "express") {
+      return expressFee;
+    }
+    if (siteConfig.freeShippingThreshold > 0 && subtotal >= siteConfig.freeShippingThreshold) {
+      return 0;
+    }
+    return standardFee;
+  }, [shippingMethod, subtotal]);
+
+  const total = Math.max(subtotal + shippingFee - promoDiscount, 0);
+
+  useEffect(() => {
+    setStoredShipping(shippingMethod);
+  }, [setStoredShipping, shippingMethod]);
+
+  useEffect(() => {
+    getPaymentSettings()
+      .then(setPaymentSettings)
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Không tìm thấy cấu hình thanh toán.")
+      );
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setHasAccountAddress(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    Promise.all([getProfile().catch(() => null), listAddresses().catch(() => [])])
+      .then(([profile, addresses]) => {
+        if (cancelled) {
+          return;
+        }
+
+        const defaultAddress = addresses.find((item) => item.is_default) || addresses[0];
+        setHasAccountAddress(Boolean(defaultAddress));
+
+        const nameFromAccount = defaultAddress?.full_name || profile?.name;
+        const phoneFromAccount = defaultAddress?.phone || profile?.phone;
+        const addressParts = [
+          defaultAddress?.address_line,
+          defaultAddress?.district,
+          defaultAddress?.province
+        ].filter(Boolean);
+        const addressFromAccount = addressParts.length > 0 ? addressParts.join(", ") : "";
+        const emailFromAccount = profile?.email || "";
+
+        if (!customerName && nameFromAccount) {
+          setCustomerName(nameFromAccount);
+        }
+        if (!phone && phoneFromAccount) {
+          setPhone(phoneFromAccount);
+        }
+        if (!address && addressFromAccount) {
+          setAddress(addressFromAccount);
+        }
+        if (!email && emailFromAccount) {
+          setEmail(emailFromAccount);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHasAccountAddress(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [address, customerName, email, isLoggedIn, phone]);
+
+  useEffect(() => {
+    if (availablePaymentOptions.length === 0) {
+      return;
+    }
+    if (!availablePaymentOptions.some((option) => option.value === paymentMethod)) {
+      setPaymentMethod(availablePaymentOptions[0].value);
+    }
+  }, [availablePaymentOptions, paymentMethod]);
+
+  useEffect(() => {
+    setPromoFeedback("");
+    setPromoDiscount(0);
+    setPromoApplied(false);
+  }, [promoCode, subtotal]);
+
+  const handleApplyPromo = async () => {
+    const trimmed = promoCode.trim();
+    if (!trimmed) {
+      setPromoFeedback("Vui lòng nhập mã khuyến mãi.");
+      return;
+    }
+
+    setIsApplyingPromo(true);
+    setPromoFeedback("");
+    try {
+      const result = await validatePromoCode({ code: trimmed, subtotal });
+      setPromoCode(result.promo_code);
+      setPromoDiscount(result.discount_total);
+      setPromoApplied(true);
+      setPromoFeedback(`Đã áp dụng ${result.promo_code}.`);
+    } catch (err) {
+      setPromoDiscount(0);
+      setPromoApplied(false);
+      setPromoFeedback(err instanceof Error ? err.message : "Mã khuyến mãi không hợp lệ.");
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setError("");
 
@@ -60,8 +200,17 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!customerName || !email || !phone || !address) {
-      setError("Vui lòng điền đầy đủ thông tin giao hàng.");
+    if (!isLoggedIn) {
+      if (!customerName || !email || !phone || !address) {
+        setError("Vui lòng điền đầy đủ thông tin giao hàng.");
+        return;
+      }
+    } else if (!customerName || !email || !phone || !address) {
+      setError(
+        hasAccountAddress
+          ? "Vui lòng kiểm tra lại địa chỉ mặc định trong tài khoản."
+          : "Vui lòng thêm địa chỉ giao hàng mặc định trong tài khoản."
+      );
       return;
     }
 
@@ -87,6 +236,7 @@ export default function CheckoutPage() {
           .filter(Boolean)
           .join(" - "),
         delivery_time: deliveryTime || shippingMethod,
+        shipping_method: shippingMethod,
         payment_method: paymentMethod,
         promo_code: promoCode,
         items: items.map((item) => ({
@@ -226,12 +376,13 @@ export default function CheckoutPage() {
                   </label>
                 ))}
               </div>
+              {promoFeedback ? <p className="mt-2 text-sm text-ink/60">{promoFeedback}</p> : null}
             </div>
 
             <div className="checkout-box">
               <h2>Phương thức thanh toán</h2>
               <div className="checkout-options">
-                {paymentOptions.map((option) => (
+                {availablePaymentOptions.map((option) => (
                   <label key={option.value} className="checkout-option">
                     <span>{option.label}</span>
                     <input
@@ -255,10 +406,16 @@ export default function CheckoutPage() {
                   onChange={(event) => setPromoCode(event.target.value)}
                   placeholder="Nhập mã khuyến mãi"
                 />
-                <button className="button btnlight" type="button">
-                  Áp dụng
+                <button
+                  className="button btnlight"
+                  type="button"
+                  onClick={handleApplyPromo}
+                  disabled={isApplyingPromo}
+                >
+                  {isApplyingPromo ? "Đang kiểm tra..." : "Áp dụng"}
                 </button>
               </div>
+              {promoFeedback ? <p className="mt-2 text-sm text-ink/60">{promoFeedback}</p> : null}
             </div>
           </div>
 
@@ -291,16 +448,17 @@ export default function CheckoutPage() {
                 </div>
                 <div className="row">
                   <span>Phí vận chuyển</span>
-                  <span>
-                    {siteConfig.freeShippingThreshold > 0 &&
-                    subtotal >= siteConfig.freeShippingThreshold
-                      ? "Miễn phí"
-                      : "Tính khi giao"}
-                  </span>
+                  <span>{shippingFee === 0 ? "Miễn phí" : formatCurrency(shippingFee)}</span>
                 </div>
+                {promoApplied ? (
+                  <div className="row">
+                    <span>Giảm giá</span>
+                    <span>-{formatCurrency(promoDiscount)}</span>
+                  </div>
+                ) : null}
                 <div className="row total">
                   <span>Tổng cộng</span>
-                  <span>{formatCurrency(subtotal)}</span>
+                  <span>{formatCurrency(total)}</span>
                 </div>
               </div>
               {minOrderAmount > 0 ? (

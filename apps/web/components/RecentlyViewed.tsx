@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Product } from "@/lib/api";
-import ProductCard from "@/components/product/ProductCard";
+import ProductGrid from "@/components/product/ProductGrid";
 
 const storageKey = "ttc_recent_products";
 
@@ -32,7 +32,7 @@ export default function RecentlyViewed({ current }: { current: Product }) {
     setItems(updated.filter((item) => item.id !== current.id));
   }, [current]);
 
-  const content = useMemo(() => items.slice(0, 3), [items]);
+  const content = useMemo(() => items.slice(0, 5), [items]);
 
   if (content.length === 0) {
     return (
@@ -42,11 +42,5 @@ export default function RecentlyViewed({ current }: { current: Product }) {
     );
   }
 
-  return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {content.map((item) => (
-        <ProductCard key={item.id} product={item} />
-      ))}
-    </div>
-  );
+  return <ProductGrid products={content} />;
 }

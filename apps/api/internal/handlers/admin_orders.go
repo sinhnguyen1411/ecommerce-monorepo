@@ -18,6 +18,8 @@ type AdminOrder struct {
 	Address       string             `json:"address"`
 	Note          string             `json:"note"`
 	DeliveryTime  string             `json:"delivery_time"`
+	PromoCode     string             `json:"promo_code"`
+	ShippingMethod string            `json:"shipping_method"`
 	Subtotal      float64            `json:"subtotal"`
 	ShippingFee   float64            `json:"shipping_fee"`
 	DiscountTotal float64            `json:"discount_total"`
@@ -32,6 +34,12 @@ type AdminOrder struct {
 }
 
 type AdminOrderUpdateInput struct {
+	CustomerName  string `json:"customer_name"`
+	Email         string `json:"email"`
+	Phone         string `json:"phone"`
+	Address       string `json:"address"`
+	Note          string `json:"note"`
+	DeliveryTime  string `json:"delivery_time"`
 	Status        string `json:"status"`
 	PaymentStatus string `json:"payment_status"`
 	AdminNote     string `json:"admin_note"`
@@ -42,7 +50,7 @@ func (s *Server) AdminListOrders(c *gin.Context) {
 	paymentStatus := c.Query("payment_status")
 
 	query := strings.Builder{}
-	query.WriteString(`SELECT id, order_number, customer_name, email, phone, address, IFNULL(note, ''), IFNULL(delivery_time, ''), subtotal, shipping_fee, discount_total, total, payment_method, IFNULL(payment_status, 'pending'), status, IFNULL(payment_proof_url, ''), IFNULL(admin_note, ''), created_at FROM orders`)
+	query.WriteString(`SELECT id, order_number, customer_name, email, phone, address, IFNULL(note, ''), IFNULL(delivery_time, ''), IFNULL(promo_code, ''), IFNULL(shipping_method, ''), subtotal, shipping_fee, discount_total, total, payment_method, IFNULL(payment_status, 'pending'), status, IFNULL(payment_proof_url, ''), IFNULL(admin_note, ''), created_at FROM orders`)
 	args := make([]any, 0)
 
 	filters := make([]string, 0)
@@ -72,7 +80,7 @@ func (s *Server) AdminListOrders(c *gin.Context) {
 	orderMap := make(map[int]*AdminOrder)
 	for rows.Next() {
 		var order AdminOrder
-		if err := rows.Scan(&order.ID, &order.OrderNumber, &order.CustomerName, &order.Email, &order.Phone, &order.Address, &order.Note, &order.DeliveryTime, &order.Subtotal, &order.ShippingFee, &order.DiscountTotal, &order.Total, &order.PaymentMethod, &order.PaymentStatus, &order.Status, &order.PaymentProof, &order.AdminNote, &order.CreatedAt); err != nil {
+		if err := rows.Scan(&order.ID, &order.OrderNumber, &order.CustomerName, &order.Email, &order.Phone, &order.Address, &order.Note, &order.DeliveryTime, &order.PromoCode, &order.ShippingMethod, &order.Subtotal, &order.ShippingFee, &order.DiscountTotal, &order.Total, &order.PaymentMethod, &order.PaymentStatus, &order.Status, &order.PaymentProof, &order.AdminNote, &order.CreatedAt); err != nil {
 			respondError(c, http.StatusInternalServerError, "db_error", "Failed to parse orders")
 			return
 		}
@@ -120,11 +128,11 @@ func (s *Server) AdminGetOrder(c *gin.Context) {
 	}
 
 	row := s.DB.QueryRow(`
-    SELECT id, order_number, customer_name, email, phone, address, IFNULL(note, ''), IFNULL(delivery_time, ''), subtotal, shipping_fee, discount_total, total, payment_method, IFNULL(payment_status, 'pending'), status, IFNULL(payment_proof_url, ''), IFNULL(admin_note, ''), created_at
+    SELECT id, order_number, customer_name, email, phone, address, IFNULL(note, ''), IFNULL(delivery_time, ''), IFNULL(promo_code, ''), IFNULL(shipping_method, ''), subtotal, shipping_fee, discount_total, total, payment_method, IFNULL(payment_status, 'pending'), status, IFNULL(payment_proof_url, ''), IFNULL(admin_note, ''), created_at
     FROM orders WHERE id = ?
   `, id)
 	var order AdminOrder
-	if err := row.Scan(&order.ID, &order.OrderNumber, &order.CustomerName, &order.Email, &order.Phone, &order.Address, &order.Note, &order.DeliveryTime, &order.Subtotal, &order.ShippingFee, &order.DiscountTotal, &order.Total, &order.PaymentMethod, &order.PaymentStatus, &order.Status, &order.PaymentProof, &order.AdminNote, &order.CreatedAt); err != nil {
+	if err := row.Scan(&order.ID, &order.OrderNumber, &order.CustomerName, &order.Email, &order.Phone, &order.Address, &order.Note, &order.DeliveryTime, &order.PromoCode, &order.ShippingMethod, &order.Subtotal, &order.ShippingFee, &order.DiscountTotal, &order.Total, &order.PaymentMethod, &order.PaymentStatus, &order.Status, &order.PaymentProof, &order.AdminNote, &order.CreatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			respondError(c, http.StatusNotFound, "not_found", "Order not found")
 			return
@@ -168,11 +176,17 @@ func (s *Server) AdminUpdateOrder(c *gin.Context) {
 
 	_, err = s.DB.Exec(`
     UPDATE orders
-    SET status = COALESCE(NULLIF(?, ''), status),
+    SET customer_name = COALESCE(NULLIF(?, ''), customer_name),
+        email = COALESCE(NULLIF(?, ''), email),
+        phone = COALESCE(NULLIF(?, ''), phone),
+        address = COALESCE(NULLIF(?, ''), address),
+        note = ?,
+        delivery_time = COALESCE(NULLIF(?, ''), delivery_time),
+        status = COALESCE(NULLIF(?, ''), status),
         payment_status = COALESCE(NULLIF(?, ''), payment_status),
         admin_note = ?
     WHERE id = ?
-  `, input.Status, input.PaymentStatus, input.AdminNote, id)
+  `, input.CustomerName, input.Email, input.Phone, input.Address, input.Note, input.DeliveryTime, input.Status, input.PaymentStatus, input.AdminNote, id)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update order")
 		return

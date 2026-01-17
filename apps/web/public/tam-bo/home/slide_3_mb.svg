@@ -1,40 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="750" height="900" viewBox="0 0 750 900" role="img" aria-labelledby="title desc">
-  <title id="title">Đồng hành cùng nhà nông</title>
-  <desc id="desc">Banner Tam Bố di động với thông điệp đồng hành cùng nhà nông.</desc>
+  <title id="title">Highland lake</title>
+  <desc id="desc">Calm lake with mountains for mobile banner.</desc>
   <defs>
-    <linearGradient id="sky3mb" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#e6f7ff"/>
-      <stop offset="60%" stop-color="#c2e8ff"/>
-      <stop offset="100%" stop-color="#8dd39c"/>
+    <linearGradient id="skyLakeMb" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#dbe9ff"/>
+      <stop offset="60%" stop-color="#b7d8ff"/>
+      <stop offset="100%" stop-color="#7db6d8"/>
     </linearGradient>
-    <linearGradient id="field3mb" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#2f7d32"/>
-      <stop offset="100%" stop-color="#98d75f"/>
+    <linearGradient id="mountainMb1" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#5a6f87"/>
+      <stop offset="100%" stop-color="#8aa2b8"/>
+    </linearGradient>
+    <linearGradient id="mountainMb2" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#4c5f74"/>
+      <stop offset="100%" stop-color="#7d95aa"/>
+    </linearGradient>
+    <linearGradient id="lakeMb" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#8fd0e8"/>
+      <stop offset="100%" stop-color="#4fa1c8"/>
     </linearGradient>
   </defs>
 
-  <rect width="750" height="900" fill="url(#sky3mb)"/>
-  <path d="M0 460 C180 380 360 380 750 460 V900 H0 Z" fill="url(#field3mb)"/>
-  <path d="M0 560 C200 500 380 500 750 560 V900 H0 Z" fill="#7fc54f" opacity="0.9"/>
+  <rect width="750" height="900" fill="url(#skyLakeMb)"/>
 
-  <circle cx="375" cy="510" r="170" fill="#ffffff" stroke="#3d7f1c" stroke-width="6"/>
-  <circle cx="375" cy="510" r="145" fill="#efffe8"/>
-  <g transform="translate(375 510)">
-    <path d="M-60 10 C-30 -40 30 -40 60 10 C30 25 0 50 -20 70 C-40 50 -60 30 -60 10 Z" fill="#3d7f1c"/>
-    <path d="M-10 -40 C0 -70 40 -70 50 -40 C30 -20 10 0 -10 25 C-25 10 -30 -20 -10 -40 Z" fill="#5aa52a"/>
+  <path d="M0 420 L140 320 L260 400 L380 300 L520 420 L640 330 L750 400 V900 H0 Z" fill="url(#mountainMb1)"/>
+  <path d="M0 470 L160 370 L280 450 L420 360 L560 460 L680 380 L750 450 V900 H0 Z" fill="url(#mountainMb2)" opacity="0.9"/>
+
+  <rect y="560" width="750" height="340" fill="url(#lakeMb)"/>
+  <path d="M0 560 C160 530 320 530 560 560 C640 570 700 570 750 560" fill="none" stroke="#bfe9f5" stroke-width="3" opacity="0.7"/>
+  <path d="M0 620 C180 600 340 600 580 620 C660 630 710 630 750 620" fill="none" stroke="#bfe9f5" stroke-width="2" opacity="0.6"/>
+
+  <g fill="#3b7c5a">
+    <path d="M330 560 C350 540 390 540 410 560 C390 565 350 565 330 560 Z"/>
+    <rect x="372" y="560" width="8" height="20" fill="#2f6b33"/>
   </g>
 
-  <g fill="#ffffff" font-family="Roboto, Arial, sans-serif" text-anchor="middle">
-    <text x="375" y="140" font-size="26" font-weight="600" letter-spacing="1">Nông dược Tam Bố</text>
-    <text x="375" y="220" font-size="42" font-weight="800">ĐỒNG HÀNH CÙNG</text>
-    <text x="375" y="280" font-size="38" font-weight="800">NHÀ NÔNG VIỆT</text>
-    <text x="375" y="340" font-size="34" font-weight="800">HIỆU QUẢ - TIN CẬY</text>
-  </g>
-
-  <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" transform="translate(220 365)">
-    <path d="M0 0 H40"/>
-    <path d="M60 0 H100"/>
-    <path d="M120 0 H160"/>
-    <path d="M180 0 H220"/>
+  <g stroke="#2f3d4f" stroke-width="3" stroke-linecap="round" opacity="0.6">
+    <path d="M560 220 C575 210 595 210 610 220"/>
+    <path d="M620 230 C635 220 655 220 670 230"/>
   </g>
 </svg>

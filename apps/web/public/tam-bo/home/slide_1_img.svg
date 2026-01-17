@@ -1,56 +1,62 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" role="img" aria-labelledby="title desc">
-  <title id="title">Nông dược Tam Bố - Nông nghiệp xanh</title>
-  <desc id="desc">Banner Tam Bố với nền cánh đồng xanh, điểm nhấn tròn và thông điệp nông nghiệp xanh.</desc>
+  <title id="title">Pine forest and tea hills</title>
+  <desc id="desc">Layered tea hills with pine forest silhouettes under a soft morning sky.</desc>
   <defs>
-    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#d9f2ff"/>
-      <stop offset="55%" stop-color="#a6d9ff"/>
-      <stop offset="100%" stop-color="#7bbf87"/>
+    <linearGradient id="skyPine" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#cfe9ff"/>
+      <stop offset="55%" stop-color="#b5e1d2"/>
+      <stop offset="100%" stop-color="#8cc58f"/>
     </linearGradient>
-    <linearGradient id="fieldLeft" x1="0" x2="1" y1="0" y2="1">
+    <linearGradient id="hillTea1" x1="0" x2="1" y1="0" y2="1">
       <stop offset="0%" stop-color="#2f7d32"/>
-      <stop offset="100%" stop-color="#7cb342"/>
+      <stop offset="100%" stop-color="#6fbf5f"/>
     </linearGradient>
-    <linearGradient id="fieldRight" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#386f1d"/>
-      <stop offset="100%" stop-color="#a7d96b"/>
+    <linearGradient id="hillTea2" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2b6d2e"/>
+      <stop offset="100%" stop-color="#5daa58"/>
     </linearGradient>
-    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#396b16"/>
-      <stop offset="100%" stop-color="#4c8b1f"/>
+    <linearGradient id="hillTea3" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#245826"/>
+      <stop offset="100%" stop-color="#4f9b4a"/>
     </linearGradient>
   </defs>
 
-  <rect width="1400" height="560" fill="url(#sky)"/>
+  <rect width="1400" height="560" fill="url(#skyPine)"/>
 
-  <path d="M0 300 C240 220 420 220 700 290 C980 360 1160 360 1400 300 V560 H0 Z" fill="url(#fieldLeft)"/>
-  <path d="M0 360 C220 300 420 300 700 360 C980 420 1180 420 1400 360 V560 H0 Z" fill="#5a9f3a" opacity="0.9"/>
-  <path d="M0 430 C240 380 420 380 700 430 C980 480 1180 480 1400 430 V560 H0 Z" fill="#76b947" opacity="0.9"/>
+  <path d="M0 260 C220 200 430 200 700 250 C970 300 1180 300 1400 250 V560 H0 Z" fill="url(#hillTea1)"/>
+  <path d="M0 320 C240 270 460 270 700 320 C980 370 1160 370 1400 320 V560 H0 Z" fill="url(#hillTea2)" opacity="0.95"/>
+  <path d="M0 390 C260 350 470 350 700 390 C990 440 1160 440 1400 390 V560 H0 Z" fill="url(#hillTea3)" opacity="0.95"/>
 
-  <rect x="900" y="0" width="500" height="560" fill="url(#fieldRight)"/>
-  <path d="M900 0 L1080 0 L980 220 L900 220 Z" fill="url(#panel)"/>
-
-  <circle cx="1030" cy="270" r="170" fill="#ffffff" stroke="#3f7f1c" stroke-width="6"/>
-  <circle cx="1030" cy="270" r="145" fill="#eaf7d9"/>
-  <g transform="translate(1030 270)">
-    <path d="M0 -70 C40 -70 70 -35 70 0 C70 40 35 70 0 70 C-35 70 -70 40 -70 0 C-70 -35 -40 -70 0 -70 Z" fill="#b8e36d"/>
-    <path d="M-10 -25 C10 -50 40 -50 50 -20 C30 -10 10 10 -10 35 C-25 20 -30 -5 -10 -25 Z" fill="#4c8b1f"/>
-    <path d="M-30 -15 C-15 -35 10 -40 20 -15 C5 -5 -10 15 -25 30 C-35 20 -38 0 -30 -15 Z" fill="#3f7f1c"/>
-    <circle cx="35" cy="25" r="12" fill="#4c8b1f"/>
-    <circle cx="-35" cy="35" r="8" fill="#3f7f1c"/>
+  <g stroke="#e7f7e4" stroke-width="2" opacity="0.6">
+    <path d="M40 300 C220 250 420 250 680 290" fill="none"/>
+    <path d="M80 350 C260 300 460 300 700 340" fill="none"/>
+    <path d="M120 410 C320 360 520 360 740 400" fill="none"/>
+    <path d="M720 260 C920 220 1120 220 1360 260" fill="none"/>
+    <path d="M720 330 C940 290 1140 290 1360 330" fill="none"/>
+    <path d="M720 400 C950 360 1150 360 1360 400" fill="none"/>
   </g>
 
-  <g fill="#ffffff" font-family="Roboto, Arial, sans-serif">
-    <text x="70" y="120" font-size="26" font-weight="600" letter-spacing="1">Nông dược Tam Bố</text>
-    <text x="70" y="200" font-size="46" font-weight="800">NÔNG NGHIỆP XANH</text>
-    <text x="70" y="260" font-size="42" font-weight="800">GIẢI PHÁP CHO TƯƠNG LAI</text>
-    <text x="70" y="320" font-size="40" font-weight="800">THÔNG MINH</text>
+  <g fill="#1f4d26" opacity="0.9">
+    <polygon points="120,260 150,200 180,260"/>
+    <rect x="145" y="260" width="10" height="30" fill="#2f6b33"/>
+    <polygon points="200,255 230,190 260,255"/>
+    <rect x="225" y="255" width="10" height="34" fill="#2f6b33"/>
+    <polygon points="280,265 310,200 340,265"/>
+    <rect x="305" y="265" width="10" height="30" fill="#2f6b33"/>
+    <polygon points="1020,255 1050,190 1080,255"/>
+    <rect x="1045" y="255" width="10" height="34" fill="#2f6b33"/>
+    <polygon points="1100,265 1130,200 1160,265"/>
+    <rect x="1125" y="265" width="10" height="30" fill="#2f6b33"/>
+    <polygon points="1180,260 1210,200 1240,260"/>
+    <rect x="1205" y="260" width="10" height="30" fill="#2f6b33"/>
   </g>
 
-  <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" transform="translate(70 345)">
-    <path d="M0 0 H40"/>
-    <path d="M60 0 H100"/>
-    <path d="M120 0 H160"/>
-    <path d="M180 0 H220"/>
+  <g fill="#234f2a">
+    <polygon points="60,420 110,330 160,420"/>
+    <rect x="104" y="420" width="12" height="40" fill="#2f6b33"/>
+    <polygon points="180,430 230,330 280,430"/>
+    <rect x="224" y="430" width="12" height="40" fill="#2f6b33"/>
+    <polygon points="1220,430 1270,330 1320,430"/>
+    <rect x="1264" y="430" width="12" height="40" fill="#2f6b33"/>
   </g>
 </svg>

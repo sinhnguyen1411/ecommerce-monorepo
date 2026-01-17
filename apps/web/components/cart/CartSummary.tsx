@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+import { validatePromoCode } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { siteConfig } from "@/lib/site";
 import { getCartSubtotal, useCartStore } from "@/store/cart";
@@ -23,12 +24,18 @@ export default function CartSummary() {
   const items = useCartStore((state) => state.items);
   const deliveryTime = useCartStore((state) => state.deliveryTime);
   const setDeliveryTime = useCartStore((state) => state.setDeliveryTime);
+  const promoCode = useCartStore((state) => state.promoCode);
+  const setPromoCode = useCartStore((state) => state.setPromoCode);
   const subtotal = getCartSubtotal(items);
   const minOrder = siteConfig.minOrderAmount;
   const meetsMinOrder = minOrder === 0 || subtotal >= minOrder;
   const [deliveryMode, setDeliveryMode] = useState("standard");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliverySlot, setDeliverySlot] = useState("");
+  const [promoFeedback, setPromoFeedback] = useState("");
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
 
   useEffect(() => {
     if (deliveryMode === "scheduled") {
@@ -38,6 +45,36 @@ export default function CartSummary() {
       setDeliveryTime("Giao khi có hàng");
     }
   }, [deliveryMode, deliveryDate, deliverySlot, setDeliveryTime]);
+
+  useEffect(() => {
+    setPromoFeedback("");
+    setPromoDiscount(0);
+    setPromoApplied(false);
+  }, [promoCode, subtotal]);
+
+  const handleApplyPromo = async () => {
+    const trimmed = promoCode.trim();
+    if (!trimmed) {
+      setPromoFeedback("Vui lòng nhập mã khuyến mãi.");
+      return;
+    }
+
+    setIsApplyingPromo(true);
+    setPromoFeedback("");
+    try {
+      const result = await validatePromoCode({ code: trimmed, subtotal });
+      setPromoCode(result.promo_code);
+      setPromoDiscount(result.discount_total);
+      setPromoApplied(true);
+      setPromoFeedback(`Đã áp dụng ${result.promo_code}.`);
+    } catch (err) {
+      setPromoDiscount(0);
+      setPromoApplied(false);
+      setPromoFeedback(err instanceof Error ? err.message : "Mã khuyến mãi không hợp lệ.");
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
 
   return (
     <>
@@ -113,6 +150,11 @@ export default function CartSummary() {
           <p>
             Tổng tiền: <span>{formatCurrency(subtotal)}</span>
           </p>
+          {promoApplied ? (
+            <p className="mt-2 text-sm text-ink/70">
+              Giảm giá: <span>-{formatCurrency(promoDiscount)}</span>
+            </p>
+          ) : null}
         </div>
         <div className="summary-action">
           <p>Phí vận chuyển sẽ được tính ở trang thanh toán.</p>
@@ -120,6 +162,25 @@ export default function CartSummary() {
           {!meetsMinOrder ? (
             <div className="summary-alert">Giỏ hàng của bạn hiện chưa đạt mức tối thiểu để thanh toán.</div>
           ) : null}
+        </div>
+        <div className="summary-action">
+          <div className="promo-field">
+            <input
+              className="field"
+              placeholder="Mã khuyến mãi"
+              value={promoCode}
+              onChange={(event) => setPromoCode(event.target.value)}
+            />
+            <button
+              className="button btnlight"
+              type="button"
+              onClick={handleApplyPromo}
+              disabled={isApplyingPromo}
+            >
+              {isApplyingPromo ? "Đang kiểm tra..." : "Áp dụng"}
+            </button>
+          </div>
+          {promoFeedback ? <p className="mt-2 text-sm text-ink/60">{promoFeedback}</p> : null}
         </div>
         <div className="summary-button">
           <Link

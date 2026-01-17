@@ -95,7 +95,7 @@ export default async function ProductDetailPage({
               </Link>
             </div>
             <ProductGrid
-              products={relatedProducts.filter((item) => item.id !== product.id).slice(0, 3)}
+              products={relatedProducts.filter((item) => item.id !== product.id).slice(0, 5)}
             />
           </div>
         </div>

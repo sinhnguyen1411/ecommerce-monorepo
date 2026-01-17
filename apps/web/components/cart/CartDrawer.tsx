@@ -22,11 +22,11 @@ export default function CartDrawer() {
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => (open ? null : close())}>
-      <SheetContent className="max-w-md">
+      <SheetContent className="max-w-md flex h-dvh flex-col overflow-hidden">
         <SheetHeader>
         <SheetTitle>Giỏ hàng ({count})</SheetTitle>
         </SheetHeader>
-        <div className="mt-6 flex h-full flex-col">
+        <div className="mt-6 flex flex-1 flex-col overflow-hidden">
           <div className="space-y-4">
             {freeThreshold > 0 ? (
               <div className="border border-forest/10 bg-white p-4 text-xs text-ink/70">
@@ -64,7 +64,7 @@ export default function CartDrawer() {
               items.map((item) => <CartLineItem key={item.id} item={item} />)
             )}
           </div>
-          <div className="mt-6 border-t border-forest/10 pt-4">
+          <div className="mt-4 shrink-0 border-t border-forest/10 pt-4">
             <div className="flex items-center justify-between text-sm font-semibold">
               <span>Tạm tính</span>
               <span>{formatCurrency(subtotal)}</span>

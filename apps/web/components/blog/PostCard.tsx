@@ -20,7 +20,7 @@ export default function PostCard({ post }: { post: Post }) {
             {post.cover_image ? (
               <img src={post.cover_image} alt={post.title} />
             ) : (
-              <div className="no-image">Đang cập nhật ảnh</div>
+              <div className="no-image">{"\u0110ang c\u1EADp nh\u1EADt \u1EA3nh"}</div>
             )}
           </Link>
         </div>
@@ -33,12 +33,12 @@ export default function PostCard({ post }: { post: Post }) {
             </h3>
           </div>
           <p className="entry-content">
-            {excerpt ? `${excerpt.slice(0, 160)}...` : "Đang cập nhật nội dung."}
+            {excerpt ? `${excerpt.slice(0, 160)}...` : "\u0110ang c\u1EADp nh\u1EADt n\u1ED9i dung."}
           </p>
           <div className="article-post-meta">
-            <span className="author">bởi: {siteConfig.email}</span>
+            <span className="author">{"b\u1EDFi: "}{siteConfig.email}</span>
             <span className="date">
-              <time>{formatDate(post.published_at) || "Tin tức"}</time>
+              <time>{formatDate(post.published_at) || "Tin t\u1EE9c"}</time>
             </span>
           </div>
         </div>

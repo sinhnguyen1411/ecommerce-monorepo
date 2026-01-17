@@ -1,45 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" role="img" aria-labelledby="title desc">
-  <title id="title">Đồng hành cùng nhà nông</title>
-  <desc id="desc">Banner Tam Bố với thông điệp đồng hành cùng nhà nông.</desc>
+  <title id="title">Highland lake</title>
+  <desc id="desc">Calm lake with mountains and soft clouds.</desc>
   <defs>
-    <linearGradient id="sky3" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#e6f7ff"/>
-      <stop offset="55%" stop-color="#c2e8ff"/>
-      <stop offset="100%" stop-color="#8dd39c"/>
+    <linearGradient id="skyLake" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#dbe9ff"/>
+      <stop offset="55%" stop-color="#b7d8ff"/>
+      <stop offset="100%" stop-color="#7db6d8"/>
     </linearGradient>
-    <linearGradient id="field3" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#2f7d32"/>
-      <stop offset="100%" stop-color="#98d75f"/>
+    <linearGradient id="mountain1" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#5a6f87"/>
+      <stop offset="100%" stop-color="#8aa2b8"/>
     </linearGradient>
-    <linearGradient id="panel3" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#3d7f1c"/>
-      <stop offset="100%" stop-color="#6fbe35"/>
+    <linearGradient id="mountain2" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#4c5f74"/>
+      <stop offset="100%" stop-color="#7d95aa"/>
+    </linearGradient>
+    <linearGradient id="lake" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#8fd0e8"/>
+      <stop offset="100%" stop-color="#4fa1c8"/>
     </linearGradient>
   </defs>
 
-  <rect width="1400" height="560" fill="url(#sky3)"/>
-  <path d="M0 310 C260 230 460 230 700 300 C980 370 1180 370 1400 310 V560 H0 Z" fill="url(#field3)"/>
-  <path d="M0 390 C240 330 440 330 700 390 C980 450 1180 450 1400 390 V560 H0 Z" fill="#7fc54f" opacity="0.9"/>
+  <rect width="1400" height="560" fill="url(#skyLake)"/>
 
-  <rect x="880" y="0" width="520" height="560" fill="url(#panel3)"/>
-  <circle cx="1085" cy="270" r="170" fill="#ffffff" stroke="#3d7f1c" stroke-width="6"/>
-  <circle cx="1085" cy="270" r="145" fill="#efffe8"/>
-  <g transform="translate(1085 270)">
-    <path d="M-60 10 C-30 -40 30 -40 60 10 C30 25 0 50 -20 70 C-40 50 -60 30 -60 10 Z" fill="#3d7f1c"/>
-    <path d="M-10 -40 C0 -70 40 -70 50 -40 C30 -20 10 0 -10 25 C-25 10 -30 -20 -10 -40 Z" fill="#5aa52a"/>
+  <path d="M0 280 L200 180 L360 260 L520 150 L700 260 L880 180 L1040 250 L1200 170 L1400 260 V560 H0 Z" fill="url(#mountain1)"/>
+  <path d="M0 320 L220 220 L380 300 L560 210 L740 300 L920 230 L1100 290 L1280 220 L1400 300 V560 H0 Z" fill="url(#mountain2)" opacity="0.9"/>
+
+  <rect y="360" width="1400" height="200" fill="url(#lake)"/>
+  <path d="M0 360 C240 330 420 330 700 360 C980 390 1160 390 1400 360" fill="none" stroke="#bfe9f5" stroke-width="3" opacity="0.7"/>
+  <path d="M0 400 C260 380 460 380 700 400 C980 420 1160 420 1400 400" fill="none" stroke="#bfe9f5" stroke-width="2" opacity="0.6"/>
+
+  <g fill="#3b7c5a">
+    <path d="M620 360 C640 340 680 340 700 360 C680 365 640 365 620 360 Z"/>
+    <rect x="658" y="360" width="8" height="20" fill="#2f6b33"/>
   </g>
 
-  <g fill="#ffffff" font-family="Roboto, Arial, sans-serif">
-    <text x="70" y="130" font-size="24" font-weight="600" letter-spacing="1">Nông dược Tam Bố</text>
-    <text x="70" y="210" font-size="44" font-weight="800">ĐỒNG HÀNH CÙNG</text>
-    <text x="70" y="270" font-size="40" font-weight="800">NHÀ NÔNG VIỆT</text>
-    <text x="70" y="330" font-size="36" font-weight="800">HIỆU QUẢ - TIN CẬY</text>
-  </g>
-
-  <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" transform="translate(70 355)">
-    <path d="M0 0 H40"/>
-    <path d="M60 0 H100"/>
-    <path d="M120 0 H160"/>
-    <path d="M180 0 H220"/>
+  <g stroke="#2f3d4f" stroke-width="3" stroke-linecap="round" opacity="0.6">
+    <path d="M1000 140 C1015 130 1035 130 1050 140"/>
+    <path d="M1060 150 C1075 140 1095 140 1110 150"/>
   </g>
 </svg>

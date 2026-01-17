@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Facebook, MessageCircle, MessageSquare } from "lucide-react";
 
 import { siteConfig } from "@/lib/site";
@@ -10,20 +10,20 @@ export default function Footer() {
         <div className="section-shell py-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="footer-widget-title">Bản tin</p>
+              <p className="footer-widget-title">{"B\u1EA3n tin"}</p>
               <h3 className="text-lg font-semibold">
-                Đăng ký nhận thông tin ưu đãi từ Tam Bố
+                {"\u0110\u0103ng k\u00FD nh\u1EADn th\u00F4ng tin \u01B0u \u0111\u00E3i t\u1EEB Tam B\u1ED1"}
               </h3>
               <p className="mt-2 text-sm text-white/70">
-                Nhập email để nhận tin về sản phẩm và khuyến mãi mới.
+                {"Nh\u1EADp email \u0111\u1EC3 nh\u1EADn tin v\u1EC1 s\u1EA3n ph\u1EA9m v\u00E0 khuy\u1EBFn m\u00E3i m\u1EDBi."}
               </p>
             </div>
             <div className="flex w-full max-w-md flex-col gap-3 sm:flex-row">
               <input
                 className="h-10 flex-1 border border-white/20 bg-white px-3 text-sm text-ink"
-                placeholder="Email của bạn"
+                placeholder={"Email c\u1EE7a b\u1EA1n"}
               />
-              <button className="button">Đăng ký</button>
+              <button className="button">{"\u0110\u0103ng k\u00FD"}</button>
             </div>
           </div>
         </div>
@@ -33,7 +33,7 @@ export default function Footer() {
         <div>
           <h2 className="text-lg font-semibold">{siteConfig.name}</h2>
           <p className="mt-3 text-sm text-white/70">
-            Kết nối nông sản sạch và người tiêu dùng. Hỗ trợ tư vấn và giao hàng nhanh.
+            {"K\u1EBFt n\u1ED1i n\u00F4ng s\u1EA3n s\u1EA1ch v\u00E0 ng\u01B0\u1EDDi ti\u00EAu d\u00F9ng. H\u1ED7 tr\u1EE3 t\u01B0 v\u1EA5n v\u00E0 giao h\u00E0ng nhanh."}
           </p>
           <div className="mt-4 flex items-center gap-3">
             <Link href={siteConfig.social.facebook} target="_blank" rel="noreferrer">
@@ -59,7 +59,7 @@ export default function Footer() {
         </div>
 
         <div className="space-y-2 text-sm text-white/70">
-          <p className="footer-widget-title">Liên hệ</p>
+          <p className="footer-widget-title">{"Li\u00EAn h\u1EC7"}</p>
           <p>{siteConfig.address}</p>
           <p>Hotline: {siteConfig.phone}</p>
           <p>KTV: {siteConfig.fax}</p>
@@ -72,33 +72,35 @@ export default function Footer() {
         </div>
 
         <div className="space-y-2 text-sm text-white/70">
-          <p className="footer-widget-title">Nhóm liên kết</p>
-          <p>Đang cập nhật.</p>
+          <p className="footer-widget-title">{"Nh\u00F3m li\u00EAn k\u1EBFt"}</p>
+          <p>{"\u0110ang c\u1EADp nh\u1EADt."}</p>
         </div>
 
         <div className="space-y-2 text-sm text-white/70">
-          <p className="footer-widget-title">Hỗ trợ</p>
+          <p className="footer-widget-title">{"H\u1ED7 tr\u1EE3"}</p>
           <Link href="/search" className="block text-white/70 hover:text-white">
-            Tìm kiếm
+            {"T\u00ECm ki\u1EBFm"}
           </Link>
           <Link href="/pages/about-us" className="block text-white/70 hover:text-white">
-            Giới thiệu
+            {"Gi\u1EDBi thi\u1EC7u"}
           </Link>
           <Link href="/pages/chinh-sach-doi-tra" className="block text-white/70 hover:text-white">
-            Chính sách đổi trả
+            {"Ch\u00EDnh s\u00E1ch \u0111\u1ED5i tr\u1EA3"}
           </Link>
           <Link href="/pages/chinh-sach-bao-mat" className="block text-white/70 hover:text-white">
-            Chính sách bảo mật
+            {"Ch\u00EDnh s\u00E1ch b\u1EA3o m\u1EADt"}
           </Link>
           <Link href="/pages/dieu-khoan-dich-vu" className="block text-white/70 hover:text-white">
-            Điều khoản dịch vụ
+            {"\u0110i\u1EC1u kho\u1EA3n d\u1ECBch v\u1EE5"}
           </Link>
           <Link href="/pages/lien-he" className="block text-white/70 hover:text-white">
-            Liên hệ
+            {"Li\u00EAn h\u1EC7"}
           </Link>
         </div>
       </div>
-      <div className="footer-bottom">Tam Bố Ecommerce. Bảo lưu mọi quyền.</div>
+      <div className="footer-bottom">
+        {"Tam B\u1ED1 Ecommerce. B\u1EA3o l\u01B0u m\u1ECDi quy\u1EC1n."}
+      </div>
     </footer>
   );
 }

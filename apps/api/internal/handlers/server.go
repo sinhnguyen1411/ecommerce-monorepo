@@ -88,6 +88,9 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 		api.GET("/pages/:slug", s.GetPage)
 		api.GET("/qna", s.ListQnA)
 		api.GET("/locations", s.ListLocations)
+		api.GET("/payment-settings", s.GetPaymentSettings)
+		api.GET("/promotions", s.ListPromotions)
+		api.POST("/promotions/validate", s.ValidatePromotion)
 		api.POST("/orders", s.CreateOrder)
 		api.POST("/orders/:id/payment-proof", s.UploadPaymentProof)
 

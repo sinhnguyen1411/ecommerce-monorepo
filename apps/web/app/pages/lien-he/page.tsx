@@ -1,8 +1,8 @@
-import { siteConfig } from "@/lib/site";
+﻿import { siteConfig } from "@/lib/site";
 
 export const metadata = {
-  title: `Liên hệ | ${siteConfig.name}`,
-  description: `Thông tin liên hệ và hỗ trợ từ ${siteConfig.name}.`
+  title: `Li\u00EAn h\u1EC7 | ${siteConfig.name}`,
+  description: `Th\u00F4ng tin li\u00EAn h\u1EC7 v\u00E0 h\u1ED7 tr\u1EE3 t\u1EEB ${siteConfig.name}.`
 };
 
 export default function ContactPage() {
@@ -18,11 +18,11 @@ export default function ContactPage() {
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
                 <a href="/" target="_self">
-                  Trang chủ
+                  {"Trang ch\u1EE7"}
                 </a>
               </li>
               <li className="active">
-                <strong>LIÊN HỆ</strong>
+                <strong>{"Li\u00EAn h\u1EC7"}</strong>
               </li>
             </ol>
           </div>
@@ -46,46 +46,45 @@ export default function ContactPage() {
           <div className="container">
             <div className="row">
               <div className="col-lg-6 col-md-12 col-12 column-left">
-                <h2>Gửi thắc mắc cho chúng tôi</h2>
+                <h2>{"G\u1EEDi th\u1EAFc m\u1EAFc cho ch\u00FAng t\u00F4i"}</h2>
                 <p>
-                  Nếu bạn có thắc mắc, vui lòng gửi yêu cầu để chúng tôi liên hệ lại
-                  sớm nhất.
+                  {"N\u1EBFu b\u1EA1n c\u00F3 th\u1EAFc m\u1EAFc, vui l\u00F2ng g\u1EEDi y\u00EAu c\u1EA7u \u0111\u1EC3 ch\u00FAng t\u00F4i li\u00EAn h\u1EC7 l\u1EA1i s\u1EDBm nh\u1EA5t."}
                 </p>
                 <form className="contact-form">
                   <div className="row">
                     <div className="col-lg-12 col-md-12 col-12">
                       <div className="input-group">
-                        <input className="form-control" placeholder="Tên của bạn" />
+                        <input className="form-control" placeholder={"T\u00EAn c\u1EE7a b\u1EA1n"} />
                       </div>
                     </div>
                     <div className="col-lg-6 col-md-6 col-12">
                       <div className="input-group">
-                        <input className="form-control" placeholder="Email của bạn" />
+                        <input className="form-control" placeholder={"Email c\u1EE7a b\u1EA1n"} />
                       </div>
                     </div>
                     <div className="col-lg-6 col-md-6 col-12">
                       <div className="input-group">
                         <input
                           className="form-control"
-                          placeholder="Số điện thoại của bạn"
+                          placeholder={"S\u1ED1 \u0111i\u1EC7n tho\u1EA1i c\u1EE7a b\u1EA1n"}
                         />
                       </div>
                     </div>
                     <div className="col-lg-12 col-md-12 col-12">
                       <div className="input-group">
-                        <textarea className="form-control" placeholder="Nội dung" />
+                        <textarea className="form-control" placeholder={"N\u1ED9i dung"} />
                       </div>
                     </div>
                     <div className="col-lg-12 col-md-12 col-12">
                       <button className="button" type="submit">
-                        Gửi cho chúng tôi
+                        {"G\u1EEDi cho ch\u00FAng t\u00F4i"}
                       </button>
                     </div>
                   </div>
                 </form>
               </div>
               <div className="col-lg-6 col-md-12 col-12 column-right">
-                <h2>Thông tin liên hệ</h2>
+                <h2>{"Th\u00F4ng tin li\u00EAn h\u1EC7"}</h2>
                 <div className="contact-info">
                   <div className="contact-info__list">
                     <div className="contact-info__item">
@@ -98,7 +97,7 @@ export default function ContactPage() {
                         </span>
                       </div>
                       <div className="right">
-                        <strong>Địa chỉ</strong>
+                        <strong>{"\u0110\u1ECBa ch\u1EC9"}</strong>
                         <br />
                         {siteConfig.address}
                       </div>
@@ -112,7 +111,7 @@ export default function ContactPage() {
                         </span>
                       </div>
                       <div className="right">
-                        <strong>Điện thoại</strong>
+                        <strong>{"\u0110i\u1EC7n tho\u1EA1i"}</strong>
                         <br />
                         {phoneLabel}
                       </div>
@@ -128,9 +127,9 @@ export default function ContactPage() {
                         </span>
                       </div>
                       <div className="right">
-                        <strong>Thời gian làm việc</strong>
+                        <strong>{"Th\u1EDDi gian l\u00E0m vi\u1EC7c"}</strong>
                         <br />
-                        Tất cả các ngày trong tuần
+                        {"T\u1EA5t c\u1EA3 c\u00E1c ng\u00E0y trong tu\u1EA7n"}
                       </div>
                     </div>
                     <div className="contact-info__item">

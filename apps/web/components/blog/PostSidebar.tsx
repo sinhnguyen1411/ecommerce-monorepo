@@ -7,7 +7,7 @@ export default function PostSidebar({ posts }: { posts: Post[] }) {
   return (
     <div className="group-sidebox">
       <div className="sidebox-title">
-        <h3 className="htitle">Bài viết mới nhất</h3>
+        <h3 className="htitle">{"B\u00E0i vi\u1EBFt m\u1EDBi nh\u1EA5t"}</h3>
       </div>
       <div className="sidebox-content sidebox-content-togged">
         <div className="list-blogs">
@@ -21,7 +21,7 @@ export default function PostSidebar({ posts }: { posts: Post[] }) {
                 {post.cover_image ? (
                   <img src={post.cover_image} alt={post.title} />
                 ) : (
-                  <div className="no-image">Đang cập nhật ảnh</div>
+                  <div className="no-image">{"\u0110ang c\u1EADp nh\u1EADt \u1EA3nh"}</div>
                 )}
               </Link>
               <div className="item-article__detail">
@@ -30,7 +30,7 @@ export default function PostSidebar({ posts }: { posts: Post[] }) {
                     {post.title}
                   </Link>
                 </p>
-                <p className="meta-post">{formatDate(post.published_at) || "Tin tức"}</p>
+                <p className="meta-post">{formatDate(post.published_at) || "Tin t\u1EE9c"}</p>
               </div>
             </article>
           ))}

@@ -80,6 +80,7 @@ export type Post = {
   content?: string;
   cover_image: string;
   published_at: string;
+  tags?: string[];
 };
 
 export type Page = {
@@ -117,6 +118,7 @@ export type OrderRequest = {
   address: string;
   note?: string;
   delivery_time?: string;
+  shipping_method?: string;
   payment_method: string;
   promo_code?: string;
   items: OrderItemInput[];
@@ -131,6 +133,33 @@ export type OrderResponse = {
   total: number;
   payment_method: string;
   status: string;
+};
+
+export type PaymentSettings = {
+  id: number;
+  cod_enabled: boolean;
+  bank_transfer_enabled: boolean;
+  bank_qr_enabled: boolean;
+  bank_name: string;
+  bank_account: string;
+  bank_holder: string;
+  bank_qr_payload: string;
+};
+
+export type PromoValidation = {
+  promo_code: string;
+  discount_total: number;
+};
+
+export type Promotion = {
+  code: string;
+  description: string;
+  discount_type: "amount" | "percent";
+  discount_value: number;
+  min_subtotal: number;
+  max_discount?: number | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
 };
 
 function buildUrl(path: string) {
@@ -222,8 +251,14 @@ export function getProduct(slug: string) {
   return apiRequest<Product>(`/api/products/${slug}`, { cache: "no-store" });
 }
 
-export function getPosts() {
-  return apiRequest<Post[]>("/api/posts");
+export function getPosts(params?: { tag?: string }) {
+  const search = new URLSearchParams();
+  if (params?.tag) {
+    search.set("tag", params.tag);
+  }
+  const suffix = search.toString();
+  const path = suffix ? `/api/posts?${suffix}` : "/api/posts";
+  return apiRequest<Post[]>(path);
 }
 
 export function getPost(slug: string) {
@@ -240,6 +275,21 @@ export function getQnA() {
 
 export function getLocations() {
   return apiRequest<Location[]>("/api/locations");
+}
+
+export function getPaymentSettings() {
+  return apiRequest<PaymentSettings>("/api/payment-settings", { cache: "no-store" });
+}
+
+export function validatePromoCode(input: { code: string; subtotal: number }) {
+  return apiRequest<PromoValidation>("/api/promotions/validate", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function getPromotions() {
+  return apiRequest<Promotion[]>("/api/promotions", { cache: "no-store" });
 }
 
 export async function createOrder(input: OrderRequest) {

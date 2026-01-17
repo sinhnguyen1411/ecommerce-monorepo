@@ -15,7 +15,10 @@ func ApplyIfNeeded(db *sql.DB, dir string) error {
 		return err
 	}
 	if seeded {
-		return nil
+		if err := applySeedFile(db, dir, "003_promotions.sql"); err != nil {
+			return err
+		}
+		return applySeedFile(db, dir, "004_users.sql")
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -57,4 +60,21 @@ func hasProducts(db *sql.DB) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func applySeedFile(db *sql.DB, dir, filename string) error {
+	path := filepath.Join(dir, filename)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	if _, err := db.Exec(string(content)); err != nil {
+		return fmt.Errorf("seed %s: %w", filename, err)
+	}
+
+	return nil
 }

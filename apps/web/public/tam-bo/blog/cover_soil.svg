@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Soil and compost</title>
+  <desc id="desc">Soil layers with leaves and compost texture.</desc>
+  <defs>
+    <linearGradient id="skySoil" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#e6f4ff"/>
+      <stop offset="55%" stop-color="#cfe5c1"/>
+      <stop offset="100%" stop-color="#a97b55"/>
+    </linearGradient>
+    <linearGradient id="soilTop" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#6b4a2b"/>
+      <stop offset="100%" stop-color="#8b5a35"/>
+    </linearGradient>
+    <linearGradient id="soilDeep" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#4b2f1c"/>
+      <stop offset="100%" stop-color="#6a3f26"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#skySoil)"/>
+  <rect y="380" width="1200" height="150" fill="url(#soilTop)"/>
+  <rect y="530" width="1200" height="170" fill="url(#soilDeep)"/>
+  <g fill="#3f7f1c">
+    <path d="M180 330 C200 300 240 300 260 330 C230 325 210 345 180 330 Z"/>
+    <path d="M260 320 C280 290 320 290 340 320 C310 315 290 335 260 320 Z"/>
+    <path d="M920 330 C940 300 980 300 1000 330 C970 325 950 345 920 330 Z"/>
+    <path d="M1000 320 C1020 290 1060 290 1080 320 C1050 315 1030 335 1000 320 Z"/>
+  </g>
+  <g fill="#c98f5d" opacity="0.85">
+    <circle cx="140" cy="440" r="7"/>
+    <circle cx="220" cy="470" r="5"/>
+    <circle cx="320" cy="430" r="6"/>
+    <circle cx="760" cy="460" r="7"/>
+    <circle cx="860" cy="440" r="5"/>
+    <circle cx="980" cy="470" r="6"/>
+  </g>
+</svg>

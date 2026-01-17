@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 
@@ -19,12 +19,12 @@ import MobileMenu from "./MobileMenu";
 import SearchDialog from "./SearchDialog";
 
 const navLinks = [
-  { href: "/", label: "Trang chủ" },
-  { href: "/pages/about-us", label: "Giới thiệu" },
-  { href: "/collections/all", label: "Sản phẩm" },
-  { href: "/blogs/news", label: "Kiến thức nông nghiệp" },
-  { href: "/pages/hoi-dap-cung-nha-nong", label: "Hỏi đáp cùng nhà nông" },
-  { href: "/pages/lien-he", label: "Liên hệ" }
+  { href: "/", label: "Trang ch\u1EE7" },
+  { href: "/pages/about-us", label: "Gi\u1EDBi thi\u1EC7u" },
+  { href: "/collections/all", label: "S\u1EA3n ph\u1EA9m" },
+  { href: "/blogs/news", label: "Ki\u1EBFn th\u1EE9c nh\u00E0 n\u00F4ng" },
+  { href: "/pages/hoi-dap-cung-nha-nong", label: "H\u1ECFi \u0111\u00E1p c\u00F9ng nh\u00E0 n\u00F4ng" },
+  { href: "/pages/lien-he", label: "Li\u00EAn h\u1EC7" }
 ];
 
 export default function Header() {
@@ -69,30 +69,32 @@ export default function Header() {
                 <SearchDialog />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="header-action-btn" aria-label="Tài khoản">
+                    <button className="header-action-btn" aria-label="T\u00E0i kho\u1EA3n">
                       <User className="h-4 w-4" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 p-2">
-                    <div className="px-2 py-2 text-xs text-ink/60">Tài khoản của bạn</div>
+                    <div className="px-2 py-2 text-xs text-ink/60">
+                      {"T\u00E0i kho\u1EA3n c\u1EE7a b\u1EA1n"}
+                    </div>
                     <DropdownMenuItem asChild>
-                      <Link href="/login">Đăng nhập</Link>
+                      <Link href="/login">{"\u0110\u0103ng nh\u1EADp"}</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/signup">Đăng ký</Link>
+                      <Link href="/signup">{"\u0110\u0103ng k\u00FD"}</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/account">Tài khoản của tôi</Link>
+                      <Link href="/account">{"T\u00E0i kho\u1EA3n c\u1EE7a t\u00F4i"}</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/forgot-password">Quên mật khẩu</Link>
+                      <Link href="/forgot-password">{"Qu\u00EAn m\u1EADt kh\u1EA9u"}</Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <button onClick={open} className="header-action-cart">
                   <ShoppingBag className="h-4 w-4" />
-                  Giỏ hàng
+                  {"Gi\u1ECF h\u00E0ng"}
                   <span>({count})</span>
                 </button>
               </div>

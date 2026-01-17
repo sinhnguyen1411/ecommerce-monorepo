@@ -1,117 +1,83 @@
-# Tam Bố Ecommerce + Blog (Phase 1)
+# Tam Bo Ecommerce + Blog Monorepo (Phase 1-2)
 
-Production-ready ecommerce + blog monorepo inspired by nongduoctambo.com.vn.
-Phase 1 focuses on a clean API-driven storefront with cart and checkout, MySQL
-migrations, and seed data for immediate local demos and client handover.
+Monorepo full-stack cho website thuong mai dien tu + blog, lay cam hung tu nongduoctambo.com.vn. Repo gom storefront Next.js, API Go (Gin) va MySQL, kem admin dashboard va he thong auth (OTP + Google OAuth). Phu hop demo nhanh, ban giao khach hang va trien khai production.
 
-## Tech Stack
-- Frontend: Next.js App Router + Tailwind CSS
-- Backend: Go (Gin)
-- Database: MySQL 8
-- Local and production: Docker Compose + Nginx (prod template)
+## Tinh nang chinh
+- Storefront: trang chu, danh muc, loc/sap xep, chi tiet san pham, quick view, san pham lien quan, recently viewed.
+- Gio hang: cap nhat so luong, ghi chu, kiem tra don toi thieu, tien trinh free shipping.
+- Checkout: chon shipping/payment, ap ma khuyen mai, tao don, upload bang chung chuyen khoan.
+- Blog + trang tinh: bai viet, About, Q&A, Locations, Return Policy, Terms.
+- Auth nguoi dung: dang ky OTP email/SMS, dang nhap email/phone + mat khau, Google OAuth, refresh token.
+- Tai khoan: thong tin ca nhan, dia chi giao hang, lich su don.
+- Admin: CRUD san pham, danh muc, bai viet, Q&A, payment settings, quan ly don hang, upload assets.
 
-## Architecture
-- MySQL stores all catalog, content, and order data.
-- Go API exposes REST endpoints for storefront and checkout.
-- Next.js consumes the API directly and renders all storefront pages.
-- Uploads (payment proofs) are stored on disk and served via /uploads.
+## Tech stack
+- Web: Next.js 14 (App Router) + Tailwind + shadcn/ui
+- API: Go 1.22 + Gin
+- DB: MySQL 8
+- Infra: Docker Compose + Nginx (prod template)
 
-## Repository Layout
-- apps/api - Go API service
-- apps/web - Next.js storefront
-- infra - docker compose, env files, nginx templates
-- migrations - SQL migrations
-- seed - seed data SQL
-- docs - local, deploy, and handover guides
+## Kien truc
+- MySQL luu catalog, bai viet, don hang, nguoi dung.
+- Go API cung cap REST endpoints cho storefront, checkout va admin.
+- Next.js consume API, render trang va xu ly cart client-side.
+- Uploads duoc luu o disk va public qua `/uploads`.
 
-## Project Tree
+## Cau truc repo
 ```
-/
-├─ apps/
-│  ├─ api/
-│  │  ├─ internal/
-│  │  ├─ Dockerfile
-│  │  └─ main.go
-│  └─ web/
-│     ├─ app/
-│     ├─ components/
-│     ├─ lib/
-│     ├─ public/
-│     ├─ Dockerfile
-│     └─ package.json
-├─ docs/
-│  ├─ README_LOCAL.md
-│  ├─ README_DEPLOY.md
-│  └─ HANDOVER_GUIDE.md
-├─ infra/
-│  ├─ env/
-│  │  ├─ api.env.example
-│  │  ├─ mysql.env.example
-│  │  └─ web.env.example
-│  ├─ nginx/
-│  │  └─ default.conf
-│  ├─ docker-compose.yml
-│  └─ docker-compose.prod.yml
-├─ migrations/
-├─ seed/
-├─ README.md
-└─ .gitignore
+.
++-- apps/
+|   +-- api/            Go API service
+|   +-- web/            Next.js storefront + admin UI
++-- infra/              docker compose, env, nginx config
++-- migrations/         SQL migrations
++-- seed/               SQL seed data (auth/admin/promotions)
++-- docs/               huong dan local, deploy, handover
++-- tmp_bcrypt.go       tool tao bcrypt hash nhanh
 ```
 
-## Key Features (Phase 1)
-- Home page with category overview, featured products, latest posts, newsletter, and contact
-- Products listing with filtering and sorting
-- Product detail with related + recently viewed
-- Cart with min order enforcement and free shipping progress
-- Checkout with shipping/payment methods and order creation
-- Bank transfer thank you page with QR and proof upload
-- Blog listing and detail with related posts
-- Static pages for About, QnA, Locations, Return Policy, Terms
+## Yeu cau
+- Docker Desktop (khuyen nghi de chay full stack)
+- Node.js 20+ (neu chay web thu cong)
+- Go 1.22 (neu chay API thu cong)
+- MySQL 8 (neu khong dung Docker)
 
-## Environment Configuration
-Env files live in `infra/env/`. Values with spaces should be quoted.
+## Cau hinh moi truong
+Env files nam trong `infra/env/`. Sao chep tu `.example` va cap nhat gia tri:
 
-Required files:
-- `infra/env/mysql.env`
-- `infra/env/api.env`
-- `infra/env/web.env`
+```
+Copy-Item infra\env\mysql.env.example infra\env\mysql.env
+Copy-Item infra\env\api.env.example infra\env\api.env
+Copy-Item infra\env\web.env.example infra\env\web.env
+```
 
-Key variables:
-- `DB_*`: database connection (api)
-- `JWT_SECRET`: access token signing secret
-- `OTP_SECRET`: OTP + verification token signing secret (defaults to `JWT_SECRET` if empty)
-- `USER_TOKEN_TTL`: access token TTL (default 15m)
-- `REFRESH_TOKEN_TTL`: refresh token TTL (default 30d)
-- `VERIFICATION_TOKEN_TTL`: OTP verification token TTL (default 10m)
-- `OTP_TTL`, `OTP_SEND_WINDOW`, `OTP_COOLDOWN`, `OTP_MAX_ATTEMPTS`, `OTP_SEND_MAX`
-- `PASSWORD_MIN_LENGTH`, `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCKOUT_DURATION`
-- `AUTH_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_WINDOW`
-- `API_RATE_LIMIT_MAX`, `API_RATE_LIMIT_WINDOW`
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URL`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_FROM_NAME`
-- `SMS_PROVIDER` (default `dev`)
-- `MIN_ORDER_AMOUNT`: minimum order total (api, frontend)
-- `FREE_SHIPPING_THRESHOLD`: free shipping threshold (api, frontend)
-- `PUBLIC_BASE_URL`: public API base used for image URLs
-- `ALLOWED_ORIGINS`: CORS origin list for the API
-- `CORS_ALLOW_CREDENTIALS`: set true when using cookie-based auth
-- `TRUSTED_PROXIES`: comma-separated CIDRs/IPs for reverse proxies
-- `NEXT_PUBLIC_API_URL`: API base for the browser
-- `API_INTERNAL_URL`: API base for server-side fetches (Docker: `http://api:8080`)
-- `NEXT_PUBLIC_SITE_URL`: base URL for sitemap/robots
+Bien quan trong:
+- API: `DB_*`, `JWT_SECRET`, `OTP_SECRET`, `MIGRATE_ON_START`, `SEED_ON_START`
+- Kinh doanh: `MIN_ORDER_AMOUNT`, `FREE_SHIPPING_THRESHOLD`
+- URL: `PUBLIC_BASE_URL`, `FRONTEND_BASE_URL`, `NEXT_PUBLIC_API_URL`, `API_INTERNAL_URL`
+- Auth: `GOOGLE_CLIENT_*`, `GOOGLE_REDIRECT_URL`
+- CORS: `ALLOWED_ORIGINS`, `CORS_ALLOW_CREDENTIALS`, `TRUSTED_PROXIES`
+- OTP/SMTP/SMS: `OTP_*`, `SMTP_*`, `SMS_PROVIDER`
 
-## Local Development (Docker)
+Luu y: `NEXT_PUBLIC_*` duoc bake vao build Next.js. Doi gia tri -> rebuild web image.
+
+## Chay local bang Docker (khuyen nghi)
 
 ```
 cd infra
 docker compose up -d --build
 ```
 
-Verify:
+Kiem tra:
 ```
 curl http://localhost:8080/healthz
 curl http://localhost:3000
 ```
+
+Ports:
+- Web: `http://localhost:3000`
+- API: `http://localhost:8080`
+- MySQL: `localhost:3007` (user/pass theo `infra/env/mysql.env`)
 
 Logs:
 ```
@@ -124,23 +90,63 @@ Reset data:
 docker compose down -v
 ```
 
-## Migrations and Seed Data
-- Migrations run on API start if `MIGRATE_ON_START=true`.
-- Seeds run once if `SEED_ON_START=true` and products table is empty.
-- SQL files live in `migrations/` and `seed/`.
+## Chay rieng tung dich vu (tuy chon)
 
-## API Summary
+### API
+1) Bat MySQL bang Docker:
+```
+cd infra
+docker compose up -d mysql
+```
+2) Chinh `infra/env/api.env`: `DB_HOST=localhost`, `DB_PORT=3007`.
+3) Chay API:
+```
+cd apps/api
+go run .
+```
+
+### Web
+```
+cd apps/web
+npm install
+npm run dev
+```
+Dam bao `NEXT_PUBLIC_API_URL=http://localhost:8080` (hoac set qua env).
+
+## Migrations va seed
+- Migrations tu dong chay khi `MIGRATE_ON_START=true`.
+- Seed chay 1 lan khi `SEED_ON_START=true` va bang trong.
+- File nam o `migrations/` va `seed/`.
+
+Seed mac dinh gom:
+- Admin user: `admin@tambo.local` / `admin123`
+- Payment settings
+- Coupons: `WELCOME50`, `FRESH10`, `SAVE10`, `SAVE20`, `SAVE40`
+
+Can tao admin moi? Dung `tmp_bcrypt.go` de tao hash:
+```
+go run tmp_bcrypt.go
+```
+
+## Giao dien (routes)
+- `/`: home
+- `/products`, `/products/[slug]`
+- `/cart`, `/checkout`, `/checkout/thank-you`
+- `/blog`, `/blog/[slug]`
+- `/pages/about-us`, `/pages/hoi-dap-cung-nha-nong`, `/pages/locations`, `/pages/return-policy`, `/pages/terms-of-service`
+- `/login`, `/signup`, `/forgot-password`
+- `/account`, `/account/addresses`, `/account/orders`
+- `/admin`, `/admin/login`
+
+## API
 Base URL: `http://localhost:8080`
 
-Response format:
+Response:
 ```
-{
-  "success": true,
-  "data": {}
-}
+{ "success": true, "data": {} }
 ```
 
-Endpoints:
+Public:
 - `GET /api/categories`
 - `GET /api/products?category=&sort=&featured=&limit=`
 - `GET /api/products/:slug`
@@ -149,10 +155,13 @@ Endpoints:
 - `GET /api/pages/:slug`
 - `GET /api/qna`
 - `GET /api/locations`
+- `GET /api/payment-settings`
+- `GET /api/promotions`
+- `POST /api/promotions/validate`
 - `POST /api/orders`
-- `POST /api/orders/:id/payment-proof` (multipart form, field name `file`)
+- `POST /api/orders/:id/payment-proof` (multipart field `file`)
 
-Auth endpoints:
+Auth:
 - `POST /api/auth/signup/request-otp`
 - `POST /api/auth/signup/verify-otp`
 - `POST /api/auth/signup/complete`
@@ -177,105 +186,72 @@ Auth endpoints:
 - `GET /api/auth/google/login`
 - `GET /api/auth/google/callback`
 
-Uploads:
-- Stored under `apps/api/uploads` (mapped to Docker volume).
-- Served publicly via `/uploads/...`.
+Account (user token):
+- `GET /api/account/profile`
+- `PATCH /api/account/profile`
+- `GET /api/account/addresses`
+- `POST /api/account/addresses`
+- `PATCH /api/account/addresses/:id`
+- `DELETE /api/account/addresses/:id`
+- `GET /api/account/orders`
 
-## Auth Notes
-- Access tokens use the `Authorization: Bearer <token>` header.
-- Refresh tokens are returned in JSON responses. For Google redirect flow, `token` is appended as a query param and `refresh_token` as a URL fragment.
-- OTPs are logged to the API console in non-production environments. In production, configure SMTP before enabling email OTP.
-- If you move refresh tokens to cookies, set `CORS_ALLOW_CREDENTIALS=true` and implement CSRF protection (double-submit or same-site tokens).
-- When `CORS_ALLOW_CREDENTIALS=true`, keep `ALLOWED_ORIGINS` explicit (no `*`).
-- Set `TRUSTED_PROXIES` when running behind Nginx/ELB so `ClientIP` and rate limits use `X-Forwarded-For`.
+Admin:
+- `POST /api/admin/login`
+- `GET /api/admin/me`
+- `GET/POST/PATCH/DELETE /api/admin/products`
+- `POST /api/admin/products/:id/images`
+- `GET/POST/PATCH/DELETE /api/admin/categories`
+- `GET/POST/PATCH/DELETE /api/admin/posts`
+- `GET/POST/PATCH/DELETE /api/admin/qna`
+- `GET /api/admin/orders`
+- `GET /api/admin/orders/:id`
+- `PATCH /api/admin/orders/:id`
+- `GET /api/admin/payment-settings`
+- `PUT /api/admin/payment-settings`
+- `POST /api/admin/uploads`
 
-## Auth Examples
-Signup (email):
-```
-curl -X POST http://localhost:8080/api/auth/signup/request-otp ^
-  -H "Content-Type: application/json" ^
-  -d "{\"channel\":\"email\",\"email\":\"user@example.com\"}"
-```
+## Auth notes
+- Access token gui qua `Authorization: Bearer <token>`.
+- Refresh token tra ve trong response JSON.
+- OTP duoc log ra console khi `APP_ENV` khac production.
+- Neu dung cookie auth: set `CORS_ALLOW_CREDENTIALS=true` va `ALLOWED_ORIGINS` phai cu the (khong duoc `*`).
 
-Verify OTP:
-```
-curl -X POST http://localhost:8080/api/auth/signup/verify-otp ^
-  -H "Content-Type: application/json" ^
-  -d "{\"request_id\":123,\"code\":\"123456\"}"
-```
+## Uploads
+- Local (khong Docker): `apps/api/uploads`
+- Docker: volume `api_uploads`
+- Truy cap qua `http://localhost:8080/uploads/...`
 
-Complete signup:
-```
-curl -X POST http://localhost:8080/api/auth/signup/complete ^
-  -H "Content-Type: application/json" ^
-  -d "{\"verification_token\":\"...\",\"password\":\"Secret123\",\"full_name\":\"Jane Doe\"}"
-```
+## Kiem thu
 
-Login:
+### Tu dong
 ```
-curl -X POST http://localhost:8080/api/auth/login ^
-  -H "Content-Type: application/json" ^
-  -d "{\"identifier\":\"user@example.com\",\"password\":\"Secret123\"}"
-```
-
-Refresh:
-```
-curl -X POST http://localhost:8080/api/auth/refresh ^
-  -H "Content-Type: application/json" ^
-  -d "{\"refresh_token\":\"...\"}"
+cd apps/api
+go test ./...
 ```
 
-Forgot password (phone):
 ```
-curl -X POST http://localhost:8080/api/auth/forgot-password/request-otp ^
-  -H "Content-Type: application/json" ^
-  -d "{\"channel\":\"sms\",\"phone\":\"0912345678\"}"
+cd apps/web
+npm run lint
 ```
 
-## Frontend Routes
-- `/` home
-- `/products` listing
-- `/products/[slug]` detail
-- `/blog` listing
-- `/blog/[slug]` detail
-- `/blogs/news` redirect to `/blog`
-- `/cart` cart
-- `/checkout` checkout
-- `/checkout/thank-you` bank transfer summary
-- `/pages/about-us`
-- `/pages/hoi-dap-cung-nha-nong`
-- `/pages/locations`
-- `/pages/return-policy`
-- `/pages/terms-of-service`
+### Manual QA checklist
+- Storefront: mo home, vao danh muc, loc/sap xep san pham, mo chi tiet.
+- Cart: them san pham, cap nhat so luong, kiem tra min order + free shipping.
+- Checkout: chon shipping/payment, ap coupon (`WELCOME50`, `FRESH10`), tao don.
+- Payment proof: upload file o trang thank-you, kiem tra file trong `/uploads`.
+- Blog: xem list va detail, related posts.
+- Auth: dang ky OTP (email/SMS), dang nhap, quen mat khau.
+- Account: cap nhat profile, them dia chi, xem lich su don.
+- Admin: dang nhap, CRUD san pham/danh muc/bai viet/Q&A, cap nhat don hang va payment settings.
 
-## Business Rules
-- Minimum order: `MIN_ORDER_AMOUNT`
-- Free shipping threshold: `FREE_SHIPPING_THRESHOLD`
-- Cart state stored in localStorage
-- Latest order stored in localStorage for thank you screen
-
-## Production Deployment
-
-1) Update env files:
-```
-Copy-Item infra\env\mysql.env.example infra\env\mysql.env
-Copy-Item infra\env\api.env.example infra\env\api.env
-Copy-Item infra\env\web.env.example infra\env\web.env
-```
-
-2) Build and run:
+## Deploy (VPS)
+Xem `docs/README_DEPLOY.md`. Tom tat:
 ```
 docker compose --env-file infra\env\web.env -f infra\docker-compose.prod.yml up -d --build
 ```
+Nginx config o `infra/nginx/default.conf`.
 
-3) Configure Nginx:
-- Edit `infra/nginx/default.conf` (server_name, TLS).
-- Add SSL via Certbot or your hosting provider.
-
-Note: `NEXT_PUBLIC_*` values are baked into the Next.js build. Rebuild the web
-image after changing them.
-
-## Backup and Restore (MySQL)
+## Backup/Restore MySQL
 Backup:
 ```
 docker exec tambo_mysql mysqldump -u root -pYOUR_ROOT_PASSWORD tambo > backup.sql
@@ -286,11 +262,11 @@ Restore:
 Get-Content backup.sql | docker exec -i tambo_mysql mysql -u root -pYOUR_ROOT_PASSWORD tambo
 ```
 
-## Documentation
-- `docs/README_LOCAL.md` local setup
-- `docs/README_DEPLOY.md` VPS deployment
-- `docs/HANDOVER_GUIDE.md` client handover and content edits
+## Tai lieu
+- `docs/README_LOCAL.md`: local setup chi tiet
+- `docs/README_DEPLOY.md`: trien khai VPS
+- `docs/HANDOVER_GUIDE.md`: quy trinh ban giao + content
+- `apps/web/README_UI.md`: tom tat UI storefront
 
 ## Roadmap
-- Phase 2: admin dashboard, payment verification
-- Phase 3: store location search improvements, promotions, delivery slots
+- Phase 3: mo rong tim kiem dia diem, promotions, delivery slots

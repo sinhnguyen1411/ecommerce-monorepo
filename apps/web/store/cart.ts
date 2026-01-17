@@ -16,6 +16,7 @@ type CartState = {
   note: string;
   promoCode: string;
   deliveryTime: string;
+  shippingMethod: string;
   isOpen: boolean;
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   removeItem: (id: number) => void;
@@ -26,6 +27,7 @@ type CartState = {
   setNote: (value: string) => void;
   setPromoCode: (value: string) => void;
   setDeliveryTime: (value: string) => void;
+  setShippingMethod: (value: string) => void;
   open: () => void;
   close: () => void;
 };
@@ -37,6 +39,7 @@ export const useCartStore = create<CartState>()(
       note: "",
       promoCode: "",
       deliveryTime: "",
+      shippingMethod: "standard",
       isOpen: false,
       addItem: (item) => {
         const items = get().items;
@@ -89,10 +92,12 @@ export const useCartStore = create<CartState>()(
           )
         });
       },
-      clear: () => set({ items: [], note: "", promoCode: "", deliveryTime: "" }),
+      clear: () =>
+        set({ items: [], note: "", promoCode: "", deliveryTime: "", shippingMethod: "standard" }),
       setNote: (value) => set({ note: value }),
       setPromoCode: (value) => set({ promoCode: value }),
       setDeliveryTime: (value) => set({ deliveryTime: value }),
+      setShippingMethod: (value) => set({ shippingMethod: value }),
       open: () => set({ isOpen: true }),
       close: () => set({ isOpen: false })
     }),
@@ -102,7 +107,8 @@ export const useCartStore = create<CartState>()(
         items: state.items,
         note: state.note,
         promoCode: state.promoCode,
-        deliveryTime: state.deliveryTime
+        deliveryTime: state.deliveryTime,
+        shippingMethod: state.shippingMethod
       })
     }
   )

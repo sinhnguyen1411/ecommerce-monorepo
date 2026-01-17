@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Irrigation lines</title>
+  <desc id="desc">Irrigation lines across farmland with water drops.</desc>
+  <defs>
+    <linearGradient id="skyIrr" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#d7f0ff"/>
+      <stop offset="60%" stop-color="#c8e7d0"/>
+      <stop offset="100%" stop-color="#82b98a"/>
+    </linearGradient>
+    <linearGradient id="fieldIrr" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2d6f3b"/>
+      <stop offset="100%" stop-color="#6dbb6f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#skyIrr)"/>
+  <path d="M0 360 C260 300 500 300 700 350 C900 400 1080 400 1200 350 V700 H0 Z" fill="url(#fieldIrr)"/>
+  <g stroke="#e7f7e4" stroke-width="3" opacity="0.7">
+    <path d="M80 420 C260 380 440 380 660 420" fill="none"/>
+    <path d="M100 470 C280 430 460 430 700 470" fill="none"/>
+    <path d="M760 400 C920 370 1060 370 1140 400" fill="none"/>
+  </g>
+  <g fill="#4fa1c8">
+    <path d="M240 410 C252 390 268 390 280 410 C268 406 252 406 240 410 Z"/>
+    <path d="M520 450 C532 430 548 430 560 450 C548 446 532 446 520 450 Z"/>
+    <path d="M920 410 C932 390 948 390 960 410 C948 406 932 406 920 410 Z"/>
+  </g>
+</svg>

@@ -23,6 +23,7 @@ type OrderRequest struct {
 	Address       string           `json:"address"`
 	Note          string           `json:"note"`
 	DeliveryTime  string           `json:"delivery_time"`
+	ShippingMethod string          `json:"shipping_method"`
 	PaymentMethod string           `json:"payment_method"`
 	PromoCode     string           `json:"promo_code"`
 	Items         []OrderItemInput `json:"items"`
@@ -58,6 +59,25 @@ func (s *Server) CreateOrder(c *gin.Context) {
 
 	if strings.TrimSpace(input.PaymentMethod) == "" {
 		input.PaymentMethod = "cod"
+	}
+
+	settings, err := s.loadPaymentSettings()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load payment settings")
+		return
+	}
+	if !isPaymentMethodEnabled(input.PaymentMethod, settings) {
+		respondError(c, http.StatusBadRequest, "payment_disabled", "Selected payment method is not available")
+		return
+	}
+
+	shippingMethod := strings.TrimSpace(input.ShippingMethod)
+	if shippingMethod == "" {
+		shippingMethod = "standard"
+	}
+	if shippingMethod != "standard" && shippingMethod != "express" {
+		respondError(c, http.StatusBadRequest, "invalid_shipping", "Shipping method is invalid")
+		return
 	}
 
 	productIDs := make([]string, 0, len(input.Items))
@@ -117,12 +137,12 @@ func (s *Server) CreateOrder(c *gin.Context) {
 	}
 
 	shippingFee := 30000.0
-	if s.Config.FreeShippingThreshold > 0 && subtotal >= s.Config.FreeShippingThreshold {
+	if shippingMethod == "express" {
+		shippingFee = 50000.0
+	}
+	if shippingMethod == "standard" && s.Config.FreeShippingThreshold > 0 && subtotal >= s.Config.FreeShippingThreshold {
 		shippingFee = 0
 	}
-
-	discountTotal := 0.0
-	total := subtotal + shippingFee - discountTotal
 
 	tx, err := s.DB.Begin()
 	if err != nil {
@@ -131,6 +151,26 @@ func (s *Server) CreateOrder(c *gin.Context) {
 	}
 	defer tx.Rollback()
 
+	discountTotal := 0.0
+	promoCode := ""
+	if strings.TrimSpace(input.PromoCode) != "" {
+		discountTotal, promoCode, err = s.validateCoupon(tx, input.PromoCode, subtotal, true)
+		if err != nil {
+			if perr, ok := err.(promoError); ok {
+				respondError(c, http.StatusBadRequest, perr.code, perr.message)
+				return
+			}
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate promotion")
+			return
+		}
+		if _, err := tx.Exec(`UPDATE coupons SET used_count = used_count + 1 WHERE code = ?`, promoCode); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to apply promotion")
+			return
+		}
+	}
+
+	total := subtotal + shippingFee - discountTotal
+
 	var userID any = nil
 	if claims := s.optionalUser(c); claims != nil {
 		userID = claims.UserID
@@ -138,9 +178,9 @@ func (s *Server) CreateOrder(c *gin.Context) {
 
 	orderNumber := fmt.Sprintf("TB%v", time.Now().Unix())
 	result, err := tx.Exec(`
-    INSERT INTO orders (order_number, user_id, customer_name, email, phone, address, note, delivery_time, subtotal, shipping_fee, discount_total, total, payment_method, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-  `, orderNumber, userID, input.CustomerName, input.Email, input.Phone, input.Address, input.Note, input.DeliveryTime, subtotal, shippingFee, discountTotal, total, input.PaymentMethod)
+    INSERT INTO orders (order_number, user_id, customer_name, email, phone, address, note, delivery_time, promo_code, shipping_method, subtotal, shipping_fee, discount_total, total, payment_method, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+  `, orderNumber, userID, input.CustomerName, input.Email, input.Phone, input.Address, input.Note, input.DeliveryTime, promoCode, shippingMethod, subtotal, shippingFee, discountTotal, total, input.PaymentMethod)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create order")
 		return

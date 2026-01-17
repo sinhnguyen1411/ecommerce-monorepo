@@ -19,6 +19,7 @@ type Product struct {
 	Featured       bool             `json:"featured"`
 	Images         []ProductImage   `json:"images"`
 	Categories     []CategorySimple `json:"categories"`
+	Tags           []string         `json:"tags,omitempty"`
 }
 
 type ProductImage struct {
@@ -40,7 +41,7 @@ func (s *Server) ListProducts(c *gin.Context) {
 	limitParam := c.Query("limit")
 
 	query := strings.Builder{}
-	query.WriteString("SELECT DISTINCT p.id, p.name, p.slug, IFNULL(p.description, ''), p.price, p.compare_at_price, p.featured, p.created_at ")
+	query.WriteString("SELECT DISTINCT p.id, p.name, p.slug, IFNULL(p.description, ''), p.price, p.compare_at_price, p.featured, IFNULL(p.tags, ''), p.created_at ")
 	query.WriteString("FROM products p ")
 
 	args := make([]any, 0)
@@ -88,14 +89,16 @@ func (s *Server) ListProducts(c *gin.Context) {
 	for rows.Next() {
 		var product Product
 		var compareAt sql.NullFloat64
+		var rawTags string
 		var createdAt sql.NullTime
-		if err := rows.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured, &createdAt); err != nil {
+		if err := rows.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured, &rawTags, &createdAt); err != nil {
 			respondError(c, http.StatusInternalServerError, "db_error", "Failed to parse products")
 			return
 		}
 		if compareAt.Valid {
 			product.CompareAtPrice = &compareAt.Float64
 		}
+		product.Tags = parseTags(rawTags)
 		products = append(products, product)
 	}
 
@@ -121,7 +124,7 @@ func (s *Server) GetProduct(c *gin.Context) {
 	slug := c.Param("slug")
 
 	row := s.DB.QueryRow(`
-    SELECT id, name, slug, IFNULL(description, ''), price, compare_at_price, featured
+    SELECT id, name, slug, IFNULL(description, ''), price, compare_at_price, featured, IFNULL(tags, '')
     FROM products
     WHERE slug = ? AND status = 'published'
     LIMIT 1
@@ -129,7 +132,8 @@ func (s *Server) GetProduct(c *gin.Context) {
 
 	var product Product
 	var compareAt sql.NullFloat64
-	if err := row.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured); err != nil {
+	var rawTags string
+	if err := row.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured, &rawTags); err != nil {
 		if err == sql.ErrNoRows {
 			respondError(c, http.StatusNotFound, "not_found", "Product not found")
 			return
@@ -141,6 +145,7 @@ func (s *Server) GetProduct(c *gin.Context) {
 	if compareAt.Valid {
 		product.CompareAtPrice = &compareAt.Float64
 	}
+	product.Tags = parseTags(rawTags)
 
 	products := []Product{product}
 	if err := s.attachProductImages(products); err != nil {
@@ -221,4 +226,21 @@ func (s *Server) attachProductCategories(products []Product) error {
 	}
 
 	return nil
+}
+
+func parseTags(raw string) []string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil
+	}
+	parts := strings.Split(trimmed, ",")
+	tags := make([]string, 0, len(parts))
+	for _, part := range parts {
+		tag := strings.TrimSpace(part)
+		if tag == "" {
+			continue
+		}
+		tags = append(tags, tag)
+	}
+	return tags
 }

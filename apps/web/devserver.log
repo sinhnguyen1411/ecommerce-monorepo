@@ -1,18 +1,298 @@
 
 > web@0.1.0 dev
-> next dev
+> next dev --port 3001
 
- ⚠ Port 3000 is in use, trying 3001 instead.
   ▲ Next.js 14.2.5
   - Local:        http://localhost:3001
 
  ✓ Starting...
- ✓ Ready in 1888ms
+ ✓ Ready in 2.8s
  ○ Compiling / ...
- ✓ Compiled / in 3.4s (844 modules)
- GET / 200 in 3676ms
- ✓ Compiled /collections/all in 372ms (853 modules)
- GET / 200 in 150ms
- ✓ Compiled /login in 295ms (853 modules)
- ✓ Compiled /signup in 193ms (859 modules)
- ✓ Compiled /forgot-password in 183ms (865 modules)
+ ✓ Compiled / in 3.7s (844 modules)
+ GET / 200 in 3969ms
+ ✓ Compiled /pages/lien-he in 377ms (848 modules)
+ ✓ Compiled /collections/all in 197ms (843 modules)
+ ✓ Compiled /products/[slug] in 375ms (895 modules)
+ ✓ Compiled in 463ms (900 modules)
+ ✓ Compiled in 382ms (900 modules)
+ GET / 200 in 141ms
+ ✓ Compiled /collections/all in 79ms (462 modules)
+ ✓ Compiled in 445ms (900 modules)
+ ✓ Compiled in 366ms (900 modules)
+ GET /products/morning-greens-box 200 in 204ms
+ GET /products/morning-greens-box 200 in 68ms
+ GET /products/morning-greens-box 200 in 71ms
+ GET /products/morning-greens-box 200 in 78ms
+ GET /products/morning-greens-box 200 in 91ms
+ ✓ Compiled /pages/about-us in 318ms (889 modules)
+ ✓ Compiled /collections/all in 79ms (465 modules)
+ ✓ Compiled in 847ms (909 modules)
+ GET /products/morning-greens-box 200 in 154ms
+ GET /products/morning-greens-box 200 in 75ms
+ GET /products/morning-greens-box 200 in 65ms
+ GET /products/morning-greens-box 200 in 92ms
+ ✓ Compiled in 445ms (903 modules)
+ ✓ Compiled in 373ms (903 modules)
+ ✓ Compiled /pages/lien-he in 113ms (461 modules)
+ ✓ Compiled /collections/all in 86ms (467 modules)
+ ✓ Compiled in 529ms (911 modules)
+ GET /products/morning-greens-box 200 in 206ms
+ ✓ Compiled in 686ms (911 modules)
+ ✓ Compiled in 536ms (911 modules)
+ GET /products/morning-greens-box 200 in 216ms
+ GET /products/morning-greens-box 200 in 58ms
+ ✓ Compiled in 483ms (911 modules)
+ GET /products/morning-greens-box 200 in 203ms
+ GET /products/morning-greens-box 200 in 66ms
+ GET /products/morning-greens-box 200 in 57ms
+ ✓ Compiled in 617ms (911 modules)
+ GET /products/morning-greens-box 200 in 122ms
+ GET /products/morning-greens-box 200 in 65ms
+ GET /products/morning-greens-box 200 in 81ms
+ GET /products/morning-greens-box 200 in 63ms
+ GET /products/morning-greens-box 200 in 81ms
+ GET /products/morning-greens-box 200 in 97ms
+ GET /products/morning-greens-box 200 in 98ms
+ GET /products/morning-greens-box 200 in 61ms
+ GET /products/morning-greens-box 200 in 78ms
+ GET /products/morning-greens-box 200 in 79ms
+ GET /products/morning-greens-box 200 in 69ms
+ GET / 200 in 96ms
+ ✓ Compiled in 584ms (911 modules)
+ GET /products/morning-greens-box 200 in 188ms
+ GET /products/morning-greens-box 200 in 58ms
+ GET /products/morning-greens-box 200 in 93ms
+ ✓ Compiled in 684ms (911 modules)
+ ✓ Compiled in 466ms (911 modules)
+ GET /products/morning-greens-box 200 in 221ms
+ GET /products/morning-greens-box 200 in 87ms
+ GET /products/morning-greens-box 200 in 85ms
+ ✓ Compiled in 461ms (911 modules)
+ ✓ Compiled in 569ms (911 modules)
+ GET /products/morning-greens-box 200 in 188ms
+ GET /products/morning-greens-box 200 in 91ms
+ GET /products/morning-greens-box 200 in 94ms
+ ✓ Compiled in 597ms (911 modules)
+ ✓ Compiled in 625ms (911 modules)
+ ✓ Compiled in 266ms (444 modules)
+ ✓ Compiled in 514ms (911 modules)
+ ✓ Compiled in 535ms (911 modules)
+ ✓ Compiled in 633ms (911 modules)
+ GET /products/morning-greens-box 200 in 200ms
+ GET /products/morning-greens-box 200 in 105ms
+ GET /products/morning-greens-box 200 in 114ms
+ ✓ Compiled in 467ms (911 modules)
+ GET /products/morning-greens-box 200 in 191ms
+ ✓ Compiled in 552ms (911 modules)
+ GET /products/morning-greens-box 200 in 141ms
+ GET /products/morning-greens-box 200 in 92ms
+ GET /products/morning-greens-box 200 in 105ms
+ ✓ Compiled in 466ms (911 modules)
+ ✓ Compiled in 562ms (911 modules)
+ GET /products/morning-greens-box 200 in 110ms
+ ✓ Compiled in 475ms (911 modules)
+ GET /products/morning-greens-box 200 in 124ms
+ GET /products/morning-greens-box 200 in 110ms
+ ✓ Compiled in 451ms (911 modules)
+ GET /products/morning-greens-box 200 in 94ms
+ GET /products/morning-greens-box 200 in 101ms
+ GET /products/morning-greens-box 200 in 95ms
+ GET /products/morning-greens-box 200 in 100ms
+ GET /products/morning-greens-box 200 in 101ms
+ GET /products/morning-greens-box 200 in 99ms
+ GET /products/morning-greens-box 200 in 107ms
+ GET /products/morning-greens-box 200 in 143ms
+ GET /products/morning-greens-box 200 in 110ms
+ GET /products/morning-greens-box 200 in 101ms
+ ✓ Compiled in 476ms (911 modules)
+ GET /products/morning-greens-box 200 in 207ms
+ ✓ Compiled in 242ms (911 modules)
+ GET /products/morning-greens-box 200 in 155ms
+ GET /products/morning-greens-box 200 in 105ms
+ GET /products/morning-greens-box 200 in 119ms
+ GET /products/morning-greens-box 200 in 94ms
+ GET /products/morning-greens-box 200 in 87ms
+ GET /products/morning-greens-box 200 in 111ms
+ GET /products/morning-greens-box 200 in 89ms
+ GET /products/morning-greens-box 200 in 73ms
+ GET /products/morning-greens-box 200 in 80ms
+ GET /products/morning-greens-box 200 in 116ms
+ GET /products/morning-greens-box 200 in 111ms
+ GET /products/morning-greens-box 200 in 87ms
+ GET /products/morning-greens-box 200 in 104ms
+ ✓ Compiled /pages/hoi-dap-cung-nha-nong in 351ms (899 modules)
+ GET /products/morning-greens-box 200 in 228ms
+ GET /products/morning-greens-box 200 in 95ms
+ GET /products/morning-greens-box 200 in 121ms
+ GET /products/morning-greens-box 200 in 96ms
+ GET /products/morning-greens-box 200 in 105ms
+ GET /products/morning-greens-box 200 in 111ms
+ GET /products/morning-greens-box 200 in 93ms
+ GET /products/morning-greens-box 200 in 88ms
+ GET /products/morning-greens-box 200 in 92ms
+ GET /products/morning-greens-box 200 in 112ms
+ ⨯ ./components/product/ProductDetailSidebar.tsx
+Error: 
+  [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\ADMIN\Documents\ecommerce-monorepo\apps\web\components\product\ProductDetailSidebar.tsx[0m:115:1]
+ [2m115[0m |   ];
+ [2m116[0m | 
+ [2m117[0m |   return (
+ [2m118[0m |     <div className="info-wrapper">
+     : [31;1m     ^^^[0m
+ [2m119[0m |       <div className="info-header">
+ [2m120[0m |         <div className="product-name">
+ [2m120[0m |           <h1>{product.name}</h1>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/product/ProductDetailSidebar.tsx
+./app/products/[slug]/page.tsx
+ ○ Compiling /_error ...
+ ⨯ ./components/product/ProductDetailSidebar.tsx
+Error: 
+  [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\ADMIN\Documents\ecommerce-monorepo\apps\web\components\product\ProductDetailSidebar.tsx[0m:115:1]
+ [2m115[0m |   ];
+ [2m116[0m | 
+ [2m117[0m |   return (
+ [2m118[0m |     <div className="info-wrapper">
+     : [31;1m     ^^^[0m
+ [2m119[0m |       <div className="info-header">
+ [2m120[0m |         <div className="product-name">
+ [2m120[0m |           <h1>{product.name}</h1>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/product/ProductDetailSidebar.tsx
+./app/products/[slug]/page.tsx
+ GET /products/aromatic-pepper-bundle 500 in 8ms
+ ⨯ ./components/product/ProductDetailSidebar.tsx
+Error: 
+  [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\ADMIN\Documents\ecommerce-monorepo\apps\web\components\product\ProductDetailSidebar.tsx[0m:115:1]
+ [2m115[0m |   ];
+ [2m116[0m | 
+ [2m117[0m |   return (
+ [2m118[0m |     <div className="info-wrapper">
+     : [31;1m     ^^^[0m
+ [2m119[0m |       <div className="info-header">
+ [2m120[0m |         <div className="product-name">
+ [2m120[0m |           <h1>{product.name}</h1>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/product/ProductDetailSidebar.tsx
+./app/products/[slug]/page.tsx
+ GET /_next/static/webpack/f0249d9eb39ec552.webpack.hot-update.json 500 in 538ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /products/aromatic-pepper-bundle 500 in 9ms
+ GET /products/aromatic-pepper-bundle 500 in 11ms
+ GET /products/aromatic-pepper-bundle 500 in 10ms
+ GET /products/aromatic-pepper-bundle 500 in 7ms
+ ✓ Compiled /_not-found in 711ms (1122 modules)
+ GET /_next/static/webpack/f0249d9eb39ec552.webpack.hot-update.json 500 in 924ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /products/aromatic-pepper-bundle 200 in 216ms
+ GET /products/aromatic-pepper-bundle 200 in 122ms
+ ✓ Compiled in 429ms (1136 modules)
+ ✓ Compiled in 377ms (1136 modules)
+ GET /products/morning-greens-box 200 in 194ms
+ GET /products/morning-greens-box 200 in 97ms
+ GET /products/morning-greens-box 200 in 111ms
+ GET /products/morning-greens-box 200 in 111ms
+ GET /products/morning-greens-box 200 in 110ms
+ GET /products/morning-greens-box 200 in 82ms
+ GET /products/morning-greens-box 200 in 109ms
+ ✓ Compiled in 633ms (1135 modules)
+ GET /products/morning-greens-box 200 in 125ms
+ GET /products/morning-greens-box 200 in 102ms
+ ✓ Compiled in 508ms (1135 modules)
+ GET /products/morning-greens-box 200 in 135ms
+ GET /products/morning-greens-box 200 in 82ms
+ ✓ Compiled in 302ms (1135 modules)
+ GET /products/morning-greens-box 200 in 92ms
+ GET /products/morning-greens-box 200 in 76ms
+ GET /products/morning-greens-box 200 in 84ms
+ ✓ Compiled /checkout in 277ms (1127 modules)
+ ✓ Compiled in 457ms (1134 modules)
+ GET /products/morning-greens-box 200 in 113ms
+ ✓ Compiled in 470ms (1134 modules)
+ ✓ Compiled in 471ms (1134 modules)
+ ✓ Compiled in 271ms (1134 modules)
+ ✓ Compiled /cart in 398ms (1129 modules)
+ ✓ Compiled / in 231ms (518 modules)
+ ✓ Compiled in 912ms (1116 modules)
+ ✓ Compiled in 286ms (632 modules)
+ ✓ Compiled in 606ms (633 modules)
+ ✓ Compiled in 709ms (1117 modules)
+ ✓ Compiled /blogs/news in 352ms (1106 modules)
+ ✓ Compiled /pages/hoi-dap-cung-nha-nong in 166ms (489 modules)
+ ✓ Compiled /pages/about-us in 203ms (491 modules)
+ ✓ Compiled /products/[slug] in 361ms (522 modules)
+ GET /products/morning-greens-box 200 in 185ms
+ GET /products/morning-greens-box 200 in 95ms
+ GET /products/morning-greens-box 200 in 86ms
+ GET /products/morning-greens-box 200 in 123ms
+ GET /products/aromatic-pepper-bundle 200 in 103ms
+ GET /products/aromatic-pepper-bundle 200 in 82ms
+ GET /products/aromatic-pepper-bundle 200 in 125ms
+ GET /products/aromatic-pepper-bundle 200 in 72ms
+ GET /products/aromatic-pepper-bundle 200 in 82ms
+ GET /products/aromatic-pepper-bundle 200 in 100ms
+ GET /products/aromatic-pepper-bundle 200 in 110ms
+ GET /products/aromatic-pepper-bundle 200 in 100ms
+ GET /products/aromatic-pepper-bundle 200 in 107ms
+ GET /products/aromatic-pepper-bundle 200 in 129ms
+ GET /products/aromatic-pepper-bundle 200 in 85ms
+ ✓ Compiled /pages/lien-he in 214ms (516 modules)
+ ✓ Compiled /pages/about-us in 141ms (518 modules)
+ GET /blogs/news 200 in 116ms
+ GET /products/morning-greens-box 200 in 134ms
+ GET /products/morning-greens-box 200 in 105ms
+ GET /products/morning-greens-box 200 in 105ms
+ GET /products/morning-greens-box 200 in 80ms
+ GET / 200 in 81ms
+ ⨯ TypeError: fetch failed
+    at async apiRequest (./lib/api.ts:26:22)
+    at async Promise.all (index 1)
+    at async CollectionsAllPage (./app/collections/all/page.tsx:20:36)
+digest: "3718565900"
+Cause: AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1134:18)
+    at afterConnectMultiple (node:net:1715:7) {
+  code: 'ECONNREFUSED',
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:8080
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '::1',
+      port: 8080
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:8080
+        at createConnectionError (node:net:1678:14)
+        at afterConnectMultiple (node:net:1708:16) {
+      errno: -4078,
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 8080
+    }
+  ]
+}
+ GET /collections/all 200 in 89ms
+ GET /products/sweet-mango-set 200 in 119ms
+ GET /products/sweet-mango-set 200 in 68ms
+ GET /products/sweet-mango-set 200 in 85ms

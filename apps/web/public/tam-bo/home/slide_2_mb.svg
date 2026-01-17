@@ -1,41 +1,49 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="750" height="900" viewBox="0 0 750 900" role="img" aria-labelledby="title desc">
-  <title id="title">Giải pháp sinh học Tam Bố</title>
-  <desc id="desc">Banner Tam Bố di động với thông điệp năng suất bền vững.</desc>
+  <title id="title">Coffee hills</title>
+  <desc id="desc">Warm sunrise over coffee hills for mobile banner.</desc>
   <defs>
-    <linearGradient id="sky2mb" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#e2f6ff"/>
-      <stop offset="60%" stop-color="#b4e3ff"/>
-      <stop offset="100%" stop-color="#84c58a"/>
+    <linearGradient id="skyCoffeeMb" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ffe1bf"/>
+      <stop offset="60%" stop-color="#f9c28d"/>
+      <stop offset="100%" stop-color="#a46f4a"/>
     </linearGradient>
-    <linearGradient id="field2mb" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#3f8f2f"/>
-      <stop offset="100%" stop-color="#9ad65b"/>
+    <linearGradient id="hillCoffeeMb1" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#6b4a2b"/>
+      <stop offset="100%" stop-color="#9c6b3e"/>
+    </linearGradient>
+    <linearGradient id="hillCoffeeMb2" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#5a3b23"/>
+      <stop offset="100%" stop-color="#8b5a35"/>
+    </linearGradient>
+    <linearGradient id="hillCoffeeMb3" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#4b2f1c"/>
+      <stop offset="100%" stop-color="#7b4f2f"/>
     </linearGradient>
   </defs>
 
-  <rect width="750" height="900" fill="url(#sky2mb)"/>
-  <path d="M0 460 C180 380 360 380 750 460 V900 H0 Z" fill="url(#field2mb)"/>
-  <path d="M0 560 C200 500 380 500 750 560 V900 H0 Z" fill="#79bf4a" opacity="0.9"/>
+  <rect width="750" height="900" fill="url(#skyCoffeeMb)"/>
+  <circle cx="580" cy="140" r="70" fill="#ffd6a2" opacity="0.7"/>
 
-  <circle cx="375" cy="510" r="170" fill="#ffffff" stroke="#2f6f16" stroke-width="6"/>
-  <circle cx="375" cy="510" r="145" fill="#f2ffe4"/>
-  <g transform="translate(375 510)">
-    <path d="M0 -80 C30 -70 60 -40 70 -5 C45 5 25 35 0 70 C-20 35 -35 10 -60 -5 C-45 -35 -20 -70 0 -80 Z" fill="#4f9f2e"/>
-    <circle cx="40" cy="35" r="12" fill="#2f6f16"/>
-    <circle cx="-30" cy="35" r="10" fill="#2f6f16"/>
+  <path d="M0 420 C160 370 320 370 750 420 V900 H0 Z" fill="url(#hillCoffeeMb1)"/>
+  <path d="M0 520 C180 480 360 480 750 520 V900 H0 Z" fill="url(#hillCoffeeMb2)" opacity="0.96"/>
+  <path d="M0 620 C200 590 400 590 750 620 V900 H0 Z" fill="url(#hillCoffeeMb3)" opacity="0.95"/>
+
+  <g stroke="#e8c7a1" stroke-width="2" opacity="0.5">
+    <path d="M60 480 C220 450 380 450 660 480" fill="none"/>
+    <path d="M80 560 C260 530 420 530 690 560" fill="none"/>
   </g>
 
-  <g fill="#ffffff" font-family="Roboto, Arial, sans-serif" text-anchor="middle">
-    <text x="375" y="140" font-size="26" font-weight="600" letter-spacing="1">Tam Bố - Giải pháp sinh học</text>
-    <text x="375" y="220" font-size="42" font-weight="800">BẢO VỆ MÙA VỤ</text>
-    <text x="375" y="280" font-size="38" font-weight="800">NÂNG CAO NĂNG SUẤT</text>
-    <text x="375" y="340" font-size="34" font-weight="800">AN TOÀN - BỀN VỮNG</text>
+  <g fill="#2f6b33" opacity="0.9">
+    <path d="M140 480 C160 450 200 450 220 480 C190 475 170 495 140 480 Z"/>
+    <path d="M180 470 C200 440 240 440 260 470 C230 465 210 485 180 470 Z"/>
+    <path d="M500 480 C520 450 560 450 580 480 C550 475 530 495 500 480 Z"/>
+    <path d="M540 470 C560 440 600 440 620 470 C590 465 570 485 540 470 Z"/>
   </g>
 
-  <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" transform="translate(220 365)">
-    <path d="M0 0 H40"/>
-    <path d="M60 0 H100"/>
-    <path d="M120 0 H160"/>
-    <path d="M180 0 H220"/>
+  <g fill="#4b2f1c" opacity="0.8">
+    <circle cx="220" cy="640" r="6"/>
+    <circle cx="250" cy="655" r="5"/>
+    <circle cx="560" cy="640" r="6"/>
+    <circle cx="590" cy="655" r="5"/>
   </g>
 </svg>
