@@ -10,6 +10,7 @@ export type AuthUser = {
   birthdate?: string;
   is_email_verified: boolean;
   is_phone_verified: boolean;
+  emailVerificationStatus?: string;
   status: string;
 };
 
@@ -19,44 +20,22 @@ export type AuthTokens = {
   user: AuthUser;
 };
 
-export function requestSignupOTP(input: {
-  channel: "email" | "sms";
-  email?: string;
+export function register(input: {
+  email: string;
+  name: string;
+  dob: string;
   phone?: string;
-}) {
-  return authRequest<{ request_id: number; cooldown_seconds: number }>(
-    "/api/auth/signup/request-otp",
-    {
-      method: "POST",
-      body: JSON.stringify(input)
-    }
-  );
-}
-
-export function verifySignupOTP(input: { request_id: number; code: string }) {
-  return authRequest<{ verification_token: string }>(
-    "/api/auth/signup/verify-otp",
-    {
-      method: "POST",
-      body: JSON.stringify(input)
-    }
-  );
-}
-
-export function completeSignup(input: {
-  verification_token: string;
+  address: string;
   password: string;
-  full_name?: string;
-  avatar_url?: string;
-  address?: string;
+  password_confirm: string;
 }) {
-  return authRequest<AuthTokens>("/api/auth/signup/complete", {
+  return authRequest<AuthTokens>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify(input)
   });
 }
 
-export function login(input: { identifier: string; password: string }) {
+export function login(input: { email: string; password: string }) {
   return authRequest<AuthTokens>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(input)
@@ -74,11 +53,7 @@ export function logout(refreshToken: string) {
   );
 }
 
-export function requestForgotPasswordOTP(input: {
-  channel: "email" | "sms";
-  email?: string;
-  phone?: string;
-}) {
+export function requestForgotPasswordOTP(input: { email: string }) {
   return authRequest<{ request_id: number; cooldown_seconds: number }>(
     "/api/auth/forgot-password/request-otp",
     {

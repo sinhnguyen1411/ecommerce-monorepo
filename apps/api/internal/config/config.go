@@ -24,9 +24,6 @@ type Config struct {
 	SeedOnStart           bool
 	PublicBaseURL         string
 	FrontendBaseURL       string
-	GoogleClientID        string
-	GoogleClientSecret    string
-	GoogleRedirectURL     string
 	UserTokenTTL          time.Duration
 	RefreshTokenTTL       time.Duration
 	VerificationTokenTTL  time.Duration
@@ -52,7 +49,6 @@ type Config struct {
 	SMTPPassword          string
 	SMTPFrom              string
 	SMTPFromName          string
-	SMSProvider           string
 }
 
 func Load() Config {
@@ -89,9 +85,6 @@ func Load() Config {
 		SeedOnStart:           getBool("SEED_ON_START", false),
 		PublicBaseURL:         strings.TrimRight(getEnv("PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
 		FrontendBaseURL:       strings.TrimRight(getEnv("FRONTEND_BASE_URL", "http://localhost:3000"), "/"),
-		GoogleClientID:        getEnv("GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret:    getEnv("GOOGLE_CLIENT_SECRET", ""),
-		GoogleRedirectURL:     getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/api/auth/google/callback"),
 		UserTokenTTL:          getDuration("USER_TOKEN_TTL", 15*time.Minute),
 		RefreshTokenTTL:       getDuration("REFRESH_TOKEN_TTL", 30*24*time.Hour),
 		VerificationTokenTTL:  getDuration("VERIFICATION_TOKEN_TTL", 10*time.Minute),
@@ -117,7 +110,6 @@ func Load() Config {
 		SMTPPassword:          smtpPassword,
 		SMTPFrom:              smtpFrom,
 		SMTPFromName:          smtpFromName,
-		SMSProvider:           getEnv("SMS_PROVIDER", "dev"),
 	}
 }
 

@@ -17,19 +17,13 @@ import (
 
 const (
 	channelEmail = "email"
-	channelSMS   = "sms"
 
-	purposeSignup            = "signup"
 	purposeReset             = "reset_password"
-	purposeChangeEmail       = "change_email"
-	purposeChangePhone       = "change_phone"
 	purposeEmailVerification = "verify_email"
 )
 
-type OTPRequestInput struct {
-	Channel string `json:"channel"`
-	Email   string `json:"email"`
-	Phone   string `json:"phone"`
+type EmailRequestInput struct {
+	Email string `json:"email"`
 }
 
 type OTPVerifyInput struct {
@@ -47,18 +41,9 @@ type RegisterInput struct {
 	PasswordConfirm string `json:"password_confirm"`
 }
 
-type SignupCompleteInput struct {
-	VerificationToken string `json:"verification_token"`
-	Password          string `json:"password"`
-	FullName          string `json:"full_name"`
-	AvatarURL         string `json:"avatar_url"`
-	Address           string `json:"address"`
-}
-
 type LoginInput struct {
-	Email      string `json:"email"`
-	Identifier string `json:"identifier"`
-	Password   string `json:"password"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type EmailOTPVerifyInput struct {
@@ -81,14 +66,6 @@ type ForgotResetInput struct {
 type ChangePasswordInput struct {
 	OldPassword string `json:"old_password"`
 	NewPassword string `json:"new_password"`
-}
-
-type LinkEmailInput struct {
-	Email string `json:"email"`
-}
-
-type LinkPhoneInput struct {
-	Phone string `json:"phone"`
 }
 
 type RefreshSessionInfo struct {
@@ -162,7 +139,7 @@ func (s *Server) Register(c *gin.Context) {
 		phoneNational = national
 	}
 
-	if exists, err := s.userExistsByDestination(channelEmail, email); err != nil {
+	if exists, err := s.userExistsByEmail(email); err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate email")
 		return
 	} else if exists {
@@ -463,183 +440,6 @@ func (s *Server) VerifyEmailOTP(c *gin.Context) {
 	})
 }
 
-func (s *Server) SignupRequestOTP(c *gin.Context) {
-	var input OTPRequestInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid request payload")
-		return
-	}
-
-	destination, _, err := s.normalizeDestination(input.Channel, input.Email, input.Phone)
-	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_destination", err.Error())
-		return
-	}
-
-	if exists, err := s.userExistsByDestination(input.Channel, destination); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate destination")
-		return
-	} else if exists {
-		respondError(c, http.StatusConflict, "already_exists", "Account already exists")
-		return
-	}
-
-	requestID, cooldown, err := s.sendOTP(c, input.Channel, destination, purposeSignup)
-	if err != nil {
-		s.handleOTPSendError(c, err)
-		return
-	}
-
-	respondOK(c, gin.H{"request_id": requestID, "cooldown_seconds": int(cooldown.Seconds())})
-}
-
-func (s *Server) SignupVerifyOTP(c *gin.Context) {
-	s.verifyOTPForPurpose(c, purposeSignup)
-}
-
-func (s *Server) SignupComplete(c *gin.Context) {
-	var input SignupCompleteInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid signup payload")
-		return
-	}
-	if input.VerificationToken == "" {
-		respondError(c, http.StatusBadRequest, "missing_token", "Verification token is required")
-		return
-	}
-	if err := auth.ValidatePassword(input.Password, s.Config.PasswordMinLength); err != nil {
-		respondError(c, http.StatusBadRequest, "weak_password", "Password does not meet requirements")
-		return
-	}
-
-	claims, err := s.parseVerificationToken(input.VerificationToken)
-	if err != nil || claims.Purpose != purposeSignup {
-		respondError(c, http.StatusBadRequest, "invalid_token", "Invalid verification token")
-		return
-	}
-
-	otpRecord, err := s.getOTPRecord(claims.OTPID)
-	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_request", "Invalid verification request")
-		return
-	}
-	if otpRecord.Purpose != purposeSignup {
-		respondError(c, http.StatusBadRequest, "invalid_request", "Invalid verification request")
-		return
-	}
-	if otpRecord.ConsumedAt == nil {
-		respondError(c, http.StatusBadRequest, "otp_not_verified", "OTP not verified")
-		return
-	}
-	if otpRecord.CompletedAt != nil {
-		respondError(c, http.StatusBadRequest, "otp_already_used", "Verification already completed")
-		return
-	}
-
-	if exists, err := s.userExistsByDestination(otpRecord.Channel, otpRecord.Destination); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate destination")
-		return
-	} else if exists {
-		respondError(c, http.StatusConflict, "already_exists", "Account already exists")
-		return
-	}
-
-	passwordHash, err := auth.HashPassword(input.Password, auth.DefaultPasswordParams)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "hash_error", "Failed to secure password")
-		return
-	}
-
-	fullName := strings.TrimSpace(input.FullName)
-	avatarURL := strings.TrimSpace(input.AvatarURL)
-	address := strings.TrimSpace(input.Address)
-
-	var email any = nil
-	var phoneE164 any = nil
-	var phoneNational any = nil
-	isEmailVerified := false
-	isPhoneVerified := false
-
-	if otpRecord.Channel == channelEmail {
-		email = otpRecord.Destination
-		isEmailVerified = true
-	} else {
-		phoneE164 = otpRecord.Destination
-		phoneNational = otpRecord.DestinationNational
-		isPhoneVerified = true
-	}
-
-	tx, err := s.DB.Begin()
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create account")
-		return
-	}
-	defer tx.Rollback()
-
-	result, err := tx.Exec(`
-    INSERT INTO users (email, phone_e164, phone_national, is_email_verified, is_phone_verified,
-      password_hash, full_name, avatar_url, address, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-  `, email, phoneE164, phoneNational, isEmailVerified, isPhoneVerified, passwordHash, fullName, avatarURL, address)
-	if err != nil {
-		if isDuplicateErr(err) {
-			respondError(c, http.StatusConflict, "already_exists", "Account already exists")
-			return
-		}
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create account")
-		return
-	}
-
-	userID64, err := result.LastInsertId()
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create account")
-		return
-	}
-	userID := int(userID64)
-
-	if address != "" && phoneNational != nil {
-		if _, err := tx.Exec(`
-      INSERT INTO user_addresses (user_id, full_name, phone, address_line, is_default)
-      VALUES (?, ?, ?, ?, TRUE)
-    `, userID, fullName, phoneNational, address); err != nil {
-			respondError(c, http.StatusInternalServerError, "db_error", "Failed to save address")
-			return
-		}
-	}
-
-	if _, err := tx.Exec(`UPDATE otp_verifications SET completed_at = ? WHERE id = ?`, time.Now(), otpRecord.ID); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to finalize verification")
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to finalize account")
-		return
-	}
-
-	accessToken, refreshToken, err := s.issueTokens(c, userID)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "token_error", "Failed to issue tokens")
-		return
-	}
-
-	user, err := s.loadUserByID(userID)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load profile")
-		return
-	}
-
-	s.logAudit(c, &userID, "signup_completed", map[string]any{
-		"channel": otpRecord.Channel,
-	})
-
-	respondOK(c, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"user":          authUserResponse(user),
-	})
-}
-
 func (s *Server) Login(c *gin.Context) {
 	var input LoginInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -648,9 +448,6 @@ func (s *Server) Login(c *gin.Context) {
 	}
 
 	emailRaw := strings.TrimSpace(input.Email)
-	if emailRaw == "" {
-		emailRaw = strings.TrimSpace(input.Identifier)
-	}
 	if emailRaw == "" || input.Password == "" {
 		respondError(c, http.StatusBadRequest, "missing_fields", "Email and password are required")
 		return
@@ -791,19 +588,19 @@ func (s *Server) Refresh(c *gin.Context) {
 }
 
 func (s *Server) ForgotPasswordRequestOTP(c *gin.Context) {
-	var input OTPRequestInput
+	var input EmailRequestInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid request payload")
 		return
 	}
 
-	destination, _, err := s.normalizeDestination(input.Channel, input.Email, input.Phone)
+	email, err := auth.NormalizeEmail(input.Email)
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_destination", err.Error())
+		respondError(c, http.StatusBadRequest, "invalid_email", "Invalid email address")
 		return
 	}
 
-	if exists, err := s.userExistsByDestination(input.Channel, destination); err != nil {
+	if exists, err := s.userExistsByEmail(email); err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate destination")
 		return
 	} else if !exists {
@@ -811,7 +608,7 @@ func (s *Server) ForgotPasswordRequestOTP(c *gin.Context) {
 		return
 	}
 
-	requestID, cooldown, err := s.sendOTP(c, input.Channel, destination, purposeReset)
+	requestID, cooldown, err := s.sendOTP(c, email, purposeReset)
 	if err != nil {
 		s.handleOTPSendError(c, err)
 		return
@@ -859,12 +656,7 @@ func (s *Server) ForgotPasswordReset(c *gin.Context) {
 		return
 	}
 
-	var user *userAuthRecord
-	if otpRecord.Channel == channelEmail {
-		user, err = s.loadUserByEmail(otpRecord.Destination)
-	} else {
-		user, err = s.loadUserByPhone(otpRecord.Destination)
-	}
+	user, err := s.loadUserByEmail(otpRecord.Destination)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondOK(c, gin.H{"reset": true})
@@ -1000,188 +792,6 @@ func (s *Server) RevokeSession(c *gin.Context) {
 	respondOK(c, gin.H{"revoked": true})
 }
 
-func (s *Server) LinkEmailRequestOTP(c *gin.Context) {
-	userID := c.MustGet("user_id").(int)
-	var input LinkEmailInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid request payload")
-		return
-	}
-
-	email, err := auth.NormalizeEmail(input.Email)
-	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_email", "Invalid email address")
-		return
-	}
-
-	if exists, err := s.userExistsByDestination(channelEmail, email); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate email")
-		return
-	} else if exists {
-		respondError(c, http.StatusConflict, "already_exists", "Email already in use")
-		return
-	}
-
-	requestID, cooldown, err := s.sendOTP(c, channelEmail, email, purposeChangeEmail)
-	if err != nil {
-		s.handleOTPSendError(c, err)
-		return
-	}
-
-	s.logAudit(c, &userID, "link_email_requested", map[string]any{
-		"email_hint": maskEmail(email),
-	})
-
-	respondOK(c, gin.H{"request_id": requestID, "cooldown_seconds": int(cooldown.Seconds())})
-}
-
-func (s *Server) LinkEmailVerifyOTP(c *gin.Context) {
-	s.verifyOTPForPurpose(c, purposeChangeEmail)
-}
-
-func (s *Server) LinkEmailComplete(c *gin.Context) {
-	userID := c.MustGet("user_id").(int)
-	var input ForgotResetInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid payload")
-		return
-	}
-	if input.VerificationToken == "" {
-		respondError(c, http.StatusBadRequest, "missing_token", "Verification token is required")
-		return
-	}
-
-	claims, err := s.parseVerificationToken(input.VerificationToken)
-	if err != nil || claims.Purpose != purposeChangeEmail {
-		respondError(c, http.StatusBadRequest, "invalid_token", "Invalid verification token")
-		return
-	}
-
-	otpRecord, err := s.getOTPRecord(claims.OTPID)
-	if err != nil || otpRecord.Channel != channelEmail {
-		respondError(c, http.StatusBadRequest, "invalid_request", "Invalid verification request")
-		return
-	}
-	if otpRecord.Purpose != purposeChangeEmail {
-		respondError(c, http.StatusBadRequest, "invalid_request", "Invalid verification request")
-		return
-	}
-	if otpRecord.ConsumedAt == nil {
-		respondError(c, http.StatusBadRequest, "otp_not_verified", "OTP not verified")
-		return
-	}
-
-	if exists, err := s.userExistsByDestination(channelEmail, otpRecord.Destination); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate email")
-		return
-	} else if exists {
-		respondError(c, http.StatusConflict, "already_exists", "Email already in use")
-		return
-	}
-
-	if _, err := s.DB.Exec(`UPDATE users SET email = ?, is_email_verified = TRUE WHERE id = ?`, otpRecord.Destination, userID); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to link email")
-		return
-	}
-
-	s.logAudit(c, &userID, "link_email_completed", map[string]any{
-		"email_hint": maskEmail(otpRecord.Destination),
-	})
-
-	respondOK(c, gin.H{"linked": true})
-}
-
-func (s *Server) LinkPhoneRequestOTP(c *gin.Context) {
-	userID := c.MustGet("user_id").(int)
-	var input LinkPhoneInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid request payload")
-		return
-	}
-
-	phoneE164, _, err := auth.NormalizeVNPhone(input.Phone)
-	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_phone", "Invalid phone number")
-		return
-	}
-
-	if exists, err := s.userExistsByDestination(channelSMS, phoneE164); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate phone")
-		return
-	} else if exists {
-		respondError(c, http.StatusConflict, "already_exists", "Phone already in use")
-		return
-	}
-
-	requestID, cooldown, err := s.sendOTP(c, channelSMS, phoneE164, purposeChangePhone)
-	if err != nil {
-		s.handleOTPSendError(c, err)
-		return
-	}
-
-	s.logAudit(c, &userID, "link_phone_requested", map[string]any{
-		"phone_hint": maskPhone(phoneE164),
-	})
-
-	respondOK(c, gin.H{"request_id": requestID, "cooldown_seconds": int(cooldown.Seconds())})
-}
-
-func (s *Server) LinkPhoneVerifyOTP(c *gin.Context) {
-	s.verifyOTPForPurpose(c, purposeChangePhone)
-}
-
-func (s *Server) LinkPhoneComplete(c *gin.Context) {
-	userID := c.MustGet("user_id").(int)
-	var input ForgotResetInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid payload")
-		return
-	}
-	if input.VerificationToken == "" {
-		respondError(c, http.StatusBadRequest, "missing_token", "Verification token is required")
-		return
-	}
-
-	claims, err := s.parseVerificationToken(input.VerificationToken)
-	if err != nil || claims.Purpose != purposeChangePhone {
-		respondError(c, http.StatusBadRequest, "invalid_token", "Invalid verification token")
-		return
-	}
-
-	otpRecord, err := s.getOTPRecord(claims.OTPID)
-	if err != nil || otpRecord.Channel != channelSMS {
-		respondError(c, http.StatusBadRequest, "invalid_request", "Invalid verification request")
-		return
-	}
-	if otpRecord.Purpose != purposeChangePhone {
-		respondError(c, http.StatusBadRequest, "invalid_request", "Invalid verification request")
-		return
-	}
-	if otpRecord.ConsumedAt == nil {
-		respondError(c, http.StatusBadRequest, "otp_not_verified", "OTP not verified")
-		return
-	}
-
-	if exists, err := s.userExistsByDestination(channelSMS, otpRecord.Destination); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate phone")
-		return
-	} else if exists {
-		respondError(c, http.StatusConflict, "already_exists", "Phone already in use")
-		return
-	}
-
-	if _, err := s.DB.Exec(`UPDATE users SET phone_e164 = ?, phone_national = ?, is_phone_verified = TRUE WHERE id = ?`, otpRecord.Destination, otpRecord.DestinationNational, userID); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to link phone")
-		return
-	}
-
-	s.logAudit(c, &userID, "link_phone_completed", map[string]any{
-		"phone_hint": maskPhone(otpRecord.Destination),
-	})
-
-	respondOK(c, gin.H{"linked": true})
-}
-
 func (s *Server) handleLoginFailure(c *gin.Context, user *userAuthRecord) {
 	attempts := user.FailedLoginAttempts + 1
 	var lockedUntil sql.NullTime
@@ -1195,28 +805,10 @@ func (s *Server) handleLoginFailure(c *gin.Context, user *userAuthRecord) {
 	})
 }
 
-func (s *Server) normalizeDestination(channel, email, phone string) (string, string, error) {
-	switch channel {
-	case channelEmail:
-		normalized, err := auth.NormalizeEmail(email)
-		return normalized, "", err
-	case channelSMS:
-		return auth.NormalizeVNPhone(phone)
-	default:
-		return "", "", errors.New("invalid channel")
-	}
-}
-
-func (s *Server) userExistsByDestination(channel, destination string) (bool, error) {
+func (s *Server) userExistsByEmail(email string) (bool, error) {
 	var count int
-	var err error
-	if channel == channelEmail {
-		row := s.DB.QueryRow(`SELECT COUNT(*) FROM users WHERE email = ?`, destination)
-		err = row.Scan(&count)
-	} else {
-		row := s.DB.QueryRow(`SELECT COUNT(*) FROM users WHERE phone_e164 = ?`, destination)
-		err = row.Scan(&count)
-	}
+	row := s.DB.QueryRow(`SELECT COUNT(*) FROM users WHERE email = ?`, email)
+	err := row.Scan(&count)
 	if err != nil {
 		return false, err
 	}
@@ -1224,16 +816,15 @@ func (s *Server) userExistsByDestination(channel, destination string) (bool, err
 }
 
 type otpRecord struct {
-	ID                  int
-	Channel             string
-	Destination         string
-	DestinationNational string
-	CodeHash            string
-	Purpose             string
-	ExpiresAt           time.Time
-	ConsumedAt          *time.Time
-	CompletedAt         *time.Time
-	AttemptsCount       int
+	ID            int
+	Channel       string
+	Destination   string
+	CodeHash      string
+	Purpose       string
+	ExpiresAt     time.Time
+	ConsumedAt    *time.Time
+	CompletedAt   *time.Time
+	AttemptsCount int
 }
 
 func (s *Server) getOTPRecord(id int) (*otpRecord, error) {
@@ -1253,11 +844,6 @@ func (s *Server) getOTPRecord(id int) (*otpRecord, error) {
 	}
 	if completedAt.Valid {
 		record.CompletedAt = &completedAt.Time
-	}
-	if record.Channel == channelSMS {
-		if _, national, err := auth.NormalizeVNPhone(record.Destination); err == nil {
-			record.DestinationNational = national
-		}
 	}
 	return &record, nil
 }
@@ -1343,11 +929,7 @@ func (s *Server) handleOTPSendError(c *gin.Context, err error) {
 	respondError(c, http.StatusBadRequest, "otp_failed", err.Error())
 }
 
-func (s *Server) sendOTP(c *gin.Context, channel, destination, purpose string) (int, time.Duration, error) {
-	if channel != channelEmail && channel != channelSMS {
-		return 0, 0, errors.New("invalid channel")
-	}
-
+func (s *Server) sendOTP(c *gin.Context, destination, purpose string) (int, time.Duration, error) {
 	cooldownRemaining, err := s.otpCooldownRemaining(destination)
 	if err != nil {
 		return 0, 0, errors.New("rate limit check failed")
@@ -1385,7 +967,7 @@ func (s *Server) sendOTP(c *gin.Context, channel, destination, purpose string) (
 	result, err := s.DB.Exec(`
     INSERT INTO otp_verifications (channel, destination, code_hash, purpose, expires_at, last_sent_at)
     VALUES (?, ?, ?, ?, ?, ?)
-  `, channel, destination, codeHash, purpose, expiresAt, now)
+  `, channelEmail, destination, codeHash, purpose, expiresAt, now)
 	if err != nil {
 		return 0, 0, errors.New("failed to store code")
 	}
@@ -1397,22 +979,15 @@ func (s *Server) sendOTP(c *gin.Context, channel, destination, purpose string) (
 	requestID := int(requestID64)
 
 	message := "Your verification code is " + code + ". It expires in " + strconv.Itoa(int(s.Config.OTPTTL.Minutes())) + " minutes."
-	if channel == channelEmail {
-		if err := s.EmailSender.Send(destination, "Your verification code", message); err != nil {
-			_, _ = s.DB.Exec(`UPDATE otp_verifications SET consumed_at = ? WHERE id = ?`, time.Now(), requestID)
-			return 0, 0, errors.New("failed to send email")
-		}
-	} else {
-		if err := s.SMSSender.Send(destination, message); err != nil {
-			_, _ = s.DB.Exec(`UPDATE otp_verifications SET consumed_at = ? WHERE id = ?`, time.Now(), requestID)
-			return 0, 0, errors.New("failed to send sms")
-		}
+	if err := s.EmailSender.Send(destination, "Your verification code", message); err != nil {
+		_, _ = s.DB.Exec(`UPDATE otp_verifications SET consumed_at = ? WHERE id = ?`, time.Now(), requestID)
+		return 0, 0, errors.New("failed to send email")
 	}
 
 	s.logAudit(c, nil, "otp_sent", map[string]any{
 		"purpose": purpose,
-		"channel": channel,
-		"dest":    maskDestination(channel, destination),
+		"channel": channelEmail,
+		"dest":    maskDestination(channelEmail, destination),
 	})
 
 	return requestID, s.Config.OTPCooldown, nil
