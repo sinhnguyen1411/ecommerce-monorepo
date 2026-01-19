@@ -44,7 +44,7 @@ export default function SignupPage() {
       setAuthTokens(result.access_token, result.refresh_token);
       router.push("/account");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Register failed");
+      setError(err instanceof Error ? err.message : "Đăng ký thất bại");
     } finally {
       setLoading(false);
     }
@@ -54,9 +54,9 @@ export default function SignupPage() {
     <div>
       <section className="section-shell pb-10 pt-14">
         <SectionTitle
-          eyebrow="Account"
-          title="Create account"
-          description="Register with email and password."
+          eyebrow="Tài khoản"
+          title="Tạo tài khoản"
+          description="Đăng ký bằng email và mật khẩu."
         />
       </section>
 
@@ -74,47 +74,48 @@ export default function SignupPage() {
               className="field"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Full name"
+              placeholder="Họ và tên"
             />
             <input
               className="field"
+              type="date"
               value={dob}
               onChange={(event) => setDob(event.target.value)}
-              placeholder="DOB (YYYY-MM-DD)"
+              placeholder="Ngày sinh (YYYY-MM-DD)"
             />
             <input
               className="field"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
-              placeholder="Phone (optional)"
+              placeholder="Số điện thoại (tuỳ chọn)"
             />
             <input
               className="field"
               value={address}
               onChange={(event) => setAddress(event.target.value)}
-              placeholder="Address"
+              placeholder="Địa chỉ"
             />
             <input
               className="field"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Password"
+              placeholder="Mật khẩu"
             />
             <input
               className="field"
               type="password"
               value={passwordConfirm}
               onChange={(event) => setPasswordConfirm(event.target.value)}
-              placeholder="Confirm password"
+              placeholder="Xác nhận mật khẩu"
             />
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create account"}
+              {loading ? "Đang tạo..." : "Tạo tài khoản"}
             </Button>
           </form>
 
           <div className="mt-6 text-xs text-ink/70">
-            Already have an account? <Link className="text-forest" href="/login">Sign in</Link>
+            Đã có tài khoản? <Link className="text-forest" href="/login">Đăng nhập</Link>
           </div>
         </div>
       </section>

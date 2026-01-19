@@ -57,10 +57,10 @@ export default function ForgotPasswordPage() {
         setRequestId(result.request_id);
         setStep("verify");
       } else {
-        setNotice("If the account exists, an OTP was sent.");
+        setNotice("Nếu tài khoản tồn tại, mã OTP đã được gửi.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send OTP");
+      setError(err instanceof Error ? err.message : "Không thể gửi OTP");
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     try {
       if (!requestId) {
-        throw new Error("Missing request");
+        throw new Error("Thiếu yêu cầu OTP");
       }
       const result = await verifyForgotPasswordOTP({
         request_id: requestId,
@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
       setVerificationToken(result.verification_token);
       setStep("reset");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "OTP verification failed");
+      setError(err instanceof Error ? err.message : "Xác minh OTP thất bại");
     } finally {
       setLoading(false);
     }
@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
       });
       setStep("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Reset failed");
+      setError(err instanceof Error ? err.message : "Đặt lại mật khẩu thất bại");
     } finally {
       setLoading(false);
     }
@@ -110,9 +110,9 @@ export default function ForgotPasswordPage() {
     <div>
       <section className="section-shell pb-10 pt-14">
         <SectionTitle
-          eyebrow="Account"
-          title="Forgot password"
-          description="Verify email and reset your password."
+          eyebrow="Tài khoản"
+          title="Quên mật khẩu"
+          description="Xác minh email và đặt lại mật khẩu."
         />
       </section>
 
@@ -130,7 +130,7 @@ export default function ForgotPasswordPage() {
                 placeholder="Email"
               />
               <Button type="submit" disabled={loading}>
-                {loading ? "Sending..." : "Send OTP"}
+                {loading ? "Đang gửi..." : "Gửi OTP"}
               </Button>
             </form>
           ) : null}
@@ -141,11 +141,11 @@ export default function ForgotPasswordPage() {
                 className="field"
                 value={otpCode}
                 onChange={(event) => setOtpCode(event.target.value)}
-                placeholder="OTP"
+                placeholder="Mã OTP"
               />
               <div className="flex flex-wrap items-center gap-3">
                 <Button type="submit" disabled={loading}>
-                  {loading ? "Verifying..." : "Verify OTP"}
+                  {loading ? "Đang xác minh..." : "Xác minh OTP"}
                 </Button>
                 <Button
                   type="button"
@@ -153,7 +153,7 @@ export default function ForgotPasswordPage() {
                   disabled={loading || cooldown > 0}
                   onClick={() => handleRequest()}
                 >
-                  {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend"}
+                  {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại"}
                 </Button>
               </div>
             </form>
@@ -166,27 +166,27 @@ export default function ForgotPasswordPage() {
                 type="password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
-                placeholder="New password"
+                placeholder="Mật khẩu mới"
               />
               <Button type="submit" disabled={loading}>
-                {loading ? "Resetting..." : "Reset password"}
+                {loading ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
               </Button>
             </form>
           ) : null}
 
           {step === "done" ? (
             <div className="grid gap-3 text-sm">
-              <p>Password reset successful.</p>
+              <p>Đặt lại mật khẩu thành công.</p>
               <Link className="text-forest" href="/login">
-                Back to login
+                Quay lại đăng nhập
               </Link>
             </div>
           ) : null}
 
           <div className="mt-6 text-xs text-ink/70">
-            Remember your password?{" "}
+            Nhớ mật khẩu rồi?{" "}
             <Link className="text-forest" href="/login">
-              Sign in
+              Đăng nhập
             </Link>
           </div>
         </div>

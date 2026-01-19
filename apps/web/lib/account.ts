@@ -6,6 +6,8 @@ export type UserProfile = {
   name: string;
   avatar_url?: string;
   phone?: string;
+  is_email_verified?: boolean;
+  emailVerificationStatus?: string;
 };
 
 export type Address = {

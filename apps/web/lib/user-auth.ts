@@ -42,6 +42,28 @@ export function login(input: { email: string; password: string }) {
   });
 }
 
+export function sendEmailOTP() {
+  return authRequest<{ sent: boolean; cooldown_seconds?: number; emailVerificationStatus?: string }>(
+    "/api/auth/send-email-otp",
+    {
+      method: "POST",
+      body: JSON.stringify({})
+    },
+    { auth: true }
+  );
+}
+
+export function verifyEmailOTP(input: { otp: string }) {
+  return authRequest<{ emailVerificationStatus: string }>(
+    "/api/auth/verify-email-otp",
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    },
+    { auth: true }
+  );
+}
+
 export function logout(refreshToken: string) {
   return authRequest<{ revoked: boolean }>(
     "/api/auth/logout",

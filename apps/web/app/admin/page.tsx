@@ -912,13 +912,19 @@ function AdminPayments({
       bank_name: "",
       bank_account: "",
       bank_holder: "",
+      bank_id: "",
+      bank_qr_template: "compact2",
       bank_qr_payload: ""
     }
   );
 
   useEffect(() => {
     if (settings) {
-      setForm(settings);
+      setForm({
+        ...settings,
+        bank_id: settings.bank_id || "",
+        bank_qr_template: settings.bank_qr_template || "compact2"
+      });
     }
   }, [settings]);
 
@@ -949,7 +955,7 @@ function AdminPayments({
             checked={form.bank_transfer_enabled}
             onChange={(event) => setForm({ ...form, bank_transfer_enabled: event.target.checked })}
           />
-          Chuyen khoan
+          Chuyển khoản
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -957,12 +963,14 @@ function AdminPayments({
             checked={form.bank_qr_enabled}
             onChange={(event) => setForm({ ...form, bank_qr_enabled: event.target.checked })}
           />
-          QR Ngan hang
+          QR ngân hàng
         </label>
         <input className="field" placeholder="Tên ngân hàng" value={form.bank_name} onChange={(event) => setForm({ ...form, bank_name: event.target.value })} />
         <input className="field" placeholder="Số tài khoản" value={form.bank_account} onChange={(event) => setForm({ ...form, bank_account: event.target.value })} />
         <input className="field" placeholder="Chủ tài khoản" value={form.bank_holder} onChange={(event) => setForm({ ...form, bank_holder: event.target.value })} />
-        <input className="field" placeholder="Nội dung QR" value={form.bank_qr_payload} onChange={(event) => setForm({ ...form, bank_qr_payload: event.target.value })} />
+        <input className="field" placeholder="Mã ngân hàng VietQR (vd: vcb, tcb)" value={form.bank_id} onChange={(event) => setForm({ ...form, bank_id: event.target.value })} />
+        <input className="field" placeholder="Mẫu QR (compact2, compact, qr_only, print)" value={form.bank_qr_template} onChange={(event) => setForm({ ...form, bank_qr_template: event.target.value })} />
+        <input className="field" placeholder="Tiền tố nội dung chuyển khoản (vd: TB)" value={form.bank_qr_payload} onChange={(event) => setForm({ ...form, bank_qr_payload: event.target.value })} />
         <Button onClick={handleSave}>Lưu cấu hình</Button>
       </div>
     </div>

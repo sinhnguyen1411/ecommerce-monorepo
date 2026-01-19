@@ -113,6 +113,8 @@ export type PaymentSettings = {
   bank_account: string;
   bank_holder: string;
   bank_qr_payload: string;
+  bank_id: string;
+  bank_qr_template: string;
 };
 
 export function adminLogin(input: { email: string; password: string }) {

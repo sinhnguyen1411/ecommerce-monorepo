@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 
-import { uploadPaymentProof } from "@/lib/api";
+import { getOrderPaymentQR, uploadPaymentProof } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
-import { siteConfig } from "@/lib/site";
+
+import type { OrderPaymentQR } from "@/lib/api";
 
 type LastOrder = {
   id: number;
@@ -17,9 +17,10 @@ type LastOrder = {
 
 export default function ThankYouPage() {
   const [order, setOrder] = useState<LastOrder | null>(null);
-  const [qrUrl, setQrUrl] = useState<string>("");
-  const [uploadStatus, setUploadStatus] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [qrInfo, setQrInfo] = useState<OrderPaymentQR | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
 
   const paymentLabels: Record<string, string> = {
     cod: "Thanh toán khi nhận hàng",
@@ -43,15 +44,17 @@ export default function ThankYouPage() {
   }, []);
 
   useEffect(() => {
-    if (!order) {
+    if (!order || paymentMethod === "cod") {
+      setQrInfo(null);
       return;
     }
 
-    const payload = `BANK|${siteConfig.bank.name}|${siteConfig.bank.account}|${order.total}|${order.order_number}`;
-    QRCode.toDataURL(payload, { width: 240, margin: 1 })
-      .then(setQrUrl)
-      .catch(() => setQrUrl(""));
-  }, [order]);
+    setQrLoading(true);
+    getOrderPaymentQR(order.id)
+      .then(setQrInfo)
+      .catch(() => setQrInfo(null))
+      .finally(() => setQrLoading(false));
+  }, [order, paymentMethod]);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!order || !event.target.files?.[0]) {
@@ -67,6 +70,8 @@ export default function ThankYouPage() {
       setUploadStatus(err instanceof Error ? err.message : "Tải lên thất bại.");
     }
   };
+
+  const qrImage = qrInfo?.vietqr.qrImageUrl || qrInfo?.vietqr.qrDataURL || "";
 
   return (
     <div className="checkout-wrapper">
@@ -122,20 +127,25 @@ export default function ThankYouPage() {
           </div>
 
           <div className="checkout-box">
-            <h2>Thanh toán ngân hàng</h2>
+            <h2>Thanh toán chuyển khoản</h2>
             {order && paymentMethod !== "cod" ? (
               <div className="mt-4 space-y-4">
                 <div className="border border-forest/10 bg-white p-4 text-sm">
-                  <p>Ngân hàng: {siteConfig.bank.name}</p>
-                  <p>Số tài khoản: {siteConfig.bank.account}</p>
-                  <p>Chủ tài khoản: {siteConfig.bank.holder}</p>
+                  <p>Ngân hàng: {qrInfo?.bank.bankName || ""}</p>
+                  <p>Số tài khoản: {qrInfo?.bank.accountNo || ""}</p>
+                  <p>Chủ tài khoản: {qrInfo?.bank.accountName || ""}</p>
                   <p>Số tiền: {formatCurrency(order.total)}</p>
+                  <p>Nội dung chuyển khoản: {qrInfo?.transferContent || ""}</p>
                 </div>
-                {qrUrl ? (
-                  <img src={qrUrl} alt="QR" className="h-48 w-48 border border-forest/10" />
+                {qrImage ? (
+                  <img
+                    src={qrImage}
+                    alt="VietQR"
+                    className="h-80 w-80 max-w-full border border-forest/10 object-contain md:h-[28rem] md:w-[28rem]"
+                  />
                 ) : (
                   <div className="border border-forest/10 bg-white p-6 text-sm text-ink/60">
-                    Đang tạo QR...
+                    {qrLoading ? "Đang tạo QR..." : "Chưa có mã QR"}
                   </div>
                 )}
                 <div>

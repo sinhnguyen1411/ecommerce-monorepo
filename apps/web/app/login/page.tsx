@@ -31,7 +31,7 @@ export default function LoginPage() {
       setAuthTokens(result.access_token, result.refresh_token);
       router.push("/account");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
     } finally {
       setLoading(false);
     }
@@ -41,9 +41,9 @@ export default function LoginPage() {
     <div>
       <section className="section-shell pb-10 pt-14">
         <SectionTitle
-          eyebrow="Account"
-          title="Sign in"
-          description="Login with email and password."
+          eyebrow="Tài khoản"
+          title="Đăng nhập"
+          description="Đăng nhập bằng email và mật khẩu."
         />
       </section>
 
@@ -62,24 +62,24 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Password"
+              placeholder="Mật khẩu"
             />
             <Button type="submit" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
           </form>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-ink/70">
             <Link className="text-forest" href="/signup">
-              Create account
+              Tạo tài khoản
             </Link>
             <span className="text-ink/40">|</span>
             <Link className="text-forest" href="/forgot-password">
-              Forgot password
+              Quên mật khẩu
             </Link>
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link href="/" className="button btnlight">
-              Home
+              Trang chủ
             </Link>
           </div>
         </div>

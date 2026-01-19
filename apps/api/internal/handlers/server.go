@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -11,9 +13,12 @@ import (
 )
 
 type Server struct {
-	DB          *sql.DB
-	Config      config.Config
-	EmailSender EmailSender
+	DB                   *sql.DB
+	Config               config.Config
+	EmailSender          EmailSender
+	vietqrBanksMu        sync.Mutex
+	vietqrBanksCache     map[string]int
+	vietqrBanksExpiresAt time.Time
 }
 
 func New(db *sql.DB, cfg config.Config) (*Server, error) {
@@ -23,9 +28,10 @@ func New(db *sql.DB, cfg config.Config) (*Server, error) {
 	}
 
 	return &Server{
-		DB:          db,
-		Config:      cfg,
-		EmailSender: emailSender,
+		DB:               db,
+		Config:           cfg,
+		EmailSender:      emailSender,
+		vietqrBanksCache: make(map[string]int),
 	}, nil
 }
 
@@ -76,6 +82,7 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 		api.GET("/promotions", s.ListPromotions)
 		api.POST("/promotions/validate", s.ValidatePromotion)
 		api.POST("/orders", s.CreateOrder)
+		api.GET("/orders/:id/payment/qr", s.GetOrderPaymentQR)
 		api.POST("/orders/:id/payment-proof", s.UploadPaymentProof)
 
 		api.POST("/admin/login", s.AdminLogin)

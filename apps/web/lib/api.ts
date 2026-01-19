@@ -144,11 +144,35 @@ export type PaymentSettings = {
   bank_account: string;
   bank_holder: string;
   bank_qr_payload: string;
+  bank_id: string;
+  bank_qr_template: string;
 };
 
 export type PromoValidation = {
   promo_code: string;
   discount_total: number;
+};
+
+export type OrderPaymentQR = {
+  orderId: number;
+  amount: number;
+  currency: string;
+  transferContent: string;
+  bank: {
+    bankId: string;
+    bin?: string;
+    accountNo?: string;
+    accountName?: string;
+    bankName?: string;
+  };
+  vietqr: {
+    method: "quicklink" | "generate";
+    template: string;
+    qrImageUrl?: string;
+    qrDataURL?: string;
+    qrCode?: string;
+  };
+  paymentStatus: "PENDING" | "PAID" | "EXPIRED";
 };
 
 export type Promotion = {
@@ -296,6 +320,12 @@ export async function createOrder(input: OrderRequest) {
   return apiRequest<OrderResponse>("/api/orders", {
     method: "POST",
     body: JSON.stringify(input)
+  });
+}
+
+export async function getOrderPaymentQR(orderId: number) {
+  return apiRequest<OrderPaymentQR>(`/api/orders/${orderId}/payment/qr`, {
+    cache: "no-store"
   });
 }
 

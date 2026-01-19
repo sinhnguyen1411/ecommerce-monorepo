@@ -16,6 +16,8 @@ type PaymentSettings struct {
 	BankAccount         string `json:"bank_account"`
 	BankHolder          string `json:"bank_holder"`
 	BankQRPayload       string `json:"bank_qr_payload"`
+	BankID              string `json:"bank_id"`
+	BankQRTemplate      string `json:"bank_qr_template"`
 }
 
 func (s *Server) AdminGetPaymentSettings(c *gin.Context) {
@@ -40,8 +42,8 @@ func (s *Server) AdminUpdatePaymentSettings(c *gin.Context) {
 	}
 
 	_, err := s.DB.Exec(`
-    INSERT INTO payment_settings (id, cod_enabled, bank_transfer_enabled, bank_qr_enabled, bank_name, bank_account, bank_holder, bank_qr_payload)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO payment_settings (id, cod_enabled, bank_transfer_enabled, bank_qr_enabled, bank_name, bank_account, bank_holder, bank_qr_payload, bank_id, bank_qr_template)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
       cod_enabled = VALUES(cod_enabled),
       bank_transfer_enabled = VALUES(bank_transfer_enabled),
@@ -49,8 +51,10 @@ func (s *Server) AdminUpdatePaymentSettings(c *gin.Context) {
       bank_name = VALUES(bank_name),
       bank_account = VALUES(bank_account),
       bank_holder = VALUES(bank_holder),
-      bank_qr_payload = VALUES(bank_qr_payload)
-  `, input.ID, input.CODEnabled, input.BankTransferEnabled, input.BankQREnabled, input.BankName, input.BankAccount, input.BankHolder, input.BankQRPayload)
+      bank_qr_payload = VALUES(bank_qr_payload),
+      bank_id = VALUES(bank_id),
+      bank_qr_template = VALUES(bank_qr_template)
+  `, input.ID, input.CODEnabled, input.BankTransferEnabled, input.BankQREnabled, input.BankName, input.BankAccount, input.BankHolder, input.BankQRPayload, input.BankID, input.BankQRTemplate)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update payment settings")
 		return
@@ -70,15 +74,16 @@ func (s *Server) GetPaymentSettings(c *gin.Context) {
 }
 
 func (s *Server) loadPaymentSettings() (PaymentSettings, error) {
-	row := s.DB.QueryRow(`SELECT id, cod_enabled, bank_transfer_enabled, bank_qr_enabled, IFNULL(bank_name, ''), IFNULL(bank_account, ''), IFNULL(bank_holder, ''), IFNULL(bank_qr_payload, '') FROM payment_settings LIMIT 1`)
+	row := s.DB.QueryRow(`SELECT id, cod_enabled, bank_transfer_enabled, bank_qr_enabled, IFNULL(bank_name, ''), IFNULL(bank_account, ''), IFNULL(bank_holder, ''), IFNULL(bank_qr_payload, ''), IFNULL(bank_id, ''), IFNULL(bank_qr_template, '') FROM payment_settings LIMIT 1`)
 	var settings PaymentSettings
-	if err := row.Scan(&settings.ID, &settings.CODEnabled, &settings.BankTransferEnabled, &settings.BankQREnabled, &settings.BankName, &settings.BankAccount, &settings.BankHolder, &settings.BankQRPayload); err != nil {
+	if err := row.Scan(&settings.ID, &settings.CODEnabled, &settings.BankTransferEnabled, &settings.BankQREnabled, &settings.BankName, &settings.BankAccount, &settings.BankHolder, &settings.BankQRPayload, &settings.BankID, &settings.BankQRTemplate); err != nil {
 		if err == sql.ErrNoRows {
 			return PaymentSettings{
 				ID:                  1,
 				CODEnabled:          true,
 				BankTransferEnabled: true,
 				BankQREnabled:       true,
+				BankQRTemplate:      "compact2",
 			}, nil
 		}
 		return PaymentSettings{}, err

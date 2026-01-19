@@ -49,6 +49,11 @@ type Config struct {
 	SMTPPassword          string
 	SMTPFrom              string
 	SMTPFromName          string
+	VietQRImageBaseURL    string
+	VietQRImageExt        string
+	VietQRBaseURL         string
+	VietQRClientID        string
+	VietQRAPIKey          string
 }
 
 func Load() Config {
@@ -110,6 +115,11 @@ func Load() Config {
 		SMTPPassword:          smtpPassword,
 		SMTPFrom:              smtpFrom,
 		SMTPFromName:          smtpFromName,
+		VietQRImageBaseURL:    strings.TrimRight(getEnv("VIETQR_IMAGE_BASE_URL", "https://img.vietqr.io"), "/"),
+		VietQRImageExt:        strings.TrimPrefix(getEnv("VIETQR_IMAGE_EXT", "png"), "."),
+		VietQRBaseURL:         strings.TrimRight(getEnv("VIETQR_BASE_URL", "https://api.vietqr.io"), "/"),
+		VietQRClientID:        getEnv("VIETQR_CLIENT_ID", ""),
+		VietQRAPIKey:          getEnv("VIETQR_API_KEY", ""),
 	}
 }
 

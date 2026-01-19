@@ -17,16 +17,16 @@ type OrderItemInput struct {
 }
 
 type OrderRequest struct {
-	CustomerName  string           `json:"customer_name"`
-	Email         string           `json:"email"`
-	Phone         string           `json:"phone"`
-	Address       string           `json:"address"`
-	Note          string           `json:"note"`
-	DeliveryTime  string           `json:"delivery_time"`
-	ShippingMethod string          `json:"shipping_method"`
-	PaymentMethod string           `json:"payment_method"`
-	PromoCode     string           `json:"promo_code"`
-	Items         []OrderItemInput `json:"items"`
+	CustomerName   string           `json:"customer_name"`
+	Email          string           `json:"email"`
+	Phone          string           `json:"phone"`
+	Address        string           `json:"address"`
+	Note           string           `json:"note"`
+	DeliveryTime   string           `json:"delivery_time"`
+	ShippingMethod string           `json:"shipping_method"`
+	PaymentMethod  string           `json:"payment_method"`
+	PromoCode      string           `json:"promo_code"`
+	Items          []OrderItemInput `json:"items"`
 }
 
 type OrderResponse struct {
@@ -192,6 +192,14 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		return
 	}
 	orderID := int(orderID64)
+
+	if input.PaymentMethod == "bank_transfer" || input.PaymentMethod == "bank_qr" {
+		transferContent := buildTransferContent(orderNumber)
+		if _, err := tx.Exec(`UPDATE orders SET transfer_content = ? WHERE id = ?`, transferContent, orderID); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to save transfer content")
+			return
+		}
+	}
 
 	for _, product := range products {
 		qty := quantities[product.ID]
