@@ -12,11 +12,13 @@ import (
 )
 
 type UserProfile struct {
-	ID        int     `json:"id"`
-	Email     string  `json:"email"`
-	Name      string  `json:"name"`
-	AvatarURL *string `json:"avatar_url,omitempty"`
-	Phone     *string `json:"phone,omitempty"`
+	ID                      int     `json:"id"`
+	Email                   string  `json:"email"`
+	Name                    string  `json:"name"`
+	AvatarURL               *string `json:"avatar_url,omitempty"`
+	Phone                   *string `json:"phone,omitempty"`
+	IsEmailVerified         bool    `json:"is_email_verified"`
+	EmailVerificationStatus string  `json:"emailVerificationStatus"`
 }
 
 type ProfileUpdateInput struct {
@@ -66,14 +68,14 @@ type OrderSummary struct {
 
 func (s *Server) GetProfile(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
-	row := s.DB.QueryRow(`SELECT id, email, full_name, avatar_url, phone_national, phone_e164 FROM users WHERE id = ?`, userID)
+	row := s.DB.QueryRow(`SELECT id, email, full_name, avatar_url, phone_national, phone_e164, is_email_verified FROM users WHERE id = ?`, userID)
 	var profile UserProfile
 	var email sql.NullString
 	var name sql.NullString
 	var avatar sql.NullString
 	var phoneNational sql.NullString
 	var phoneE164 sql.NullString
-	if err := row.Scan(&profile.ID, &email, &name, &avatar, &phoneNational, &phoneE164); err != nil {
+	if err := row.Scan(&profile.ID, &email, &name, &avatar, &phoneNational, &phoneE164, &profile.IsEmailVerified); err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load profile")
 		return
 	}
@@ -91,6 +93,7 @@ func (s *Server) GetProfile(c *gin.Context) {
 	} else if phoneE164.Valid {
 		profile.Phone = &phoneE164.String
 	}
+	profile.EmailVerificationStatus = emailVerificationStatus(profile.IsEmailVerified)
 
 	respondOK(c, profile)
 }

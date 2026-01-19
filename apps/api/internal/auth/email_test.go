@@ -10,6 +10,11 @@ func TestNormalizeEmail(t *testing.T) {
 	}{
 		{"User@Example.com", "user@example.com", false},
 		{" test@example.com ", "test@example.com", false},
+		{"first.last+tag@gmail.com", "first.last+tag@gmail.com", false},
+		{"first.last@googlemail.com", "first.last@googlemail.com", false},
+		{"first..last@gmail.com", "", true},
+		{".start@gmail.com", "", true},
+		{"end.@gmail.com", "", true},
 		{"invalid@", "", true},
 		{"@example.com", "", true},
 		{"no-at-sign", "", true},

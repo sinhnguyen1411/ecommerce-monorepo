@@ -56,6 +56,22 @@ type Config struct {
 }
 
 func Load() Config {
+	smtpUser := getEnv("SMTP_USERNAME", getEnv("GMAIL_SMTP_USER", ""))
+	smtpPassword := getEnv("SMTP_PASSWORD", getEnv("GMAIL_SMTP_APP_PASSWORD", ""))
+	smtpHost := getEnv("SMTP_HOST", "")
+	smtpPort := getEnv("SMTP_PORT", "")
+	smtpFrom := getEnv("SMTP_FROM", "")
+	smtpFromName := getEnv("SMTP_FROM_NAME", "")
+	if smtpHost == "" && smtpUser != "" {
+		smtpHost = "smtp.gmail.com"
+	}
+	if smtpPort == "" && smtpUser != "" {
+		smtpPort = "587"
+	}
+	if smtpFrom == "" && smtpUser != "" {
+		smtpFrom = smtpUser
+	}
+
 	return Config{
 		AppEnv:                getEnv("APP_ENV", "local"),
 		Port:                  getEnv("PORT", "8080"),
@@ -95,12 +111,12 @@ func Load() Config {
 		AllowedOrigins:        getList("ALLOWED_ORIGINS", "http://localhost:3000"),
 		CORSAllowCredentials:  getBool("CORS_ALLOW_CREDENTIALS", false),
 		TrustedProxies:        getList("TRUSTED_PROXIES", ""),
-		SMTPHost:              getEnv("SMTP_HOST", ""),
-		SMTPPort:              getEnv("SMTP_PORT", ""),
-		SMTPUsername:          getEnv("SMTP_USERNAME", ""),
-		SMTPPassword:          getEnv("SMTP_PASSWORD", ""),
-		SMTPFrom:              getEnv("SMTP_FROM", ""),
-		SMTPFromName:          getEnv("SMTP_FROM_NAME", ""),
+		SMTPHost:              smtpHost,
+		SMTPPort:              smtpPort,
+		SMTPUsername:          smtpUser,
+		SMTPPassword:          smtpPassword,
+		SMTPFrom:              smtpFrom,
+		SMTPFromName:          smtpFromName,
 		SMSProvider:           getEnv("SMS_PROVIDER", "dev"),
 	}
 }
