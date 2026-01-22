@@ -1,4 +1,4 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -37,6 +37,12 @@
   --color-clay: 210 85 46;
   --color-cream: 247 245 239;
   --color-mist: 239 235 226;
+  --color-primary: #3b82f6;
+  --color-secondary: #60a5fa;
+  --color-cta: #f97316;
+  --color-brand: #4a7c23;
+  --color-bg: #f8fafc;
+  --color-text: #1e293b;
 }
 
 * {
@@ -54,6 +60,19 @@ body {
   background-color: var(--shop-color-bg);
 }
 
+body.admin-mode {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+body.admin-mode .topbar,
+body.admin-mode .mainHeader--height,
+body.admin-mode .footer-main,
+body.admin-mode .footer-bottom,
+body.admin-mode .social-floating {
+  display: none !important;
+}
+
 a {
   color: var(--shop-color-text);
   text-decoration: none;
@@ -63,6 +82,16 @@ a {
 a:hover:not(.button):not(.btn),
 a:focus:not(.button):not(.btn) {
   color: var(--shop-color-hover);
+}
+
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
 a:focus-visible,

@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 
-import { siteConfig } from "@/lib/site";
+import { useContactSettings } from "@/lib/client-content";
 
 export default function Topbar() {
-  const phoneDigits = siteConfig.phone.replace(/[^0-9]/g, "");
+  const settings = useContactSettings();
+  const phoneDigits = settings.phone.replace(/[^0-9]/g, "");
 
   return (
     <div className="topbar">
@@ -15,7 +18,7 @@ export default function Topbar() {
                 <span>
                   Hotline:{" "}
                   <a className="font-semibold" href={`tel:${phoneDigits}`}>
-                    {siteConfig.phone}
+                    {settings.phone}
                   </a>
                 </span>
               </div>

@@ -1,10 +1,15 @@
-﻿import Link from "next/link";
+"use client";
+
+import Link from "next/link";
 import Image from "next/image";
 import { Facebook, MessageCircle, MessageSquare } from "lucide-react";
 
+import { useContactSettings } from "@/lib/client-content";
 import { siteConfig } from "@/lib/site";
 
 export default function Footer() {
+  const settings = useContactSettings();
+
   return (
     <footer className="footer-main">
       <div className="footer-top">
@@ -61,10 +66,10 @@ export default function Footer() {
 
         <div className="space-y-2 text-sm text-white/70">
           <p className="footer-widget-title">{"Li\u00EAn h\u1EC7"}</p>
-          <p>{siteConfig.address}</p>
-          <p>Hotline: {siteConfig.phone}</p>
-          <p>KTV: {siteConfig.fax}</p>
-          <p>Email: {siteConfig.email}</p>
+          <p>{settings.address}</p>
+          <p>Hotline: {settings.phone}</p>
+          <p>KTV: {settings.fax}</p>
+          <p>Email: {settings.email}</p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Image src="/tam-bo/footer/shipment_1_img.png" alt="shipping" width={90} height={32} className="h-8 w-auto" sizes="90px" />
             <Image src="/tam-bo/footer/shipment_2_img.png" alt="shipping" width={90} height={32} className="h-8 w-auto" sizes="90px" />

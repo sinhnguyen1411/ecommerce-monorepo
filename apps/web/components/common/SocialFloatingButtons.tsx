@@ -1,11 +1,11 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { Facebook, MessageCircle, MessageSquare } from "lucide-react";
 
 import { siteConfig } from "@/lib/site";
 
 export default function SocialFloatingButtons() {
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
+    <div className="social-floating fixed bottom-6 right-6 z-40 flex flex-col gap-3">
       <Link
         href={siteConfig.social.zalo}
         target="_blank"

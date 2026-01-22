@@ -4,6 +4,7 @@ import Image from "next/image";
 import PostCard from "@/components/blog/PostCard";
 import HomeSlider from "@/components/home/HomeSlider";
 import ProductGrid from "@/components/product/ProductGrid";
+import { defaultHomeBanners } from "@/lib/content";
 import { getPosts, getProducts } from "@/lib/api";
 
 export const metadata = {
@@ -17,26 +18,7 @@ export default async function HomePage() {
     getPosts()
   ]);
 
-  const slides = [
-    {
-      href: "/collections/all",
-      desktopSrc: "/tam-bo/home/slide_1_img.svg",
-      mobileSrc: "/tam-bo/home/slide_1_mb.svg",
-      alt: "Nông dược Tam Bố"
-    },
-    {
-      href: "/collections/all",
-      desktopSrc: "/tam-bo/home/slide_2_img.svg",
-      mobileSrc: "/tam-bo/home/slide_2_mb.svg",
-      alt: "Giải pháp sinh học Tam Bố"
-    },
-    {
-      href: "/collections/all",
-      desktopSrc: "/tam-bo/home/slide_3_img.svg",
-      mobileSrc: "/tam-bo/home/slide_3_mb.svg",
-      alt: "Đồng hành cùng nhà nông"
-    }
-  ];
+  const slides = defaultHomeBanners;
 
   return (
     <main className="mainWrapper--content">
