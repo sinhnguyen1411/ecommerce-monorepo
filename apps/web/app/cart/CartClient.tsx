@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 import CartLineItem from "@/components/cart/CartLineItem";
 import CartSummary from "@/components/cart/CartSummary";
@@ -98,7 +99,14 @@ export default function CartClient({ suggestedProducts }: CartClientProps) {
                   <div className="table-cart">
                     {items.length === 0 ? (
                       <div className="cart-empty">
-                        <img src="/tam-bo/cart/cart_banner_image.jpg" alt="empty" />
+                        <Image
+                          src="/tam-bo/cart/cart_banner_image.jpg"
+                          alt="empty"
+                          width={640}
+                          height={360}
+                          className="h-auto w-full"
+                          sizes="(max-width: 768px) 80vw, 420px"
+                        />
                         <p>Giỏ hàng đang trống.</p>
                         <Link className="button" href="/collections/all">
                           Mua sản phẩm

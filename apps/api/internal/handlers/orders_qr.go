@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
 	"math"
 	"net/http"
+	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +16,7 @@ import (
 
 type paymentQRResponse struct {
 	OrderID         int    `json:"orderId"`
+	OrderNumber     string `json:"orderNumber"`
 	Amount          int64  `json:"amount"`
 	Currency        string `json:"currency"`
 	TransferContent string `json:"transferContent"`
@@ -78,15 +82,6 @@ func (s *Server) GetOrderPaymentQR(c *gin.Context) {
 		return
 	}
 
-	bankID := normalizeBankID(settings.BankID)
-	accountNo := normalizeAccountNo(settings.BankAccount)
-	accountName := strings.TrimSpace(settings.BankHolder)
-	bankName := strings.TrimSpace(settings.BankName)
-	if bankID == "" || accountNo == "" || accountName == "" {
-		respondError(c, http.StatusBadRequest, "payment_not_configured", "Bank transfer is not configured")
-		return
-	}
-
 	content := strings.TrimSpace(transferContent.String)
 	if content == "" || len(content) > 25 {
 		content = buildTransferContent(orderNumber)
@@ -96,15 +91,57 @@ func (s *Server) GetOrderPaymentQR(c *gin.Context) {
 		}
 	}
 
-	template := normalizeVietQRTemplate(settings.BankQRTemplate)
-
 	response := paymentQRResponse{
 		OrderID:         orderID,
+		OrderNumber:     orderNumber,
 		Amount:          amount,
 		Currency:        "VND",
 		TransferContent: content,
 		PaymentStatus:   normalizePaymentStatus(paymentStatus.String),
 	}
+
+	quickLinkPreset := strings.TrimSpace(settings.BankQRPayload)
+	if quickLinkPreset != "" {
+		link, parsed, err := buildQuickLinkFromPreset(quickLinkPreset, amount, content, strings.TrimSpace(settings.BankHolder))
+		if err == nil {
+			template := parsed.Template
+			if template == "" {
+				template = "custom"
+			}
+			if qrValue.String != link || qrMethod.String != "quicklink" || qrTemplate.String != template {
+				if _, err := s.DB.Exec(`UPDATE orders SET qr_method = ?, qr_template = ?, qr_value = ?, qr_created_at = ? WHERE id = ?`,
+					"quicklink", template, link, time.Now(), orderID); err != nil {
+					respondError(c, http.StatusInternalServerError, "db_error", "Failed to save QR")
+					return
+				}
+			}
+
+			response.Bank.BankID = parsed.BankID
+			response.Bank.Bin = parsed.Bin
+			response.Bank.AccountNo = parsed.AccountNo
+			response.Bank.AccountName = parsed.AccountName
+			response.Bank.BankName = strings.TrimSpace(settings.BankName)
+			if response.Bank.AccountName == "" {
+				response.Bank.AccountName = strings.TrimSpace(settings.BankHolder)
+			}
+			response.VietQR.Method = "quicklink"
+			response.VietQR.Template = template
+			response.VietQR.QRImageURL = link
+			respondOK(c, response)
+			return
+		}
+	}
+
+	bankID := normalizeBankID(settings.BankID)
+	accountNo := normalizeAccountNo(settings.BankAccount)
+	accountName := strings.TrimSpace(settings.BankHolder)
+	bankName := strings.TrimSpace(settings.BankName)
+	if bankID == "" || accountNo == "" || accountName == "" {
+		respondError(c, http.StatusBadRequest, "payment_not_configured", "Bank transfer is not configured")
+		return
+	}
+
+	template := normalizeVietQRTemplate(settings.BankQRTemplate)
 	response.Bank.BankID = bankID
 	response.Bank.AccountNo = accountNo
 	response.Bank.AccountName = accountName
@@ -177,4 +214,58 @@ func normalizePaymentStatus(status string) string {
 	default:
 		return "PENDING"
 	}
+}
+
+type quickLinkPresetInfo struct {
+	BankID      string
+	Bin         string
+	AccountNo   string
+	AccountName string
+	Template    string
+}
+
+func buildQuickLinkFromPreset(preset string, amount int64, content string, fallbackAccountName string) (string, quickLinkPresetInfo, error) {
+	var info quickLinkPresetInfo
+	trimmed := strings.TrimSpace(preset)
+	if trimmed == "" {
+		return "", info, errors.New("empty quick link")
+	}
+
+	parsedURL, err := url.Parse(trimmed)
+	if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
+		return "", info, errors.New("invalid quick link")
+	}
+
+	query := parsedURL.Query()
+	if fallbackAccountName != "" && strings.TrimSpace(query.Get("accountName")) == "" {
+		query.Set("accountName", fallbackAccountName)
+	}
+	query.Set("amount", strconv.FormatInt(amount, 10))
+	query.Set("addInfo", content)
+	parsedURL.RawQuery = query.Encode()
+
+	fileName := strings.TrimSuffix(path.Base(parsedURL.Path), path.Ext(parsedURL.Path))
+	parts := strings.Split(fileName, "-")
+	if len(parts) >= 2 {
+		info.BankID = parts[0]
+		info.AccountNo = parts[1]
+	}
+	if len(parts) >= 3 {
+		info.Template = parts[2]
+	}
+	if info.BankID != "" && len(info.BankID) == 6 && isAllDigits(info.BankID) {
+		info.Bin = info.BankID
+	}
+	info.AccountName = query.Get("accountName")
+
+	return parsedURL.String(), info, nil
+}
+
+func isAllDigits(value string) bool {
+	for _, r := range value {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return value != ""
 }

@@ -19,6 +19,9 @@ type Server struct {
 	vietqrBanksMu        sync.Mutex
 	vietqrBanksCache     map[string]int
 	vietqrBanksExpiresAt time.Time
+	geoMu                sync.Mutex
+	geoData              []geoProvince
+	geoExpiresAt         time.Time
 }
 
 func New(db *sql.DB, cfg config.Config) (*Server, error) {
@@ -78,14 +81,20 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 		api.GET("/pages/:slug", s.GetPage)
 		api.GET("/qna", s.ListQnA)
 		api.GET("/locations", s.ListLocations)
+		api.GET("/geo/provinces", s.ListProvinces)
+		api.GET("/geo/districts", s.ListDistricts)
+		api.GET("/checkout/config", s.GetCheckoutConfig)
 		api.GET("/payment-settings", s.GetPaymentSettings)
 		api.GET("/promotions", s.ListPromotions)
 		api.POST("/promotions/validate", s.ValidatePromotion)
 		api.POST("/orders", s.CreateOrder)
+		api.GET("/orders/:id/summary", s.GetOrderSummary)
+		api.PATCH("/orders/:id/payment-method", s.UpdateOrderPaymentMethod)
 		api.GET("/orders/:id/payment/qr", s.GetOrderPaymentQR)
 		api.POST("/orders/:id/payment-proof", s.UploadPaymentProof)
 
 		api.POST("/admin/login", s.AdminLogin)
+		api.POST("/admin/logout", s.AdminLogout)
 		admin := api.Group("/admin", s.requireRole("admin"))
 		{
 			admin.GET("/me", s.AdminMe)

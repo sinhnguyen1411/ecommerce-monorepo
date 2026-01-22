@@ -1,8 +1,8 @@
 INSERT INTO categories (name, slug, description, sort_order) VALUES
-  ('Fresh Harvest', 'fresh-harvest', 'Seasonal vegetables and greens.', 1),
-  ('Fruit Market', 'fruit-market', 'Tropical and orchard fruit.', 2),
-  ('Pantry Staples', 'pantry-staples', 'Grains, spices, and pantry goods.', 3),
-  ('Garden Tools', 'garden-tools', 'Tools for field and home gardens.', 4);
+  ('Thuốc bảo vệ thực vật', 'thuoc-bao-ve-thuc-vat', 'Thuốc trừ sâu, trừ bệnh và giải pháp IPM.', 1),
+  ('Phân bón & dinh dưỡng', 'phan-bon-dinh-duong', 'Phân vô cơ, hữu cơ và vi lượng cho cây trồng.', 2),
+  ('Hạt giống & cây giống', 'hat-giong-cay-giong', 'Giống cây trồng, hạt giống chất lượng cao.', 3),
+  ('Vật tư & dụng cụ nông nghiệp', 'vat-tu-dung-cu-nong-nghiep', 'Bình phun, bạt phủ, thiết bị canh tác.', 4);
 
 INSERT INTO products (name, slug, description, price, compare_at_price, featured, status) VALUES
   ('Morning Greens Box', 'morning-greens-box', 'A crisp mix of leafy greens from partner farms.', 180000, 220000, true, 'published'),

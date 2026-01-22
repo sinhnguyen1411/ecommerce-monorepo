@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { Product } from "@/lib/api";
@@ -53,10 +54,13 @@ export default function QuickViewModal({ product }: QuickViewModalProps) {
             <div className="grid gap-6 p-8 md:grid-cols-[1.1fr_1fr]">
               <div className="relative h-64 overflow-hidden border border-forest/10 bg-white md:h-full">
                 {image ? (
-                  <img
+                  <Image
                     src={image}
                     alt={product.name}
+                    width={520}
+                    height={520}
                     className="h-full w-full object-cover"
+                    sizes="(max-width: 768px) 90vw, 520px"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm text-ink/50">

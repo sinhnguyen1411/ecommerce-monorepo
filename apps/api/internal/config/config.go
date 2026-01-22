@@ -19,6 +19,8 @@ type Config struct {
 	OTPSecret             string
 	MinOrderAmount        float64
 	FreeShippingThreshold float64
+	StandardShippingFee   float64
+	ExpressShippingFee    float64
 	UploadDir             string
 	MigrateOnStart        bool
 	SeedOnStart           bool
@@ -85,6 +87,8 @@ func Load() Config {
 		OTPSecret:             getEnv("OTP_SECRET", getEnv("JWT_SECRET", "change-me")),
 		MinOrderAmount:        getFloat("MIN_ORDER_AMOUNT", 0),
 		FreeShippingThreshold: getFloat("FREE_SHIPPING_THRESHOLD", 0),
+		StandardShippingFee:   getFloat("SHIPPING_FEE_STANDARD", 30000),
+		ExpressShippingFee:    getFloat("SHIPPING_FEE_EXPRESS", 50000),
 		UploadDir:             getEnv("UPLOAD_DIR", "./uploads"),
 		MigrateOnStart:        getBool("MIGRATE_ON_START", true),
 		SeedOnStart:           getBool("SEED_ON_START", false),

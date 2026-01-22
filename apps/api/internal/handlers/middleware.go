@@ -52,7 +52,7 @@ func (s *Server) parseToken(tokenString string) (*JWTClaims, error) {
 
 func (s *Server) requireRole(role string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := bearerToken(c.GetHeader("Authorization"))
+		token := s.tokenFromRequest(c, role)
 		if token == "" {
 			respondError(c, http.StatusUnauthorized, "unauthorized", "Missing token")
 			c.Abort()
@@ -79,7 +79,7 @@ func (s *Server) requireRole(role string) gin.HandlerFunc {
 }
 
 func (s *Server) optionalUser(c *gin.Context) *JWTClaims {
-	token := bearerToken(c.GetHeader("Authorization"))
+	token := s.tokenFromRequest(c, "user")
 	if token == "" {
 		return nil
 	}
@@ -105,4 +105,20 @@ func bearerToken(header string) string {
 		return ""
 	}
 	return strings.TrimSpace(parts[1])
+}
+
+func (s *Server) tokenFromRequest(c *gin.Context, role string) string {
+	token := bearerToken(c.GetHeader("Authorization"))
+	if token != "" {
+		return token
+	}
+	if role == "admin" {
+		if cookie := getCookie(c, adminTokenCookie); cookie != "" {
+			return cookie
+		}
+	}
+	if cookie := getCookie(c, accessTokenCookie); cookie != "" {
+		return cookie
+	}
+	return ""
 }

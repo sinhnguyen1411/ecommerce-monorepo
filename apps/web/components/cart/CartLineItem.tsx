@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { formatCurrency } from "@/lib/format";
 import { CartItem, useCartStore } from "@/store/cart";
 
@@ -13,9 +15,23 @@ export default function CartLineItem({ item }: { item: CartItem }) {
       <div className="media-left">
         <div className="item-img">
           {item.imageUrl ? (
-            <img src={item.imageUrl} alt={item.name} />
+            <Image
+              src={item.imageUrl}
+              alt={item.name}
+              width={96}
+              height={96}
+              className="h-full w-full object-cover"
+              sizes="96px"
+            />
           ) : (
-            <img src="/tam-bo/cart/no_image.jpg" alt="No image" />
+            <Image
+              src="/tam-bo/cart/no_image.jpg"
+              alt="No image"
+              width={96}
+              height={96}
+              className="h-full w-full object-cover"
+              sizes="96px"
+            />
           )}
         </div>
         <div className="item-remove">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 import PostCard from "@/components/blog/PostCard";
 import HomeSlider from "@/components/home/HomeSlider";
@@ -88,7 +89,14 @@ export default async function HomePage() {
             </div>
             <div className="intro-image">
               <Link href="/collections/all" className="image-use-effect3">
-                <img src="/tam-bo/home/home_introduce_img.svg" alt="Nông Dược Tam Bố" />
+                <Image
+                  src="/tam-bo/home/home_introduce_img.svg"
+                  alt="Nông Dược Tam Bố"
+                  width={640}
+                  height={520}
+                  className="h-auto w-full"
+                  sizes="(max-width: 768px) 90vw, 520px"
+                />
               </Link>
             </div>
           </div>
@@ -100,7 +108,14 @@ export default async function HomePage() {
           <div className="banner-block banner-left">
             <div className="banner-block__left">
               <Link href="/collections/all" className="image-use-effect3">
-                <img src="/tam-bo/home/home_banner_1_img.svg" alt="Organic Master" />
+                <Image
+                  src="/tam-bo/home/home_banner_1_img.svg"
+                  alt="Organic Master"
+                  width={640}
+                  height={520}
+                  className="h-auto w-full"
+                  sizes="(max-width: 768px) 90vw, 520px"
+                />
               </Link>
             </div>
             <div className="banner-block__right banner-block__info">
@@ -167,7 +182,14 @@ export default async function HomePage() {
             </div>
             <div className="banner-block__right">
               <Link href="/collections/all" className="image-use-effect3">
-                <img src="/tam-bo/home/home_banner_2_img.svg" alt="Microbial" />
+                <Image
+                  src="/tam-bo/home/home_banner_2_img.svg"
+                  alt="Microbial"
+                  width={640}
+                  height={520}
+                  className="h-auto w-full"
+                  sizes="(max-width: 768px) 90vw, 520px"
+                />
               </Link>
             </div>
           </div>
@@ -180,7 +202,14 @@ export default async function HomePage() {
             <div className="feature-block">
               <div className="feature-block__inner image-use-effect4">
                 <div className="feature-block__img">
-                  <img src="/tam-bo/home/home_feature_1_img.jpg" alt="FREESHIP TOÀN QUỐC" />
+                  <Image
+                    src="/tam-bo/home/home_feature_1_img.jpg"
+                    alt="FREESHIP TOÀN QUỐC"
+                    width={480}
+                    height={360}
+                    className="h-auto w-full"
+                    sizes="(max-width: 768px) 90vw, 320px"
+                  />
                 </div>
                 <div className="feature-block__title">
                   <h4>FREESHIP TOÀN QUỐC</h4>
@@ -197,7 +226,14 @@ export default async function HomePage() {
             <div className="feature-block">
               <div className="feature-block__inner image-use-effect4">
                 <div className="feature-block__img">
-                  <img src="/tam-bo/home/home_feature_2_img.jpg" alt="TĂNG NĂNG SUẤT VƯỢT TRỘI" />
+                  <Image
+                    src="/tam-bo/home/home_feature_2_img.jpg"
+                    alt="TĂNG NĂNG SUẤT VƯỢT TRỘI"
+                    width={480}
+                    height={360}
+                    className="h-auto w-full"
+                    sizes="(max-width: 768px) 90vw, 320px"
+                  />
                 </div>
                 <div className="feature-block__title">
                   <h4>TĂNG NĂNG SUẤT VƯỢT TRỘI</h4>
@@ -214,7 +250,14 @@ export default async function HomePage() {
             <div className="feature-block">
               <div className="feature-block__inner image-use-effect4">
                 <div className="feature-block__img">
-                  <img src="/tam-bo/home/home_feature_3_img.jpg" alt="HỖ TRỢ 24/7" />
+                  <Image
+                    src="/tam-bo/home/home_feature_3_img.jpg"
+                    alt="HỖ TRỢ 24/7"
+                    width={480}
+                    height={360}
+                    className="h-auto w-full"
+                    sizes="(max-width: 768px) 90vw, 320px"
+                  />
                 </div>
                 <div className="feature-block__title">
                   <h4>HỖ TRỢ 24/7</h4>

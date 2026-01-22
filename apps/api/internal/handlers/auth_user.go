@@ -201,6 +201,7 @@ func (s *Server) Register(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "token_error", "Failed to issue tokens")
 		return
 	}
+	s.setAuthCookies(c, accessToken, refreshToken)
 
 	user, err := s.loadUserByID(userID)
 	if err != nil {
@@ -501,6 +502,7 @@ func (s *Server) Login(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "token_error", "Failed to issue tokens")
 		return
 	}
+	s.setAuthCookies(c, accessToken, refreshToken)
 
 	s.logAudit(c, &user.ID, "login_success", nil)
 
@@ -513,24 +515,46 @@ func (s *Server) Login(c *gin.Context) {
 
 func (s *Server) Logout(c *gin.Context) {
 	var input LogoutInput
-	if err := c.ShouldBindJSON(&input); err != nil || strings.TrimSpace(input.RefreshToken) == "" {
-		respondError(c, http.StatusBadRequest, "missing_token", "Refresh token is required")
-		return
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&input); err != nil {
+			respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid logout payload")
+			return
+		}
 	}
 
-	hash := auth.HashToken(strings.TrimSpace(input.RefreshToken))
-	_, _ = s.DB.Exec(`UPDATE refresh_sessions SET revoked_at = ? WHERE refresh_token_hash = ? AND revoked_at IS NULL`, time.Now(), hash)
+	refreshToken := strings.TrimSpace(input.RefreshToken)
+	if refreshToken == "" {
+		refreshToken = getCookie(c, refreshTokenCookie)
+	}
+
+	if refreshToken != "" {
+		hash := auth.HashToken(refreshToken)
+		_, _ = s.DB.Exec(`UPDATE refresh_sessions SET revoked_at = ? WHERE refresh_token_hash = ? AND revoked_at IS NULL`, time.Now(), hash)
+	}
+
+	s.clearAuthCookies(c)
 	respondOK(c, gin.H{"revoked": true})
 }
 
 func (s *Server) Refresh(c *gin.Context) {
 	var input RefreshInput
-	if err := c.ShouldBindJSON(&input); err != nil || strings.TrimSpace(input.RefreshToken) == "" {
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&input); err != nil {
+			respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid refresh payload")
+			return
+		}
+	}
+
+	refreshToken := strings.TrimSpace(input.RefreshToken)
+	if refreshToken == "" {
+		refreshToken = getCookie(c, refreshTokenCookie)
+	}
+	if refreshToken == "" {
+		s.clearAuthCookies(c)
 		respondError(c, http.StatusBadRequest, "missing_token", "Refresh token is required")
 		return
 	}
 
-	refreshToken := strings.TrimSpace(input.RefreshToken)
 	hash := auth.HashToken(refreshToken)
 
 	var sessionID int
@@ -544,6 +568,7 @@ func (s *Server) Refresh(c *gin.Context) {
     LIMIT 1
   `, hash)
 	if err := row.Scan(&sessionID, &userID, &expiresAt, &revokedAt); err != nil {
+		s.clearAuthCookies(c)
 		respondError(c, http.StatusUnauthorized, "invalid_token", "Invalid refresh token")
 		return
 	}
@@ -551,21 +576,25 @@ func (s *Server) Refresh(c *gin.Context) {
 	if revokedAt.Valid {
 		s.logAudit(c, &userID, "refresh_reuse", nil)
 		_, _ = s.DB.Exec(`UPDATE refresh_sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL`, time.Now(), userID)
+		s.clearAuthCookies(c)
 		respondError(c, http.StatusUnauthorized, "invalid_token", "Invalid refresh token")
 		return
 	}
 
 	if time.Now().After(expiresAt) {
+		s.clearAuthCookies(c)
 		respondError(c, http.StatusUnauthorized, "expired_token", "Refresh token expired")
 		return
 	}
 
 	var status string
 	if err := s.DB.QueryRow(`SELECT status FROM users WHERE id = ?`, userID).Scan(&status); err != nil {
+		s.clearAuthCookies(c)
 		respondError(c, http.StatusUnauthorized, "invalid_token", "Invalid refresh token")
 		return
 	}
 	if status != "active" {
+		s.clearAuthCookies(c)
 		respondError(c, http.StatusForbidden, "account_locked", "Account is not active")
 		return
 	}
@@ -580,6 +609,7 @@ func (s *Server) Refresh(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "token_error", "Failed to issue tokens")
 		return
 	}
+	s.setAuthCookies(c, accessToken, newRefreshToken)
 
 	respondOK(c, gin.H{
 		"access_token":  accessToken,

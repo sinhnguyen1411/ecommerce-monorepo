@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 import SectionTitle from "@/components/common/SectionTitle";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -15,11 +23,13 @@ import {
   AdminQnA,
   PaymentSettings,
   addAdminProductImage,
-  createAdminCategory,
+  adminLogout,
+  adminMe,
+
   createAdminPost,
   createAdminProduct,
   createAdminQnA,
-  deleteAdminCategory,
+
   deleteAdminPost,
   deleteAdminProduct,
   deleteAdminQnA,
@@ -29,7 +39,7 @@ import {
   listAdminPosts,
   listAdminProducts,
   listAdminQnA,
-  updateAdminCategory,
+
   updateAdminOrder,
   updateAdminPost,
   updateAdminProduct,
@@ -37,7 +47,6 @@ import {
   updatePaymentSettings,
   uploadAdminFile
 } from "@/lib/admin";
-import { clearAdminToken, getAdminToken } from "@/lib/auth";
 
 export default function AdminDashboardPage() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
@@ -48,8 +57,8 @@ export default function AdminDashboardPage() {
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
   const [error, setError] = useState("");
   const [uploadUrl, setUploadUrl] = useState("");
-
-  const isAuthed = Boolean(getAdminToken());
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const loadAll = async () => {
     setError("");
@@ -70,9 +79,27 @@ export default function AdminDashboardPage() {
       setOrders(orderData);
       setSettings(paymentData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load admin data");
+      setError(err instanceof Error ? err.message : "Không thể tải dữ liệu quản trị.");
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    adminMe()
+      .then(() => {
+        if (!cancelled) {
+          setIsAuthed(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIsAuthed(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isAuthed) {
@@ -88,9 +115,33 @@ export default function AdminDashboardPage() {
       const result = await uploadAdminFile(file);
       setUploadUrl(result.url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : "Không thể tải lên tệp.");
     }
   };
+
+  const handleLogout = async () => {
+    if (loggingOut) {
+      return;
+    }
+    setError("");
+    setLoggingOut(true);
+    try {
+      await adminLogout();
+      setIsAuthed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể đăng xuất.");
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
+  if (isAuthed === null) {
+    return (
+      <div className="section-shell pb-16 pt-14">
+        <p className="text-sm text-ink/70">Đang kiểm tra quyền quản trị...</p>
+      </div>
+    );
+  }
 
   if (!isAuthed) {
     return (
@@ -137,8 +188,8 @@ export default function AdminDashboardPage() {
         <Tabs defaultValue="products">
           <TabsList>
             <TabsTrigger value="products">Sản phẩm</TabsTrigger>
-            <TabsTrigger value="categories">Danh mục</TabsTrigger>
-            <TabsTrigger value="posts">Tin tức</TabsTrigger>
+            
+            <TabsTrigger value="posts">Kiến thức nhà nông</TabsTrigger>
             <TabsTrigger value="qna">Hỏi đáp</TabsTrigger>
             <TabsTrigger value="orders">Đơn hàng</TabsTrigger>
             <TabsTrigger value="payments">Thanh toán</TabsTrigger>
@@ -151,10 +202,6 @@ export default function AdminDashboardPage() {
               onReload={loadAll}
               setError={setError}
             />
-          </TabsContent>
-
-          <TabsContent value="categories" className="pt-6">
-            <AdminCategories categories={categories} onReload={loadAll} setError={setError} />
           </TabsContent>
 
           <TabsContent value="posts" className="pt-6">
@@ -177,12 +224,10 @@ export default function AdminDashboardPage() {
         <div className="mt-10">
           <Button
             variant="outline"
-            onClick={() => {
-              clearAdminToken();
-              window.location.reload();
-            }}
+            onClick={handleLogout}
+            disabled={loggingOut}
           >
-            Đăng xuất admin
+            {loggingOut ? "Đang đăng xuất..." : "Đăng xuất quản trị"}
           </Button>
         </div>
       </section>
@@ -210,259 +255,525 @@ function AdminProducts({
     featured: false,
     tags: "",
     sort_order: "0",
-    description: "",
-    category_ids: "",
-    image_url: ""
+    description: ""
   };
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [newImages, setNewImages] = useState<string[]>([]);
+  const [imageUrlInput, setImageUrlInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
+
+  const totalImages = existingImages.length + newImages.length;
+  const canAddMore = totalImages < 10;
+  const remainingSlots = Math.max(0, 10 - totalImages);
+
+  const filteredProducts = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) {
+      return products;
+    }
+    return products.filter((product) =>
+      [product.name, product.slug].some((value) => value?.toLowerCase().includes(term))
+    );
+  }, [products, query]);
+
+  const resetForm = () => {
+    setForm(initialForm);
+    setEditingId(null);
+    setExistingImages([]);
+    setNewImages([]);
+    setImageUrlInput("");
+    setSelectedCategories([]);
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const handleSelectProduct = (product: AdminProduct) => {
+    setEditingId(product.id);
+    setForm({
+      name: product.name,
+      slug: product.slug,
+      price: String(product.price),
+      compare_at_price: product.compare_at_price ? String(product.compare_at_price) : "",
+      status: product.status || "published",
+      featured: product.featured,
+      tags: product.tags || "",
+      sort_order: String(product.sort_order || 0),
+      description: product.description || ""
+    });
+    setSelectedCategories(product.categories?.map((cat) => cat.id) || []);
+    setExistingImages(product.images?.map((image) => image.url) || []);
+    setNewImages([]);
+    setImageUrlInput("");
+    setDialogOpen(true);
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      resetForm();
+    }
+  };
+
+  const handleToggleCategory = (id: number) => {
+    setSelectedCategories((prev) =>
+      prev.includes(id) ? prev.filter((value) => value != id) : [...prev, id]
+    );
+  };
+
+  const handleAddUrl = () => {
+    const url = imageUrlInput.trim();
+    if (!url) {
+      return;
+    }
+    if (!url.startsWith("http")) {
+      setError("Vui l?ng nh?p URL h?p l?.");
+      return;
+    }
+    if (!canAddMore) {
+      setError("T?i ?a 10 ?nh cho m?i s?n ph?m.");
+      return;
+    }
+    if (existingImages.includes(url) || newImages.includes(url)) {
+      setImageUrlInput("");
+      return;
+    }
+    setNewImages((prev) => [...prev, url]);
+    setImageUrlInput("");
+  };
+
+  const handleUploadFiles = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length == 0) {
+      return;
+    }
+
+    if (totalImages + files.length > 10) {
+      setError("T?i ?a 10 ?nh cho m?i s?n ph?m.");
+      event.target.value = "";
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const uploaded = await Promise.all(files.map((file) => uploadAdminFile(file)));
+      setNewImages((prev) => [...prev, ...uploaded.map((item) => item.url)]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kh?ng th? t?i ?nh l?n.");
+    } finally {
+      setUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveNewImage = (index: number) => {
+    setNewImages((prev) => prev.filter((_, idx) => idx != index));
+  };
+
+  const handleDeleteProduct = async (product: AdminProduct) => {
+    const confirmed = window.confirm(`X?a s?n ph?m "${product.name}"?`);
+    if (!confirmed) {
+      return;
+    }
+    setError("");
+    try {
+      await deleteAdminProduct(product.id);
+      onReload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kh?ng th? x?a s?n ph?m.");
+    }
+  };
 
   const handleSubmit = async () => {
-    try {
-      const categoryIds = form.category_ids
-        .split(",")
-        .map((value) => parseInt(value.trim(), 10))
-        .filter((value) => !Number.isNaN(value));
+    setError("");
+    const total = existingImages.length + newImages.length;
+    if (total < 3) {
+      setError("M?i s?n ph?m c?n t?i thi?u 3 ?nh.");
+      return;
+    }
+    if (total > 10) {
+      setError("T?i ?a 10 ?nh cho m?i s?n ph?m.");
+      return;
+    }
+    if (!form.name.trim()) {
+      setError("Vui l?ng nh?p t?n s?n ph?m.");
+      return;
+    }
+    if (!form.slug.trim()) {
+      setError("Vui l?ng nh?p slug s?n ph?m.");
+      return;
+    }
 
+    const priceValue = Number(form.price || 0);
+    if (!priceValue || Number.isNaN(priceValue)) {
+      setError("Vui l?ng nh?p gi? b?n h?p l?.");
+      return;
+    }
+
+    try {
       const payload = {
-        name: form.name,
-        slug: form.slug,
-        price: Number(form.price || 0),
+        name: form.name.trim(),
+        slug: form.slug.trim(),
+        price: priceValue,
         compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : undefined,
         status: form.status,
         featured: form.featured,
-        tags: form.tags,
+        tags: form.tags.trim(),
         sort_order: Number(form.sort_order || 0),
-        description: form.description,
-        category_ids: categoryIds
+        description: form.description.trim(),
+        category_ids: selectedCategories
       };
 
       const result = editingId
         ? await updateAdminProduct(editingId, payload)
         : await createAdminProduct(payload);
 
-      if (form.image_url) {
-        const targetId = editingId || result.id;
-        await addAdminProductImage(targetId, { url: form.image_url, sort_order: 0 });
+      const targetId = editingId || result.id;
+      const offset = editingId ? existingImages.length : 0;
+      for (const [index, url] of newImages.entries()) {
+        await addAdminProductImage(targetId, { url, sort_order: offset + index });
       }
 
-      setForm(initialForm);
-      setEditingId(null);
+      setDialogOpen(false);
+      resetForm();
       onReload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save product");
+      setError(err instanceof Error ? err.message : "Kh?ng th? l?u s?n ph?m.");
     }
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+    <div className="grid gap-6">
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Danh sách sản phẩm</h3>
-        <div className="mt-4 space-y-4">
-          {products.map((product) => (
-            <div key={product.id} className="rounded-2xl border border-forest/10 bg-white/80 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">{product.name}</p>
-                  <p className="text-xs text-ink/60">{product.slug}</p>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold">Qu?n l? s?n ph?m</h3>
+            <p className="text-sm text-ink/70">
+              C?p nh?t th?ng tin, h?nh ?nh v? danh m?c cho t?ng s?n ph?m.
+            </p>
+          </div>
+          <Button onClick={openCreateDialog}>Th?m s?n ph?m</Button>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <input
+            className="field max-w-xs"
+            placeholder="T?m theo t?n ho?c slug"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <span className="text-xs text-ink/60">
+            Hi?n th? {filteredProducts.length}/{products.length} s?n ph?m
+          </span>
+        </div>
+        <div className="mt-5 grid gap-4">
+          {filteredProducts.map((product) => {
+            const firstImage = product.images?.[0]?.url;
+            const statusLabel = product.status == "published" ? "?ang b?n" : "?n";
+            return (
+              <div
+                key={product.id}
+                className="rounded-2xl border border-forest/10 bg-white/80 p-4"
+              >
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="h-20 w-20 overflow-hidden rounded-2xl bg-mist">
+                    {firstImage ? (
+                      <Image
+                        src={firstImage}
+                        alt={product.name}
+                        width={80}
+                        height={80}
+                        className="h-full w-full object-cover"
+                        sizes="80px"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs text-ink/50">
+                        Ch?a c? ?nh
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-[200px] flex-1">
+                    <p className="text-base font-semibold">{product.name}</p>
+                    <p className="text-xs text-ink/60">/{product.slug}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink/60">
+                      <span className="rounded-full bg-forest/10 px-3 py-1 text-forest">
+                        {statusLabel}
+                      </span>
+                      <span>?nh: {product.images?.length || 0}</span>
+                      <span>Th? t?: {product.sort_order}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-base font-semibold">{formatCurrency(product.price)}</p>
+                    {product.compare_at_price ? (
+                      <p className="text-xs text-ink/50 line-through">
+                        {formatCurrency(product.compare_at_price)}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="text-sm text-ink/70">{formatCurrency(product.price)}</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {product.categories?.length ? (
+                    product.categories.map((cat) => (
+                      <span
+                        key={cat.id}
+                        className="rounded-full bg-forest/10 px-3 py-1 text-xs font-semibold text-forest"
+                      >
+                        {cat.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-ink/50">Ch?a g?n danh m?c</span>
+                  )}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleSelectProduct(product)}>
+                    Ch?nh s?a
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteProduct(product)}>
+                    X?a
+                  </Button>
+                </div>
               </div>
-              <div className="mt-2 text-xs text-ink/60">Trạng thái: {product.status}</div>
-              <div className="mt-1 text-xs text-ink/60">Thẻ: {product.tags || "-"}</div>
-              <div className="mt-1 text-xs text-ink/60">Thứ tự: {product.sort_order}</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {product.categories?.map((cat) => (
-                  <span key={cat.id} className="rounded-full bg-forest/10 px-3 py-1 text-xs font-semibold text-forest">
-                    {cat.name}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEditingId(product.id);
-                    setForm({
-                      name: product.name,
-                      slug: product.slug,
-                      price: String(product.price),
-                      compare_at_price: product.compare_at_price ? String(product.compare_at_price) : "",
-                      status: product.status || "published",
-                      featured: product.featured,
-                      tags: product.tags || "",
-                      sort_order: String(product.sort_order || 0),
-                      description: product.description || "",
-                      category_ids: product.categories?.map((cat) => cat.id).join(",") || "",
-                      image_url: ""
-                    });
-                  }}
-                >
-                  Sửa
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    deleteAdminProduct(product.id)
-                      .then(onReload)
-                      .catch((err) =>
-                        setError(err instanceof Error ? err.message : "Failed to delete product")
-                      )
-                  }
-                >
-                  Xóa
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Thêm sản phẩm</h3>
-        <div className="mt-4 grid gap-3">
-          <input className="field" placeholder="Tên sản phẩm" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-          <input className="field" placeholder="Slug" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} />
-          <input className="field" placeholder="Giá" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
-          <input className="field" placeholder="Giá giam" value={form.compare_at_price} onChange={(event) => setForm({ ...form, compare_at_price: event.target.value })} />
-          <select className="field" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
-            <option value="published">published</option>
-            <option value="hidden">hidden</option>
-          </select>
-          <input className="field" placeholder="Thẻ" value={form.tags} onChange={(event) => setForm({ ...form, tags: event.target.value })} />
-          <input className="field" placeholder="Thứ tự hiển thị" value={form.sort_order} onChange={(event) => setForm({ ...form, sort_order: event.target.value })} />
-          <textarea className="field h-24" placeholder="Mô tả" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-          <input className="field" placeholder="ID danh mục (1,2,3)" value={form.category_ids} onChange={(event) => setForm({ ...form, category_ids: event.target.value })} />
-          <input className="field" placeholder="URL hình ảnh" value={form.image_url} onChange={(event) => setForm({ ...form, image_url: event.target.value })} />
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.featured} onChange={(event) => setForm({ ...form, featured: event.target.checked })} />
-            Sản phẩm nổi bật
-          </label>
-          <Button onClick={handleSubmit}>
-            {editingId ? "Lưu sản phẩm" : "Tạo sản phẩm"}
-          </Button>
-          {editingId ? (
-            <Button variant="outline" onClick={() => { setForm(initialForm); setEditingId(null); }}>
-              Huy
-            </Button>
-          ) : null}
-        </div>
-        <p className="mt-4 text-xs text-ink/60">Danh mục có sẵn: {categories.map((cat) => `${cat.id}:${cat.name}`).join(" | ")}</p>
-      </div>
+      <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "C?p nh?t s?n ph?m" : "Th?m s?n ph?m"}</DialogTitle>
+            <DialogDescription>
+              T?i t?i thi?u 3 ?nh v? t?i ?a 10 ?nh cho m?i s?n ph?m. C? th? d?ng file t? m?y
+              ho?c d?n URL h?nh ?nh.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid gap-4">
+              <div className="grid gap-3 rounded-2xl border border-forest/10 bg-white p-4">
+                <p className="text-sm font-semibold">Th?ng tin c? b?n</p>
+                <input
+                  className="field"
+                  placeholder="T?n s?n ph?m"
+                  value={form.name}
+                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                />
+                <input
+                  className="field"
+                  placeholder="Slug"
+                  value={form.slug}
+                  onChange={(event) => setForm({ ...form, slug: event.target.value })}
+                />
+                <textarea
+                  className="field h-24"
+                  placeholder="M? t? ng?n"
+                  value={form.description}
+                  onChange={(event) => setForm({ ...form, description: event.target.value })}
+                />
+              </div>
+
+              <div className="grid gap-3 rounded-2xl border border-forest/10 bg-white p-4">
+                <p className="text-sm font-semibold">Gi? & tr?ng th?i</p>
+                <input
+                  className="field"
+                  placeholder="Gi? b?n"
+                  value={form.price}
+                  onChange={(event) => setForm({ ...form, price: event.target.value })}
+                />
+                <input
+                  className="field"
+                  placeholder="Gi? ni?m y?t (n?u c?)"
+                  value={form.compare_at_price}
+                  onChange={(event) => setForm({ ...form, compare_at_price: event.target.value })}
+                />
+                <select
+                  className="field"
+                  value={form.status}
+                  onChange={(event) => setForm({ ...form, status: event.target.value })}
+                >
+                  <option value="published">?ang b?n</option>
+                  <option value="hidden">?n</option>
+                </select>
+                <input
+                  className="field"
+                  placeholder="Th? (ph?n t?ch b?ng d?u ph?y)"
+                  value={form.tags}
+                  onChange={(event) => setForm({ ...form, tags: event.target.value })}
+                />
+                <input
+                  className="field"
+                  placeholder="Th? t? hi?n th?"
+                  value={form.sort_order}
+                  onChange={(event) => setForm({ ...form, sort_order: event.target.value })}
+                />
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.featured}
+                    onChange={(event) => setForm({ ...form, featured: event.target.checked })}
+                  />
+                  S?n ph?m n?i b?t
+                </label>
+              </div>
+
+              <div className="grid gap-3 rounded-2xl border border-forest/10 bg-white p-4">
+                <p className="text-sm font-semibold">Danh m?c s?n ph?m</p>
+                {categories.length ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {categories.map((cat) => (
+                      <label key={cat.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedCategories.includes(cat.id)}
+                          onChange={() => handleToggleCategory(cat.id)}
+                        />
+                        {cat.name}
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-ink/60">Ch?a c? danh m?c n?o.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <div className="grid gap-3 rounded-2xl border border-forest/10 bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">?nh s?n ph?m</p>
+                  <span className="text-xs text-ink/60">{totalImages}/10 ?nh</span>
+                </div>
+
+                {existingImages.length > 0 ? (
+                  <div>
+                    <p className="text-xs text-ink/60">?nh hi?n c? ({existingImages.length})</p>
+                    <div className="mt-2 grid grid-cols-5 gap-2">
+                      {existingImages.map((url, index) => (
+                        <div
+                          key={`${url}-${index}`}
+                          className="h-14 w-14 overflow-hidden rounded-lg bg-mist"
+                        >
+                          <Image
+                            src={url}
+                            alt="?nh s?n ph?m"
+                            width={56}
+                            height={56}
+                            className="h-full w-full object-cover"
+                            sizes="56px"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-ink/60">Ch?a c? ?nh hi?n c?.</p>
+                )}
+
+                {newImages.length > 0 ? (
+                  <div>
+                    <p className="text-xs text-ink/60">?nh m?i ({newImages.length})</p>
+                    <div className="mt-2 grid grid-cols-5 gap-2">
+                      {newImages.map((url, index) => (
+                        <div
+                          key={`${url}-${index}`}
+                          className="relative h-14 w-14 overflow-hidden rounded-lg bg-mist"
+                        >
+                          <Image
+                            src={url}
+                            alt="?nh m?i"
+                            width={56}
+                            height={56}
+                            className="h-full w-full object-cover"
+                            sizes="56px"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-0 top-0 rounded-bl bg-white/90 px-1 text-xs"
+                            onClick={() => handleRemoveNewImage(index)}
+                          >
+                            x
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-ink/60">Ch?a c? ?nh m?i ???c th?m.</p>
+                )}
+              </div>
+
+              <div className="grid gap-3 rounded-2xl border border-forest/10 bg-white p-4">
+                <p className="text-sm font-semibold">Th?m ?nh</p>
+                <div className="grid gap-2">
+                  <label className="text-xs font-semibold">T?i ?nh t? m?y</label>
+                  <input
+                    type="file"
+                    className="field"
+                    accept="image/*"
+                    multiple
+                    disabled={!canAddMore || uploading}
+                    onChange={handleUploadFiles}
+                  />
+                  {uploading ? <p className="text-xs text-ink/60">?ang t?i ?nh...</p> : null}
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="text-xs font-semibold">Th?m ?nh b?ng URL</label>
+                  <div className="flex gap-2">
+                    <input
+                      className="field"
+                      placeholder="https://..."
+                      value={imageUrlInput}
+                      onChange={(event) => setImageUrlInput(event.target.value)}
+                      disabled={!canAddMore}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddUrl}
+                      disabled={!canAddMore}
+                    >
+                      Th?m
+                    </Button>
+                  </div>
+                </div>
+
+                <p className="text-xs text-ink/60">
+                  C?n c? th? th?m {remainingSlots} ?nh. H? th?ng y?u c?u t?i thi?u 3 ?nh.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-forest/10 bg-white p-4">
+            <div className="text-sm text-ink/70">
+              T?ng ?nh: {totalImages}/10. T?i thi?u 3 ?nh ?? l?u s?n ph?m.
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={uploading}>
+                ??ng
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={uploading || totalImages < 3 || totalImages > 10}
+              >
+                {editingId ? "L?u thay ??i" : "T?o s?n ph?m"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
-function AdminCategories({
-  categories,
-  onReload,
-  setError
-}: {
-  categories: AdminCategory[];
-  onReload: () => void;
-  setError: (value: string) => void;
-}) {
-  const initialForm = { name: "", slug: "", description: "", sort_order: "0" };
-  const [form, setForm] = useState(initialForm);
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  const handleSubmit = async () => {
-    try {
-      const payload = {
-        name: form.name,
-        slug: form.slug,
-        description: form.description,
-        sort_order: Number(form.sort_order || 0)
-      };
-
-      if (editingId) {
-        await updateAdminCategory(editingId, payload);
-      } else {
-        await createAdminCategory(payload);
-      }
-
-      setForm(initialForm);
-      setEditingId(null);
-      onReload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save category");
-    }
-  };
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Danh sach danh muc</h3>
-        <div className="mt-4 space-y-3">
-          {categories.map((category) => (
-            <div key={category.id} className="flex items-center justify-between rounded-2xl border border-forest/10 bg-white/80 p-4 text-sm">
-              <div>
-                <p className="font-semibold">{category.name}</p>
-                <p className="text-xs text-ink/60">{category.slug}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEditingId(category.id);
-                    setForm({
-                      name: category.name,
-                      slug: category.slug,
-                      description: category.description || "",
-                      sort_order: String(category.sort_order || 0)
-                    });
-                  }}
-                >
-                  Sua
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    deleteAdminCategory(category.id)
-                      .then(onReload)
-                      .catch((err) =>
-                        setError(err instanceof Error ? err.message : "Failed to delete category")
-                      )
-                  }
-                >
-                  Xoa
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Them danh muc</h3>
-        <div className="mt-4 grid gap-3">
-          <input className="field" placeholder="Ten" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-          <input className="field" placeholder="Slug" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} />
-          <input className="field" placeholder="Thu tu" value={form.sort_order} onChange={(event) => setForm({ ...form, sort_order: event.target.value })} />
-          <textarea className="field h-24" placeholder="Mo ta" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-          <Button onClick={handleSubmit}>
-            {editingId ? "Luu danh muc" : "Tao danh muc"}
-          </Button>
-          {editingId ? (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setForm(initialForm);
-                setEditingId(null);
-              }}
-            >
-              Huy
-            </Button>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AdminPosts({
   posts,
   onReload,
@@ -517,7 +828,7 @@ function AdminPosts({
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Danh sách bài viết</h3>
+        <h3 className="text-lg font-semibold">Danh sách kiến thức nhà nông</h3>
         <div className="mt-4 space-y-3">
           {posts.map((post) => (
             <div key={post.id} className="rounded-2xl border border-forest/10 bg-white/80 p-4">
@@ -568,7 +879,7 @@ function AdminPosts({
         </div>
       </div>
       <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-        <h3 className="text-lg font-semibold">Thêm bài viết</h3>
+        <h3 className="text-lg font-semibold">Thêm kiến thức nhà nông</h3>
         <div className="mt-4 grid gap-3">
           <input className="field" placeholder="Tiêu đề" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
           <input className="field" placeholder="Slug" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} />
@@ -583,7 +894,7 @@ function AdminPosts({
           <textarea className="field h-20" placeholder="Trích dẫn" value={form.excerpt} onChange={(event) => setForm({ ...form, excerpt: event.target.value })} />
           <textarea className="field h-32" placeholder="Nội dung" value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} />
           <Button onClick={handleSubmit}>
-            {editingId ? "Lưu bài viết" : "Tạo bài viết"}
+            {editingId ? "Lưu kiến thức" : "Tạo kiến thức"}
           </Button>
           {editingId ? (
             <Button variant="outline" onClick={() => { setForm(initialForm); setEditingId(null); }}>
@@ -922,8 +1233,7 @@ function AdminPayments({
     if (settings) {
       setForm({
         ...settings,
-        bank_id: settings.bank_id || "",
-        bank_qr_template: settings.bank_qr_template || "compact2"
+        bank_qr_payload: settings.bank_qr_payload || ""
       });
     }
   }, [settings]);
@@ -933,14 +1243,18 @@ function AdminPayments({
       const updated = await updatePaymentSettings(form);
       onSave(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update payment settings");
+      setError(err instanceof Error ? err.message : "Kh?ng th? c?p nh?t c?u h?nh thanh to?n.");
     }
   };
 
   return (
     <div className="rounded-[28px] border border-forest/10 bg-white/90 p-6">
-      <h3 className="text-lg font-semibold">Cấu hình thanh toán</h3>
-      <div className="mt-4 grid gap-3">
+      <h3 className="text-lg font-semibold">C?u h?nh thanh to?n</h3>
+      <p className="mt-2 text-sm text-ink/70">
+        Admin ch? c?n nh?p Quick Link VietQR c?a shop. H? th?ng s? t? th?m s? ti?n
+        v? n?i dung chuy?n kho?n theo t?ng ??n h?ng.
+      </p>
+      <div className="mt-5 grid gap-3">
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -955,7 +1269,7 @@ function AdminPayments({
             checked={form.bank_transfer_enabled}
             onChange={(event) => setForm({ ...form, bank_transfer_enabled: event.target.checked })}
           />
-          Chuyển khoản
+          Chuy?n kho?n
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -963,15 +1277,23 @@ function AdminPayments({
             checked={form.bank_qr_enabled}
             onChange={(event) => setForm({ ...form, bank_qr_enabled: event.target.checked })}
           />
-          QR ngân hàng
+          QR ng?n h?ng
         </label>
-        <input className="field" placeholder="Tên ngân hàng" value={form.bank_name} onChange={(event) => setForm({ ...form, bank_name: event.target.value })} />
-        <input className="field" placeholder="Số tài khoản" value={form.bank_account} onChange={(event) => setForm({ ...form, bank_account: event.target.value })} />
-        <input className="field" placeholder="Chủ tài khoản" value={form.bank_holder} onChange={(event) => setForm({ ...form, bank_holder: event.target.value })} />
-        <input className="field" placeholder="Mã ngân hàng VietQR (vd: vcb, tcb)" value={form.bank_id} onChange={(event) => setForm({ ...form, bank_id: event.target.value })} />
-        <input className="field" placeholder="Mẫu QR (compact2, compact, qr_only, print)" value={form.bank_qr_template} onChange={(event) => setForm({ ...form, bank_qr_template: event.target.value })} />
-        <input className="field" placeholder="Tiền tố nội dung chuyển khoản (vd: TB)" value={form.bank_qr_payload} onChange={(event) => setForm({ ...form, bank_qr_payload: event.target.value })} />
-        <Button onClick={handleSave}>Lưu cấu hình</Button>
+
+        <div className="mt-2">
+          <label className="text-sm font-semibold">Quick Link VietQR</label>
+          <input
+            className="field mt-2"
+            placeholder="https://img.vietqr.io/image/vcb-0123456789-compact2.png?accountName=NGUYEN%20VAN%20A"
+            value={form.bank_qr_payload}
+            onChange={(event) => setForm({ ...form, bank_qr_payload: event.target.value })}
+          />
+          <p className="mt-2 text-xs text-ink/60">
+            V? d?: link VietQR c? s?n t? ng?n h?ng. B?n kh?ng c?n ?i?n th?m th?ng tin kh?c.
+          </p>
+        </div>
+
+        <Button onClick={handleSave}>L?u c?u h?nh</Button>
       </div>
     </div>
   );

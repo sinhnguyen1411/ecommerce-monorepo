@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import SectionTitle from "@/components/common/SectionTitle";
 import { Button } from "@/components/ui/button";
 import { adminLogin } from "@/lib/admin";
-import { setAdminToken } from "@/lib/auth";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -16,55 +15,54 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const response = await adminLogin({ email, password });
-      setAdminToken(response.token);
+      await adminLogin({ email, password });
       router.push("/admin");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "??ng nh?p th?t b?i");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <section className="section-shell pb-10 pt-14">
-        <SectionTitle
-          eyebrow="Admin"
-          title="Đăng nhập quản trị"
-          description="Chỉ dành cho nhân viên quản lý nội bộ."
-        />
-      </section>
-
-      <section className="section-shell pb-16">
-        <div className="border border-forest/10 bg-white p-8">
-          {error ? <p className="text-sm text-clay">{error}</p> : null}
-          <div className="mt-4 grid gap-3">
-            <input
-              className="field"
-              placeholder="Email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+    <div className="auth-shell">
+      <section className="section-shell pb-16 pt-14">
+        <div className="auth-grid auth-grid--single">
+          <div className="auth-card auth-card--wide auth-card--center">
+            <SectionTitle
+              eyebrow="Admin"
+              title="??ng nh?p qu?n tr?"
+              description="Ch? d?nh cho nh?n vi?n qu?n tr? n?i b?."
             />
-            <input
-              className="field"
-              placeholder="Mật khẩu"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </div>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Button onClick={handleLogin} disabled={loading}>
-              {loading ? "Đang xử lý..." : "Đăng nhập"}
-            </Button>
-            <Link href="/" className="button btnlight">
-              Về trang chủ
-            </Link>
+            {error ? <p className="mb-4 text-sm text-clay">{error}</p> : null}
+            <form className="grid gap-4" onSubmit={handleLogin}>
+              <input
+                className="field"
+                placeholder="Email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              <input
+                className="field"
+                placeholder="M?t kh?u"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <Button type="submit" disabled={loading}>
+                {loading ? "?ang x? l?..." : "??ng nh?p"}
+              </Button>
+            </form>
+            <div className="mt-5 text-xs text-ink/70 text-center">
+              <Link href="/" className="text-forest">
+                V? trang ch?
+              </Link>
+            </div>
           </div>
         </div>
       </section>

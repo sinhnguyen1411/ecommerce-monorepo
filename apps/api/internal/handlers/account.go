@@ -168,8 +168,25 @@ func (s *Server) CreateAddress(c *gin.Context) {
 		return
 	}
 
-	if strings.TrimSpace(input.FullName) == "" || strings.TrimSpace(input.Phone) == "" || strings.TrimSpace(input.AddressLine) == "" {
-		respondError(c, http.StatusBadRequest, "missing_fields", "Full name, phone, and address are required")
+	fullName := strings.TrimSpace(input.FullName)
+	phoneRaw := strings.TrimSpace(input.Phone)
+	addressLine := strings.TrimSpace(input.AddressLine)
+	provinceInput := strings.TrimSpace(input.Province)
+	districtInput := strings.TrimSpace(input.District)
+	if fullName == "" || phoneRaw == "" || addressLine == "" || provinceInput == "" || districtInput == "" {
+		respondError(c, http.StatusBadRequest, "missing_fields", "Full name, phone, address, province, and district are required")
+		return
+	}
+
+	_, nationalPhone, err := auth.NormalizeVNPhone(phoneRaw)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_phone", "Invalid phone number")
+		return
+	}
+
+	provinceName, districtName, err := s.resolveProvinceDistrict(provinceInput, districtInput)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_location", "Invalid province or district")
 		return
 	}
 
@@ -190,7 +207,7 @@ func (s *Server) CreateAddress(c *gin.Context) {
 	_, err = tx.Exec(`
     INSERT INTO user_addresses (user_id, full_name, phone, address_line, province, district, is_default)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `, userID, input.FullName, input.Phone, input.AddressLine, input.Province, input.District, input.IsDefault)
+  `, userID, fullName, nationalPhone, addressLine, provinceName, districtName, input.IsDefault)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create address")
 		return
@@ -218,6 +235,28 @@ func (s *Server) UpdateAddress(c *gin.Context) {
 		return
 	}
 
+	fullName := strings.TrimSpace(input.FullName)
+	phoneRaw := strings.TrimSpace(input.Phone)
+	addressLine := strings.TrimSpace(input.AddressLine)
+	provinceInput := strings.TrimSpace(input.Province)
+	districtInput := strings.TrimSpace(input.District)
+	if fullName == "" || phoneRaw == "" || addressLine == "" || provinceInput == "" || districtInput == "" {
+		respondError(c, http.StatusBadRequest, "missing_fields", "Full name, phone, address, province, and district are required")
+		return
+	}
+
+	_, nationalPhone, err := auth.NormalizeVNPhone(phoneRaw)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_phone", "Invalid phone number")
+		return
+	}
+
+	provinceName, districtName, err := s.resolveProvinceDistrict(provinceInput, districtInput)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_location", "Invalid province or district")
+		return
+	}
+
 	tx, err := s.DB.Begin()
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update address")
@@ -236,7 +275,7 @@ func (s *Server) UpdateAddress(c *gin.Context) {
     UPDATE user_addresses
     SET full_name = ?, phone = ?, address_line = ?, province = ?, district = ?, is_default = ?
     WHERE id = ? AND user_id = ?
-  `, input.FullName, input.Phone, input.AddressLine, input.Province, input.District, input.IsDefault, id, userID)
+  `, fullName, nationalPhone, addressLine, provinceName, districtName, input.IsDefault, id, userID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update address")
 		return
@@ -302,6 +341,7 @@ func (s *Server) ListUserOrders(c *gin.Context) {
 			respondError(c, http.StatusInternalServerError, "db_error", "Failed to parse orders")
 			return
 		}
+		order.Items = make([]OrderItemSummary, 0)
 		orders = append(orders, order)
 		orderIDs = append(orderIDs, order.ID)
 		orderMap[order.ID] = &orders[len(orders)-1]

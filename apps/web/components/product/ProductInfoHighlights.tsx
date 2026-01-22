@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 const sellingPolicies = [
   {
     icon: "/tam-bo/product/product_info1_desc1_img.png",
@@ -41,7 +43,7 @@ export default function ProductInfoHighlights() {
           {sellingPolicies.map((item) => (
             <div key={item.label} className="item">
               <div className="item--img">
-                <img src={item.icon} alt={item.label} />
+                <Image src={item.icon} alt={item.label} width={48} height={48} className="h-12 w-12" sizes="48px" />
               </div>
               <div className="item--text">{item.label}</div>
             </div>
@@ -56,7 +58,7 @@ export default function ProductInfoHighlights() {
           {extraInfo.map((item) => (
             <div key={item.label} className="item">
               <div className="item--img">
-                <img src={item.icon} alt={item.label} />
+                <Image src={item.icon} alt={item.label} width={48} height={48} className="h-12 w-12" sizes="48px" />
               </div>
               <div className="item--text">{item.label}</div>
             </div>

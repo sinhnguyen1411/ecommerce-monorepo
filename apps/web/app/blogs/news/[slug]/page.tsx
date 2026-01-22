@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import PostCard from "@/components/blog/PostCard";
@@ -58,7 +59,14 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
             <div className="article-detail">
               <div className="article-image">
                 {post.cover_image ? (
-                  <img src={post.cover_image} alt={post.title} />
+                  <Image
+                    src={post.cover_image}
+                    alt={post.title}
+                    width={1200}
+                    height={675}
+                    className="h-full w-full object-cover"
+                    sizes="(max-width: 768px) 100vw, 900px"
+                  />
                 ) : (
                   <div className="no-image">{"\u0110ang c\u1EADp nh\u1EADt \u1EA3nh"}</div>
                 )}

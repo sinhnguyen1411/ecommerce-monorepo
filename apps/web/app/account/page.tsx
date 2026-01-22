@@ -2,22 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
 import SectionTitle from "@/components/common/SectionTitle";
 import { Button } from "@/components/ui/button";
-import {
-  clearAuthTokens,
-  getRefreshToken,
-  getUserToken,
-  setAuthTokens
-} from "@/lib/auth";
+import { clearAuthTokens } from "@/lib/auth";
 import { getProfile, updateProfile, UserProfile } from "@/lib/account";
 import { logout, sendEmailOTP, verifyEmailOTP } from "@/lib/user-auth";
 
 export default function AccountPage() {
-  const searchParams = useSearchParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [emailStatus, setEmailStatus] = useState("");
@@ -31,37 +25,26 @@ export default function AccountPage() {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   useEffect(() => {
-    const token = searchParams.get("token");
-    if (token) {
-      const hash = typeof window !== "undefined" ? window.location.hash : "";
-      const refreshToken = hash
-        ? new URLSearchParams(hash.replace(/^#/, "")).get("refresh_token")
-        : "";
-      setAuthTokens(token, refreshToken || undefined);
-      const url = new URL(window.location.href);
-      url.searchParams.delete("token");
-      url.hash = "";
-      window.history.replaceState({}, "", url.toString());
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    const token = getUserToken();
-    const refreshToken = getRefreshToken();
-    if (!token && !refreshToken) {
-      return;
-    }
-
+    let cancelled = false;
     getProfile()
       .then((data) => {
+        if (cancelled) {
+          return;
+        }
         setProfile(data);
         setName(data.name || "");
         setPhone(data.phone || "");
         setEmailStatus(data.emailVerificationStatus || "");
+        setIsAuthed(true);
       })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Không thể tải hồ sơ.")
-      );
+      .catch(() => {
+        if (!cancelled) {
+          setIsAuthed(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -162,7 +145,15 @@ export default function AccountPage() {
 
   const emailStatusLabel = isEmailVerified ? "Đã xác minh" : "Chưa xác minh";
 
-  if (!getUserToken() && !getRefreshToken()) {
+  if (isAuthed === null) {
+    return (
+      <div className="section-shell pb-16 pt-14">
+        <p className="text-sm text-ink/70">Đang tải thông tin tài khoản...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthed) {
     return (
       <div>
         <section className="section-shell pb-10 pt-14">
@@ -262,10 +253,7 @@ export default function AccountPage() {
                   setLoggingOut(true);
                   setError("");
                   try {
-                    const refreshToken = getRefreshToken();
-                    if (refreshToken) {
-                      await logout(refreshToken);
-                    }
+                    await logout();
                   } catch (err) {
                     setError(err instanceof Error ? err.message : "Không thể đăng xuất.");
                   } finally {

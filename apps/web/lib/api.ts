@@ -116,6 +116,9 @@ export type OrderRequest = {
   email: string;
   phone: string;
   address: string;
+  address_line?: string;
+  province?: string;
+  district?: string;
   note?: string;
   delivery_time?: string;
   shipping_method?: string;
@@ -135,6 +138,15 @@ export type OrderResponse = {
   status: string;
 };
 
+export type OrderSummary = {
+  id: number;
+  order_number: string;
+  total: number;
+  payment_method: string;
+  payment_status?: string;
+  status?: string;
+};
+
 export type PaymentSettings = {
   id: number;
   cod_enabled: boolean;
@@ -148,6 +160,23 @@ export type PaymentSettings = {
   bank_qr_template: string;
 };
 
+export type GeoProvince = {
+  code: number;
+  name: string;
+};
+
+export type GeoDistrict = {
+  code: number;
+  name: string;
+};
+
+export type CheckoutConfig = {
+  min_order_amount: number;
+  free_shipping_threshold: number;
+  shipping_fee_standard: number;
+  shipping_fee_express: number;
+};
+
 export type PromoValidation = {
   promo_code: string;
   discount_total: number;
@@ -155,6 +184,7 @@ export type PromoValidation = {
 
 export type OrderPaymentQR = {
   orderId: number;
+  orderNumber?: string;
   amount: number;
   currency: string;
   transferContent: string;
@@ -173,6 +203,12 @@ export type OrderPaymentQR = {
     qrCode?: string;
   };
   paymentStatus: "PENDING" | "PAID" | "EXPIRED";
+};
+
+export type OrderPaymentMethodUpdate = {
+  order_id: number;
+  payment_method: string;
+  transfer_content?: string;
 };
 
 export type Promotion = {
@@ -198,6 +234,7 @@ async function apiRequest<T>(
   const noStore = options?.cache === "no-store";
   const response = await fetch(buildUrl(path), {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(options?.headers || {})
@@ -305,6 +342,20 @@ export function getPaymentSettings() {
   return apiRequest<PaymentSettings>("/api/payment-settings", { cache: "no-store" });
 }
 
+export function getCheckoutConfig() {
+  return apiRequest<CheckoutConfig>("/api/checkout/config", { cache: "no-store" });
+}
+
+export function getGeoProvinces() {
+  return apiRequest<GeoProvince[]>("/api/geo/provinces", { cache: "no-store" });
+}
+
+export function getGeoDistricts(provinceCode: number) {
+  return apiRequest<GeoDistrict[]>(`/api/geo/districts?province_code=${provinceCode}`, {
+    cache: "no-store"
+  });
+}
+
 export function validatePromoCode(input: { code: string; subtotal: number }) {
   return apiRequest<PromoValidation>("/api/promotions/validate", {
     method: "POST",
@@ -323,9 +374,20 @@ export async function createOrder(input: OrderRequest) {
   });
 }
 
+export async function getOrderSummary(orderId: number) {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/summary`, { cache: "no-store" });
+}
+
 export async function getOrderPaymentQR(orderId: number) {
   return apiRequest<OrderPaymentQR>(`/api/orders/${orderId}/payment/qr`, {
     cache: "no-store"
+  });
+}
+
+export async function updateOrderPaymentMethod(orderId: number, paymentMethod: string) {
+  return apiRequest<OrderPaymentMethodUpdate>(`/api/orders/${orderId}/payment-method`, {
+    method: "PATCH",
+    body: JSON.stringify({ payment_method: paymentMethod })
   });
 }
 
@@ -335,7 +397,8 @@ export async function uploadPaymentProof(orderId: number, file: File) {
 
   const response = await fetch(buildUrl(`/api/orders/${orderId}/payment-proof`), {
     method: "POST",
-    body: formData
+    body: formData,
+    credentials: "include"
   });
 
   const payload = (await response.json()) as ApiEnvelope<{

@@ -64,12 +64,12 @@ export function verifyEmailOTP(input: { otp: string }) {
   );
 }
 
-export function logout(refreshToken: string) {
+export function logout() {
   return authRequest<{ revoked: boolean }>(
     "/api/auth/logout",
     {
       method: "POST",
-      body: JSON.stringify({ refresh_token: refreshToken })
+      body: JSON.stringify({})
     },
     { auth: true }
   );

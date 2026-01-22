@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 import { Facebook, MessageCircle, MessageSquare } from "lucide-react";
 
 import { siteConfig } from "@/lib/site";
@@ -53,8 +54,8 @@ export default function Footer() {
             </Link>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
-            <img src="/tam-bo/footer/payment_1_img.png" alt="payment" className="h-7" />
-            <img src="/tam-bo/footer/payment_2_img.png" alt="payment" className="h-7" />
+            <Image src="/tam-bo/footer/payment_1_img.png" alt="payment" width={80} height={28} className="h-7 w-auto" sizes="80px" />
+            <Image src="/tam-bo/footer/payment_2_img.png" alt="payment" width={80} height={28} className="h-7 w-auto" sizes="80px" />
           </div>
         </div>
 
@@ -65,9 +66,9 @@ export default function Footer() {
           <p>KTV: {siteConfig.fax}</p>
           <p>Email: {siteConfig.email}</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <img src="/tam-bo/footer/shipment_1_img.png" alt="shipping" className="h-8" />
-            <img src="/tam-bo/footer/shipment_2_img.png" alt="shipping" className="h-8" />
-            <img src="/tam-bo/footer/shipment_4_img.png" alt="shipping" className="h-8" />
+            <Image src="/tam-bo/footer/shipment_1_img.png" alt="shipping" width={90} height={32} className="h-8 w-auto" sizes="90px" />
+            <Image src="/tam-bo/footer/shipment_2_img.png" alt="shipping" width={90} height={32} className="h-8 w-auto" sizes="90px" />
+            <Image src="/tam-bo/footer/shipment_4_img.png" alt="shipping" width={90} height={32} className="h-8 w-auto" sizes="90px" />
           </div>
         </div>
 

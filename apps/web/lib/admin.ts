@@ -1,5 +1,3 @@
-import { getAdminToken } from "./auth";
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 function buildUrl(path: string) {
@@ -7,17 +5,16 @@ function buildUrl(path: string) {
 }
 
 async function adminRequest<T>(path: string, options?: RequestInit) {
-  const token = getAdminToken();
   const headers: Record<string, string> = {
-    ...(options?.headers as Record<string, string> | undefined),
-    Authorization: token ? `Bearer ${token}` : ""
+    ...(options?.headers as Record<string, string> | undefined)
   };
   if (!(options?.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
   const response = await fetch(buildUrl(path), {
     ...options,
-    headers
+    headers,
+    credentials: "include"
   });
 
   const payload = await response.json();
@@ -121,6 +118,13 @@ export function adminLogin(input: { email: string; password: string }) {
   return adminRequest<{ token: string; admin: AdminProfile }>("/api/admin/login", {
     method: "POST",
     body: JSON.stringify(input)
+  });
+}
+
+export function adminLogout() {
+  return adminRequest<{ logged_out: boolean }>("/api/admin/logout", {
+    method: "POST",
+    body: JSON.stringify({})
   });
 }
 
@@ -271,16 +275,13 @@ export function updatePaymentSettings(input: PaymentSettings) {
 }
 
 export async function uploadAdminFile(file: File) {
-  const token = getAdminToken();
   const formData = new FormData();
   formData.append("file", file);
 
   const response = await fetch(buildUrl("/api/admin/uploads"), {
     method: "POST",
-    headers: {
-      Authorization: token ? `Bearer ${token}` : ""
-    },
-    body: formData
+    body: formData,
+    credentials: "include"
   });
 
   const payload = await response.json();

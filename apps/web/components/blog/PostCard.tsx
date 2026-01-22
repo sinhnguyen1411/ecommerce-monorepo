@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 
 import { Post } from "@/lib/api";
 import { formatDate, stripHtml } from "@/lib/format";
@@ -18,7 +19,14 @@ export default function PostCard({ post }: { post: Post }) {
             rel="nofollow"
           >
             {post.cover_image ? (
-              <img src={post.cover_image} alt={post.title} />
+              <Image
+                src={post.cover_image}
+                alt={post.title}
+                width={640}
+                height={360}
+                className="h-full w-full object-cover"
+                sizes="(max-width: 768px) 100vw, 360px"
+              />
             ) : (
               <div className="no-image">{"\u0110ang c\u1EADp nh\u1EADt \u1EA3nh"}</div>
             )}
