@@ -23,8 +23,24 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
     if (typeof window === "undefined") {
       return;
     }
-    const nextSlides = loadHomeBanners();
-    setResolvedSlides(nextSlides.length ? nextSlides : slides);
+    const syncSlides = () => {
+      const nextSlides = loadHomeBanners();
+      setResolvedSlides(nextSlides.length ? nextSlides : slides);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncSlides();
+      }
+    };
+
+    syncSlides();
+    window.addEventListener("storage", syncSlides);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("storage", syncSlides);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [slides]);
 
   const activeSlides = useMemo(() => {
@@ -77,6 +93,10 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
     if (!track) {
       return;
     }
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("a, button, input, textarea, select, [role='button']")) {
+      return;
+    }
     isDragging.current = true;
     dragStartX.current = event.clientX;
     dragScrollLeft.current = track.scrollLeft;
@@ -121,46 +141,64 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
         >
-          {activeSlides.map((slide, index) => (
-            <div key={`${slide.desktopSrc}-${index}`} className="home-slide">
-              <Link href={slide.ctaHref} className="home-slide__link">
-                <picture>
-                  <source media="(min-width: 768px)" srcSet={slide.desktopSrc} />
-                  <source media="(max-width: 767px)" srcSet={slide.mobileSrc} />
-                  <img src={slide.desktopSrc} alt={slide.alt} />
-                </picture>
-              </Link>
-              {(slide.title || slide.description || slide.ctaLabel) && (
-                <div className="pointer-events-none absolute inset-0 flex items-end md:items-center">
-                  <div className="mx-auto w-full max-w-5xl px-6 pb-8 md:px-10 md:pb-0">
-                    <div className="pointer-events-auto max-w-lg rounded-2xl border border-white/40 bg-white/90 p-5 shadow-lg backdrop-blur sm:p-6">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Banner nổi bật
-                      </p>
-                      {slide.title ? (
-                        <h2 className="mt-2 text-2xl font-semibold text-slate-900 sm:text-3xl">
-                          {slide.title}
-                        </h2>
-                      ) : null}
-                      {slide.description ? (
-                        <p className="mt-2 text-sm text-slate-600">
-                          {slide.description}
-                        </p>
-                      ) : null}
-                      {slide.ctaLabel ? (
-                        <Link
-                          href={slide.ctaHref}
-                          className="mt-4 inline-flex items-center justify-center rounded-full bg-[var(--color-cta)] px-5 py-2 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cta)]/40"
-                        >
-                          {slide.ctaLabel}
-                        </Link>
-                      ) : null}
+          {activeSlides.map((slide, index) => {
+            const label = slide.ctaLabel?.toLowerCase() || "";
+            const normalizedLabel = label
+              .normalize("NFD")
+              .replace(/\p{Diacritic}/gu, "");
+            const rawHref = slide.ctaHref || "";
+            const isHero3 = slide.id === "banner-hero-3";
+            const isContactLabel =
+              normalizedLabel.includes("lien he") ||
+              normalizedLabel.includes("lienhe");
+            const isContactHref = rawHref.includes("lien-he");
+            const ctaHref =
+              isHero3 || isContactLabel || isContactHref
+                ? "/pages/lien-he"
+                : rawHref || "/";
+            return (
+              <div key={`${slide.desktopSrc}-${index}`} className="home-slide">
+                <Link href={ctaHref} className="home-slide__link">
+                  <picture>
+                    <source media="(min-width: 768px)" srcSet={slide.desktopSrc} />
+                    <source media="(max-width: 767px)" srcSet={slide.mobileSrc} />
+                    <img src={slide.desktopSrc} alt={slide.alt} />
+                  </picture>
+                </Link>
+                {(slide.title || slide.description || slide.ctaLabel || slide.badge) && (
+                  <div className="pointer-events-none absolute inset-0 flex items-end md:items-center">
+                    <div className="mx-auto w-full max-w-5xl px-6 pb-8 md:px-10 md:pb-0">
+                      <div className="home-slider__card pointer-events-auto max-w-lg p-5 sm:p-6">
+                        {slide.badge ? (
+                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
+                            {slide.badge}
+                          </p>
+                        ) : null}
+                        {slide.title ? (
+                          <h2 className="mt-2 text-2xl font-semibold text-slate-900 sm:text-3xl">
+                            {slide.title}
+                          </h2>
+                        ) : null}
+                        {slide.description ? (
+                          <p className="mt-2 text-sm text-slate-700">
+                            {slide.description}
+                          </p>
+                        ) : null}
+                        {slide.ctaLabel ? (
+                          <Link
+                            href={ctaHref}
+                            className="home-slider__cta mt-4 inline-flex items-center justify-center rounded-full bg-[var(--color-cta)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#ea580c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cta)]/40"
+                          >
+                            {slide.ctaLabel}
+                          </Link>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
         <div className="home-slider__pagination" aria-hidden="true">
           {activeSlides.map((_, index) => (

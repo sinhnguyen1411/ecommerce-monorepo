@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 
@@ -9,26 +9,25 @@ export default function Topbar() {
   const phoneDigits = settings.phone.replace(/[^0-9]/g, "");
 
   return (
-    <div className="topbar">
+    <div className="topbar" role="region" aria-label="Thanh thông tin">
       <div className="topbar-bottom">
         <div className="container-fluid">
           <div className="box-content">
             <div className="box-left">
-              <div className="hotline">
-                <span>
-                  Hotline:{" "}
-                  <a className="font-semibold" href={`tel:${phoneDigits}`}>
-                    {settings.phone}
-                  </a>
-                </span>
+              <div className="topbar-item hotline">
+                <span className="topbar-label">Hotline</span>
+                <a className="topbar-link topbar-phone" href={`tel:${phoneDigits}`}>
+                  {settings.phone}
+                </a>
               </div>
-              <div className="contact">
-                <Link href="/pages/lien-he">Liên hệ</Link>
-              </div>
+              <span className="topbar-divider" aria-hidden="true" />
+              <Link className="topbar-item topbar-link" href="/pages/lien-he">
+                Liên hệ
+              </Link>
             </div>
 
             <div className="box-right">
-              <div className="notify">
+              <div className="topbar-item notify">
                 <div className="notify-title">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -44,8 +43,13 @@ export default function Topbar() {
                   <span>Thông báo</span>
                 </div>
               </div>
-              <span className="hidden md:inline">
-                Giao hàng tận nhà - Đổi trả trong 24h
+              <span className="topbar-divider hidden md:inline" aria-hidden="true" />
+              <span className="topbar-meta hidden md:inline">
+                <span>Giao hàng tận nhà</span>
+                <span className="topbar-dot" aria-hidden="true">
+                  •
+                </span>
+                <span>Đổi trả trong 24h</span>
               </span>
             </div>
           </div>

@@ -9,7 +9,7 @@ import {
   defaultHomeBanners
 } from "@/lib/content";
 
-export const HOME_BANNERS_STORAGE_KEY = "admin_home_banners_v1";
+export const HOME_BANNERS_STORAGE_KEY = "admin_home_banners_v2";
 export const CONTACT_SETTINGS_STORAGE_KEY = "admin_contact_settings_v1";
 
 const parseJson = <T,>(value: string | null): T | null => {
@@ -27,16 +27,18 @@ const normalizeHomeBanners = (input: HomeBanner[] | null): HomeBanner[] => {
   }
 
   return input.map((banner, index) => {
+    const fallback = defaultHomeBanners[index] || defaultHomeBanners[0];
     const order = Number.isFinite(banner.order) ? Number(banner.order) : index + 1;
     return {
       id: banner.id || `banner-${order}`,
-      title: banner.title || "Banner",
-      description: banner.description || "",
-      ctaLabel: banner.ctaLabel || "Xem chi tiết",
-      ctaHref: banner.ctaHref || "/",
-      desktopSrc: banner.desktopSrc || defaultHomeBanners[0]?.desktopSrc || "",
-      mobileSrc: banner.mobileSrc || banner.desktopSrc || defaultHomeBanners[0]?.mobileSrc || "",
-      alt: banner.alt || banner.title || "Banner",
+      badge: banner.badge || fallback?.badge || "Banner nổi bật",
+      title: banner.title || fallback?.title || "Banner",
+      description: banner.description || fallback?.description || "",
+      ctaLabel: banner.ctaLabel || fallback?.ctaLabel || "Xem chi tiết",
+      ctaHref: banner.ctaHref || fallback?.ctaHref || "/",
+      desktopSrc: banner.desktopSrc || fallback?.desktopSrc || "",
+      mobileSrc: banner.mobileSrc || banner.desktopSrc || fallback?.mobileSrc || "",
+      alt: banner.alt || banner.title || fallback?.alt || "Banner",
       order,
       isActive: banner.isActive !== false
     };

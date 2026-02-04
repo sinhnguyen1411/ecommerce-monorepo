@@ -1,10 +1,12 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   CreditCard,
+  ChevronDown,
+  ChevronUp,
   HelpCircle,
   Image as ImageIcon,
   Layers,
@@ -447,6 +449,7 @@ function AdminProductsSection({
   const [categoryFilter, setCategoryFilter] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [page, setPage] = useState(1);
+  const dialogScrollRef = useRef<HTMLDivElement | null>(null);
 
   const totalImages = existingImages.length + newImages.length;
   const canAddMore = totalImages < 10;
@@ -832,7 +835,8 @@ function AdminProductsSection({
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-5xl relative">
+          <div ref={dialogScrollRef} className="max-h-[80vh] overflow-y-auto pr-12">
           <DialogHeader>
             <DialogTitle>
               {editingId ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
@@ -1063,13 +1067,14 @@ function AdminProductsSection({
                     {existingImages.map((url, index) => (
                       <div
                         key={`existing-${index}`}
-                        className="relative overflow-hidden rounded-xl border border-slate-200"
+                        className="relative h-24 overflow-hidden rounded-xl border border-slate-200"
                       >
-                        <img
+                        <Image
                           src={url}
                           alt={`Ảnh hiện có ${index + 1}`}
-                          className="h-24 w-full object-cover"
-                          loading="lazy"
+                          fill
+                          sizes="(min-width: 640px) 160px, 50vw"
+                          className="object-cover"
                         />
                         <span className="absolute left-2 top-2 rounded-full bg-slate-900/70 px-2 py-1 text-xs text-white">
                           Hiện có
@@ -1079,13 +1084,14 @@ function AdminProductsSection({
                     {newImages.map((url, index) => (
                       <div
                         key={`new-${index}`}
-                        className="relative overflow-hidden rounded-xl border border-slate-200"
+                        className="relative h-24 overflow-hidden rounded-xl border border-slate-200"
                       >
-                        <img
+                        <Image
                           src={url}
                           alt={`Ảnh mới ${index + 1}`}
-                          className="h-24 w-full object-cover"
-                          loading="lazy"
+                          fill
+                          sizes="(min-width: 640px) 160px, 50vw"
+                          className="object-cover"
                         />
                         <button
                           type="button"
@@ -1124,6 +1130,32 @@ function AdminProductsSection({
             >
               {editingId ? "Lưu sản phẩm" : "Tạo sản phẩm"}
             </Button>
+          </div>
+          </div>
+
+          <div className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col gap-2">
+            <button
+              type="button"
+              aria-label="Cuộn lên đầu"
+              onClick={() =>
+                dialogScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+              }
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] cursor-pointer"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Cuộn xuống cuối"
+              onClick={() => {
+                const container = dialogScrollRef.current;
+                if (!container) return;
+                container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] cursor-pointer"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
           </div>
         </DialogContent>
       </Dialog>
@@ -2519,6 +2551,7 @@ function AdminBannersSection({
 }) {
   const initialForm = {
     title: "",
+    badge: "Banner nổi bật",
     description: "",
     ctaLabel: "",
     ctaHref: "",
@@ -2545,6 +2578,7 @@ function AdminBannersSection({
     setEditingId(banner.id);
     setForm({
       title: banner.title,
+      badge: banner.badge,
       description: banner.description,
       ctaLabel: banner.ctaLabel,
       ctaHref: banner.ctaHref,
@@ -2586,6 +2620,7 @@ function AdminBannersSection({
     const orderValue = Number(form.order || 0);
     const payload: HomeBanner = {
       id: editingId || `banner-${Date.now()}`,
+      badge: form.badge.trim() || "Banner nổi bật",
       title: form.title.trim(),
       description: form.description.trim(),
       ctaLabel: form.ctaLabel.trim(),
@@ -2637,11 +2672,13 @@ function AdminBannersSection({
                 className="flex flex-wrap items-start gap-4 rounded-xl border border-slate-200 p-4"
               >
                 <div className="h-20 w-32 overflow-hidden rounded-lg bg-slate-100">
-                  <img
+                  <Image
                     src={banner.desktopSrc}
                     alt={banner.alt}
+                    width={128}
+                    height={80}
                     className="h-full w-full object-cover"
-                    loading="lazy"
+                    sizes="128px"
                   />
                 </div>
                 <div className="flex-1 space-y-1">
@@ -2652,6 +2689,11 @@ function AdminBannersSection({
                     CTA: {banner.ctaLabel} · {banner.ctaHref}
                   </p>
                   <div className="flex flex-wrap gap-2 text-base text-slate-500 md:text-sm">
+                    {banner.badge ? (
+                      <span className="rounded-full bg-[var(--color-primary)]/10 px-3 py-1 text-[var(--color-primary)]">
+                        {banner.badge}
+                      </span>
+                    ) : null}
                     <span className="rounded-full bg-slate-100 px-3 py-1">
                       Thứ tự: {banner.order}
                     </span>
@@ -2705,6 +2747,16 @@ function AdminBannersSection({
               className={inputClass}
               value={form.title}
               onChange={(event) => setForm({ ...form, title: event.target.value })}
+            />
+          </AdminField>
+          <AdminField
+            label="Nhãn banner"
+            helper="Ví dụ: Banner nổi bật, Ưu đãi tuần này."
+          >
+            <input
+              className={inputClass}
+              value={form.badge}
+              onChange={(event) => setForm({ ...form, badge: event.target.value })}
             />
           </AdminField>
           <AdminField label="Mô tả" helper="Mô tả ngắn, tối đa 2 dòng.">

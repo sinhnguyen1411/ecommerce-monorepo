@@ -1,7 +1,9 @@
 ﻿node_modules
 .next
 npm-debug.log*
-.env*
+.env
+.env.*
+!*.env.example
 apps/api/uploads
 
 bin
@@ -10,3 +12,27 @@ bin
 *.test
 
 .DS_Store
+
+.vscode
+.idea
+
+# build/cache outputs
+out
+dist
+build
+.turbo
+.cache
+
+# logs
+*.log
+
+# tool caches
+.eslintcache
+.stylelintcache
+
+# vercel
+.vercel
+
+# OS junk
+Thumbs.db
+Desktop.ini

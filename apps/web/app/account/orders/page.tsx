@@ -41,7 +41,7 @@ export default function OrdersPage() {
         } else {
           setIsAuthed(true);
         }
-        setError(err instanceof Error ? err.message : "Kh?ng th? t?i ??n h?ng.");
+        setError(err instanceof Error ? err.message : "Không thể tải đơn hàng.");
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -59,7 +59,7 @@ export default function OrdersPage() {
   if (isAuthed === null) {
     return (
       <div className="section-shell pb-16 pt-14">
-        <p className="text-sm text-ink/70">?ang t?i ??n h?ng...</p>
+        <p className="text-sm text-ink/70">Đang tải đơn hàng...</p>
       </div>
     );
   }
@@ -68,13 +68,13 @@ export default function OrdersPage() {
     return (
       <div className="section-shell pb-16 pt-14">
         <SectionTitle
-          eyebrow="T?i kho?n"
-          title="??ng nh?p ?? xem ??n h?ng"
-          description="Vui l?ng ??ng nh?p ?? theo d?i l?ch s? mua h?ng."
+          eyebrow="Tài khoản"
+          title="Đăng nhập để xem đơn hàng"
+          description="Vui lòng đăng nhập để theo dõi lịch sử mua hàng."
         />
         <div className="mt-6">
           <Link className="btn-primary" href="/login">
-            ?i ??n trang ??ng nh?p
+            Đi đến trang đăng nhập
           </Link>
         </div>
       </div>
@@ -85,19 +85,19 @@ export default function OrdersPage() {
     <div>
       <section className="section-shell pb-6 pt-14">
         <SectionTitle
-          eyebrow="T?i kho?n"
-          title="??n h?ng c?a t?i"
-          description="Theo d?i tr?ng th?i ??n h?ng v? thanh to?n."
+          eyebrow="Tài khoản"
+          title="Đơn hàng của tôi"
+          description="Theo dõi trạng thái đơn hàng và thanh toán."
         />
       </section>
 
       <section className="section-shell pb-16">
         {error ? <p className="text-sm text-clay">{error}</p> : null}
         {loading ? (
-          <p className="text-sm text-ink/70">?ang t?i...</p>
+          <p className="text-sm text-ink/70">Đang tải...</p>
         ) : orders.length === 0 ? (
           <div className="border border-forest/10 bg-white p-6 text-sm text-ink/70">
-            Ch?a c? ??n h?ng n?o.
+            Chưa có đơn hàng nào.
           </div>
         ) : (
           <div className="space-y-4">
@@ -115,13 +115,13 @@ export default function OrdersPage() {
                       </p>
                     </div>
                     <div className="text-sm text-ink/70">
-                      <p>Tr?ng th?i: {order.status}</p>
-                      <p>Thanh to?n: {order.payment_status}</p>
+                      <p>Trạng thái: {order.status}</p>
+                      <p>Thanh toán: {order.payment_status}</p>
                     </div>
                   </div>
                   <div className="mt-4 space-y-2 text-sm text-ink/70">
                     {items.length === 0 ? (
-                      <p>Ch?a c? s?n ph?m n?o.</p>
+                      <p>Chưa có sản phẩm nào.</p>
                     ) : (
                       items.map((item) => (
                         <div
