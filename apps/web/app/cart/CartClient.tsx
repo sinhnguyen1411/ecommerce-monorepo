@@ -100,7 +100,7 @@ export default function CartClient({ suggestedProducts }: CartClientProps) {
                     {items.length === 0 ? (
                       <div className="cart-empty">
                         <Image
-                          src="/tam-bo/cart/cart_banner_image.jpg"
+                          src="https://images.pexels.com/photos/31231189/pexels-photo-31231189.jpeg?cs=srgb&dl=pexels-vi-t-anh-nguy-n-2150409023-31231189.jpg&fm=jpg"
                           alt="empty"
                           width={640}
                           height={360}

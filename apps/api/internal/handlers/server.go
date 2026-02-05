@@ -117,6 +117,11 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 			admin.PATCH("/posts/:id", s.AdminUpdatePost)
 			admin.DELETE("/posts/:id", s.AdminDeletePost)
 
+			admin.GET("/pages", s.AdminListPages)
+			admin.POST("/pages", s.AdminCreatePage)
+			admin.GET("/pages/:id", s.AdminGetPage)
+			admin.PATCH("/pages/:id", s.AdminUpdatePage)
+
 			admin.GET("/qna", s.AdminListQnA)
 			admin.POST("/qna", s.AdminCreateQnA)
 			admin.GET("/qna/:id", s.AdminGetQnA)

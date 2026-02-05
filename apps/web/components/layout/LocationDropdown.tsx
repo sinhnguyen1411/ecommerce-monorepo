@@ -162,14 +162,15 @@ export default function LocationDropdown() {
   const activeAddress = activeLocation
     ? `${activeLocation.address}, ${activeLocation.district}, ${activeLocation.province}`
     : siteConfig.address;
-  const label = activeLocation ? activeAddress : "Giao hoặc đến lấy tại";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="hidden items-center gap-2 border border-forest/20 bg-white px-3 py-2 text-xs font-semibold text-forest lg:flex">
+        <button
+          className="header-action-btn hidden lg:inline-flex"
+          aria-label={`V\u1ECB tr\u00ED giao h\u00E0ng: ${activeAddress}`}
+        >
           <MapPin className="h-4 w-4" />
-          <span className="max-w-[180px] truncate">{label}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[360px] p-4">

@@ -7,7 +7,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { siteConfig } from "@/lib/site";
 
 const navLinks = [
-  { href: "/", label: "Trang ch\u1EE7" },
   { href: "/pages/about-us", label: "Gi\u1EDBi thi\u1EC7u" },
   { href: "/collections/all", label: "S\u1EA3n ph\u1EA9m" },
   { href: "/blogs/news", label: "Ki\u1EBFn th\u1EE9c nh\u00E0 n\u00F4ng" },

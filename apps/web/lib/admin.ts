@@ -69,6 +69,14 @@ export type AdminPost = {
   published_at?: string | null;
 };
 
+export type AdminPage = {
+  id: number;
+  title: string;
+  slug: string;
+  content: string;
+  updated_at?: string;
+};
+
 export type AdminQnA = {
   id: number;
   question: string;
@@ -208,6 +216,28 @@ export function updateAdminPost(id: number, input: Partial<AdminPost>) {
 export function deleteAdminPost(id: number) {
   return adminRequest<{ deleted: boolean }>(`/api/admin/posts/${id}`, {
     method: "DELETE"
+  });
+}
+
+export function listAdminPages() {
+  return adminRequest<AdminPage[]>("/api/admin/pages");
+}
+
+export function getAdminPage(id: number) {
+  return adminRequest<AdminPage>(`/api/admin/pages/${id}`);
+}
+
+export function createAdminPage(input: Partial<AdminPage>) {
+  return adminRequest<AdminPage>("/api/admin/pages", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function updateAdminPage(id: number, input: Partial<AdminPage>) {
+  return adminRequest<AdminPage>(`/api/admin/pages/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
   });
 }
 

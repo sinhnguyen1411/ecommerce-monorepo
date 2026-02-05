@@ -1,6 +1,6 @@
 import "./globals.css";
 
-import { Nunito_Sans, Rubik } from "next/font/google";
+import { Be_Vietnam_Pro, Noto_Sans } from "next/font/google";
 
 import CartDrawer from "@/components/cart/CartDrawer";
 import Footer from "@/components/layout/Footer";
@@ -9,16 +9,17 @@ import Topbar from "@/components/layout/Topbar";
 import SocialFloatingButtons from "@/components/common/SocialFloatingButtons";
 import { Sonner } from "@/components/ui/sonner";
 
-const rubik = Rubik({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const displayFont = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
+  weight: ["300", "400", "500", "600", "700"],
   variable: "--font-display",
-  display: "swap"
+  display: "swap",
+  adjustFontFallback: false
 });
 
-const nunitoSans = Nunito_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const bodyFont = Noto_Sans({
+  subsets: ["latin", "vietnamese"],
+  weight: ["300", "400", "500", "600", "700"],
   variable: "--font-sans",
   display: "swap",
   adjustFontFallback: false
@@ -38,7 +39,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body className={`${rubik.variable} ${nunitoSans.variable} text-ink`}>
+      <body className={`${displayFont.variable} ${bodyFont.variable} text-ink`}>
         <Topbar />
         <Header />
         <div className="min-h-screen pb-16">{children}</div>

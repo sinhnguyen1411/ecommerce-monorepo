@@ -4,6 +4,8 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  Bell,
+  BookOpen,
   CreditCard,
   ChevronDown,
   ChevronUp,
@@ -15,7 +17,8 @@ import {
   Newspaper,
   Package,
   Phone,
-  ShoppingCart
+  ShoppingCart,
+  Megaphone
 } from "lucide-react";
 
 import AdminShell, { AdminNavItem } from "@/components/admin/AdminShell";
@@ -31,11 +34,11 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { AdminDialogContent } from "@/components/admin/AdminDialog";
 import { formatCurrency } from "@/lib/format";
 import {
   AdminCategory,
@@ -49,6 +52,7 @@ import {
   adminLogout,
   adminMe,
   createAdminCategory,
+  createAdminPage,
   createAdminPost,
   createAdminProduct,
   createAdminQnA,
@@ -59,24 +63,48 @@ import {
   getPaymentSettings,
   listAdminCategories,
   listAdminOrders,
+  listAdminPages,
   listAdminPosts,
   listAdminProducts,
   listAdminQnA,
   updateAdminCategory,
   updateAdminOrder,
+  updateAdminPage,
   updateAdminPost,
   updateAdminProduct,
   updateAdminQnA,
   updatePaymentSettings,
   uploadAdminFile
 } from "@/lib/admin";
-import type { ContactSettings, HomeBanner } from "@/lib/content";
-import { defaultContactSettings, defaultHomeBanners } from "@/lib/content";
+import type {
+  AboutPageContent,
+  AboutSlide,
+  ContactSettings,
+  HomeBanner,
+  NotificationItem,
+  NotificationSettings,
+  PromoCoupon,
+  PromoPopupSettings,
+  PromoProgram
+} from "@/lib/content";
+import {
+  cloneAboutContent,
+  defaultAboutContent,
+  defaultContactSettings,
+  defaultHomeBanners,
+  defaultNotificationSettings,
+  defaultPromoPopupSettings,
+  resolveAboutContent
+} from "@/lib/content";
 import {
   loadContactSettings,
   loadHomeBanners,
+  loadNotificationSettings,
+  loadPromoPopupSettings,
   saveContactSettings,
-  saveHomeBanners
+  saveHomeBanners,
+  saveNotificationSettings,
+  savePromoPopupSettings
 } from "@/lib/client-content";
 
 const sectionLabels: Record<string, string> = {
@@ -84,11 +112,14 @@ const sectionLabels: Record<string, string> = {
   products: "Sản phẩm",
   categories: "Danh mục",
   posts: "Tin tức",
+  about: "Giới thiệu",
   qna: "Hỏi đáp",
   orders: "Đơn hàng",
   payments: "Thanh toán",
   contact: "Liên hệ",
-  banners: "Banner trang chủ"
+  banners: "Banner trang chủ",
+  popup: "Popup khuyến mãi",
+  notifications: "Thông báo"
 };
 
 export default function AdminDashboardPage() {
@@ -107,35 +138,67 @@ export default function AdminDashboardPage() {
   const [activeSection, setActiveSection] = useState("overview");
   const [banners, setBanners] = useState<HomeBanner[]>(defaultHomeBanners);
   const [contactDraft, setContactDraft] = useState<ContactSettings>(defaultContactSettings);
+  const [promoPopupDraft, setPromoPopupDraft] = useState<PromoPopupSettings>(
+    defaultPromoPopupSettings
+  );
+  const [notificationDraft, setNotificationDraft] = useState<NotificationSettings>(
+    defaultNotificationSettings
+  );
+  const [aboutPageId, setAboutPageId] = useState<number | null>(null);
+  const [aboutDraft, setAboutDraft] = useState<AboutPageContent>(cloneAboutContent(defaultAboutContent));
+  const [aboutDirty, setAboutDirty] = useState(false);
+  const [aboutSavedAt, setAboutSavedAt] = useState<string | null>(null);
   const [bannerDirty, setBannerDirty] = useState(false);
+  const [promoPopupDirty, setPromoPopupDirty] = useState(false);
+  const [promoPopupSavedAt, setPromoPopupSavedAt] = useState<string | null>(null);
   const [bannerSavedAt, setBannerSavedAt] = useState<string | null>(null);
   const [contactDirty, setContactDirty] = useState(false);
   const [contactSavedAt, setContactSavedAt] = useState<string | null>(null);
+  const [notificationDirty, setNotificationDirty] = useState(false);
+  const [notificationSavedAt, setNotificationSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
     setBanners(loadHomeBanners());
     setContactDraft(loadContactSettings());
+    setPromoPopupDraft(loadPromoPopupSettings());
+    setNotificationDraft(loadNotificationSettings());
   }, []);
 
   const loadAll = async () => {
     setError("");
     setLoading(true);
     try {
-      const [productData, categoryData, postData, qnaData, orderData, paymentData] =
-        await Promise.all([
-          listAdminProducts(),
-          listAdminCategories(),
-          listAdminPosts(),
-          listAdminQnA(),
-          listAdminOrders(),
-          getPaymentSettings()
-        ]);
+      const [
+        productData,
+        categoryData,
+        postData,
+        qnaData,
+        orderData,
+        paymentData,
+        pageData
+      ] = await Promise.all([
+        listAdminProducts(),
+        listAdminCategories(),
+        listAdminPosts(),
+        listAdminQnA(),
+        listAdminOrders(),
+        getPaymentSettings(),
+        listAdminPages()
+      ]);
       setProducts(productData);
       setCategories(categoryData);
       setPosts(postData);
       setQnA(qnaData);
       setOrders(orderData);
       setSettings(paymentData);
+      const aboutPage = pageData.find((item) => item.slug === "about-us");
+      setAboutPageId(aboutPage?.id ?? null);
+      if (!aboutDirty) {
+        const resolved = resolveAboutContent(aboutPage?.content);
+        setAboutDraft(cloneAboutContent(resolved));
+        setAboutDirty(false);
+        setAboutSavedAt(aboutPage?.updated_at || null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể tải dữ liệu quản trị.");
     } finally {
@@ -219,6 +282,61 @@ export default function AdminDashboardPage() {
     setContactSavedAt(new Date().toLocaleString("vi-VN"));
   };
 
+  const handlePromoPopupChange = (patch: Partial<PromoPopupSettings>) => {
+    setPromoPopupDraft((prev) => ({ ...prev, ...patch }));
+    setPromoPopupDirty(true);
+  };
+
+  const handlePromoPopupSave = () => {
+    savePromoPopupSettings(promoPopupDraft);
+    setPromoPopupDirty(false);
+    setPromoPopupSavedAt(new Date().toLocaleString("vi-VN"));
+  };
+
+  const handleAboutChange = (next: AboutPageContent) => {
+    setAboutDraft(next);
+    setAboutDirty(true);
+  };
+
+  const handleAboutSave = async () => {
+    setError("");
+    if (!aboutDraft.hero.title.trim()) {
+      setError("Vui lòng nhập tiêu đề trang giới thiệu.");
+      return;
+    }
+    if (!aboutDraft.slides.length) {
+      setError("Trang giới thiệu cần ít nhất một slide nội dung.");
+      return;
+    }
+
+    try {
+      const payload = {
+        title: aboutDraft.hero.title || "Giới thiệu",
+        slug: "about-us",
+        content: JSON.stringify(aboutDraft)
+      };
+      const saved = aboutPageId
+        ? await updateAdminPage(aboutPageId, payload)
+        : await createAdminPage(payload);
+      setAboutPageId(saved.id);
+      setAboutDirty(false);
+      setAboutSavedAt(new Date().toLocaleString("vi-VN"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể lưu trang giới thiệu.");
+    }
+  };
+
+  const handleNotificationChange = (next: NotificationSettings) => {
+    setNotificationDraft(next);
+    setNotificationDirty(true);
+  };
+
+  const handleNotificationSave = () => {
+    saveNotificationSettings(notificationDraft);
+    setNotificationDirty(false);
+    setNotificationSavedAt(new Date().toLocaleString("vi-VN"));
+  };
+
   const pendingOrders = useMemo(
     () => orders.filter((order) => order.status === "pending").length,
     [orders]
@@ -246,11 +364,14 @@ export default function AdminDashboardPage() {
       { id: "products", label: "Sản phẩm", icon: Package },
       { id: "categories", label: "Danh mục", icon: Layers },
       { id: "posts", label: "Tin tức", icon: Newspaper },
+      { id: "about", label: "Giới thiệu", icon: BookOpen },
       { id: "qna", label: "Hỏi đáp", icon: HelpCircle },
       { id: "orders", label: "Đơn hàng", icon: ShoppingCart },
       { id: "payments", label: "Thanh toán", icon: CreditCard },
       { id: "contact", label: "Liên hệ", icon: Phone },
-      { id: "banners", label: "Banner trang chủ", icon: ImageIcon }
+      { id: "banners", label: "Banner trang chủ", icon: ImageIcon },
+      { id: "popup", label: "Popup khuyến mãi", icon: Megaphone },
+      { id: "notifications", label: "Thông báo", icon: Bell }
     ],
     []
   );
@@ -260,19 +381,26 @@ export default function AdminDashboardPage() {
       products: products.length,
       categories: categories.length,
       posts: posts.length,
+      about: aboutPageId ? 1 : 0,
       qna: qna.length,
       orders: pendingOrders,
       payments: pendingPayments,
-      banners: banners.length
+      banners: banners.length,
+      popup: promoPopupDraft.coupons.length + promoPopupDraft.programs.length,
+      notifications: notificationDraft.items.length
     }),
     [
       products.length,
       categories.length,
       posts.length,
+      aboutPageId,
       qna.length,
       pendingOrders,
       pendingPayments,
-      banners.length
+      banners.length,
+      promoPopupDraft.coupons.length,
+      promoPopupDraft.programs.length,
+      notificationDraft.items.length
     ]
   );
 
@@ -379,6 +507,17 @@ export default function AdminDashboardPage() {
         <AdminPostsSection posts={posts} onReload={loadAll} setError={setError} />
       )}
 
+      {activeSection === "about" && (
+        <AdminAboutSection
+          value={aboutDraft}
+          onChange={handleAboutChange}
+          onSave={handleAboutSave}
+          isDirty={aboutDirty}
+          savedAt={aboutSavedAt}
+          setError={setError}
+        />
+      )}
+
       {activeSection === "qna" && (
         <AdminQnASection items={qna} onReload={loadAll} setError={setError} />
       )}
@@ -409,6 +548,26 @@ export default function AdminDashboardPage() {
           isDirty={bannerDirty}
           savedAt={bannerSavedAt}
           setError={setError}
+        />
+      )}
+
+      {activeSection === "popup" && (
+        <AdminPromoPopupSection
+          value={promoPopupDraft}
+          onChange={handlePromoPopupChange}
+          onSave={handlePromoPopupSave}
+          isDirty={promoPopupDirty}
+          savedAt={promoPopupSavedAt}
+        />
+      )}
+
+      {activeSection === "notifications" && (
+        <AdminNotificationsSection
+          value={notificationDraft}
+          onChange={handleNotificationChange}
+          onSave={handleNotificationSave}
+          isDirty={notificationDirty}
+          savedAt={notificationSavedAt}
         />
       )}
     </AdminShell>
@@ -835,8 +994,11 @@ function AdminProductsSection({
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-5xl relative">
-          <div ref={dialogScrollRef} className="max-h-[80vh] overflow-y-auto pr-12">
+        <AdminDialogContent className="max-w-5xl relative">
+          <div
+            ref={dialogScrollRef}
+            className="max-h-[calc(100vh-6rem)] overflow-y-auto pr-12"
+          >
           <DialogHeader>
             <DialogTitle>
               {editingId ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
@@ -1157,7 +1319,7 @@ function AdminProductsSection({
               <ChevronDown className="h-4 w-4" />
             </button>
           </div>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
     </div>
   );
@@ -2447,6 +2609,490 @@ function AdminPaymentsSection({
   );
 }
 
+
+function AdminAboutSection({
+  value,
+  onChange,
+  onSave,
+  isDirty,
+  savedAt,
+  setError
+}: {
+  value: AboutPageContent;
+  onChange: (next: AboutPageContent) => void;
+  onSave: () => void;
+  isDirty: boolean;
+  savedAt: string | null;
+  setError: (value: string) => void;
+}) {
+  const initialSlideForm = {
+    tag: "",
+    title: "",
+    description: "",
+    bullets: "",
+    image: "",
+    imageAlt: "",
+    ctaLabel: "",
+    ctaHref: ""
+  };
+  const [slideForm, setSlideForm] = useState(initialSlideForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const heroPillsValue = useMemo(() => value.hero.pills.join("\n"), [value.hero.pills]);
+
+  const updateHero = (patch: Partial<AboutPageContent["hero"]>) => {
+    onChange({
+      ...value,
+      hero: {
+        ...value.hero,
+        ...patch
+      }
+    });
+  };
+
+  const handleHeroPillsChange = (input: string) => {
+    const pills = input
+      .split(/\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    updateHero({ pills });
+  };
+
+  const handleStatChange = (index: number, patch: Partial<AboutPageContent["stats"][0]>) => {
+    const next = value.stats.map((item, idx) => (idx === index ? { ...item, ...patch } : item));
+    onChange({ ...value, stats: next });
+  };
+
+  const addStat = () => {
+    onChange({
+      ...value,
+      stats: [...value.stats, { value: "", label: "" }]
+    });
+  };
+
+  const removeStat = (index: number) => {
+    onChange({
+      ...value,
+      stats: value.stats.filter((_, idx) => idx !== index)
+    });
+  };
+
+  const handleContactChange = (patch: Partial<AboutPageContent["contact"]>) => {
+    onChange({
+      ...value,
+      contact: {
+        ...value.contact,
+        ...patch
+      }
+    });
+  };
+
+  const handleStoryChange = (next: string) => {
+    onChange({
+      ...value,
+      storyHtml: next
+    });
+  };
+
+  const resetSlideForm = () => {
+    setSlideForm(initialSlideForm);
+    setEditingId(null);
+  };
+
+  const handleSlideEdit = (slide: AboutSlide) => {
+    setEditingId(slide.id);
+    setSlideForm({
+      tag: slide.tag,
+      title: slide.title,
+      description: slide.description,
+      bullets: slide.bullets.join("\n"),
+      image: slide.image,
+      imageAlt: slide.imageAlt,
+      ctaLabel: slide.ctaLabel,
+      ctaHref: slide.ctaHref
+    });
+  };
+
+  const handleSlideDelete = (slide: AboutSlide) => {
+    const confirmed = window.confirm(`Xóa slide "${slide.title}"?`);
+    if (!confirmed) {
+      return;
+    }
+    onChange({
+      ...value,
+      slides: value.slides.filter((item) => item.id !== slide.id)
+    });
+  };
+
+  const handleSlideSubmit = () => {
+    setError("");
+    if (!slideForm.title.trim()) {
+      setError("Vui lòng nhập tiêu đề slide.");
+      return;
+    }
+    if (!slideForm.image.trim()) {
+      setError("Vui lòng nhập URL ảnh cho slide.");
+      return;
+    }
+
+    const bullets = slideForm.bullets
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const tagValue = slideForm.tag.trim() || `Chặng ${(value.slides.length + 1).toString().padStart(2, "0")}`;
+    const payload: AboutSlide = {
+      id: editingId || `about-slide-${Date.now()}`,
+      tag: tagValue,
+      title: slideForm.title.trim(),
+      description: slideForm.description.trim(),
+      bullets,
+      image: slideForm.image.trim(),
+      imageAlt: slideForm.imageAlt.trim() || slideForm.title.trim(),
+      ctaLabel: slideForm.ctaLabel.trim() || "Liên hệ tư vấn",
+      ctaHref: slideForm.ctaHref.trim() || "/pages/lien-he"
+    };
+
+    const nextSlides = editingId
+      ? value.slides.map((item) => (item.id === editingId ? payload : item))
+      : [...value.slides, payload];
+
+    onChange({
+      ...value,
+      slides: nextSlides
+    });
+    resetSlideForm();
+  };
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader
+            title="Trang giới thiệu"
+            description="Cập nhật nội dung hiển thị trên trang giới thiệu. Hỗ trợ ảnh và CTA theo từng slide."
+            actions={
+              <div className="flex flex-wrap items-center gap-2">
+                {savedAt ? (
+                  <span className="text-base text-slate-500 md:text-sm">Đã lưu: {savedAt}</span>
+                ) : null}
+                <Button
+                  onClick={onSave}
+                  disabled={!isDirty}
+                  className="bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+                >
+                  Lưu trang giới thiệu
+                </Button>
+              </div>
+            }
+          />
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <AdminField label="Eyebrow" helper="Ví dụ: Giới thiệu">
+              <input
+                className={inputClass}
+                value={value.hero.eyebrow}
+                onChange={(event) => updateHero({ eyebrow: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Tiêu đề chính" helper="Tiêu đề lớn hiển thị ở phần đầu trang.">
+              <input
+                className={inputClass}
+                value={value.hero.title}
+                onChange={(event) => updateHero({ title: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Mô tả" helper="Đoạn giới thiệu ngắn bên dưới tiêu đề.">
+              <textarea
+                className={textareaClass}
+                value={value.hero.lead}
+                onChange={(event) => updateHero({ lead: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Ảnh hero" helper="Kích thước gợi ý 1400x900px.">
+              <input
+                className={inputClass}
+                value={value.hero.image}
+                onChange={(event) => updateHero({ image: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Alt ảnh hero" helper="Mô tả ảnh cho SEO.">
+              <input
+                className={inputClass}
+                value={value.hero.imageAlt}
+                onChange={(event) => updateHero({ imageAlt: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="CTA chính" helper="Nút liên hệ nổi bật.">
+              <input
+                className={inputClass}
+                value={value.hero.ctaLabel}
+                onChange={(event) => updateHero({ ctaLabel: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Link CTA chính" helper="Ví dụ: /pages/lien-he">
+              <input
+                className={inputClass}
+                value={value.hero.ctaHref}
+                onChange={(event) => updateHero({ ctaHref: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="CTA phụ" helper="Nút phụ ở phần hero.">
+              <input
+                className={inputClass}
+                value={value.hero.secondaryLabel}
+                onChange={(event) => updateHero({ secondaryLabel: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Link CTA phụ" helper="Ví dụ: /pages/hoi-dap-cung-nha-nong">
+              <input
+                className={inputClass}
+                value={value.hero.secondaryHref}
+                onChange={(event) => updateHero({ secondaryHref: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Pill highlights" helper="Mỗi dòng là một nhãn nổi bật.">
+              <textarea
+                className={textareaClass}
+                value={heroPillsValue}
+                onChange={(event) => handleHeroPillsChange(event.target.value)}
+              />
+            </AdminField>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader title="Chỉ số nổi bật" description="Các con số tạo niềm tin trên trang giới thiệu." />
+          <div className="mt-4 grid gap-4">
+            {value.stats.map((stat, index) => (
+              <div
+                key={`${stat.label}-${index}`}
+                className="grid gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-[1fr_1.4fr_auto]"
+              >
+                <input
+                  className={inputClass}
+                  placeholder="Ví dụ: 3.000+"
+                  value={stat.value}
+                  onChange={(event) => handleStatChange(index, { value: event.target.value })}
+                />
+                <input
+                  className={inputClass}
+                  placeholder="Mô tả chỉ số"
+                  value={stat.label}
+                  onChange={(event) => handleStatChange(index, { label: event.target.value })}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeStat(index)}
+                  className="normal-case tracking-normal text-rose-600 hover:bg-rose-50 text-base md:text-sm cursor-pointer"
+                >
+                  Xóa
+                </Button>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              onClick={addStat}
+              className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
+            >
+              Thêm chỉ số
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader
+            title="Nội dung chi tiết"
+            description="Có thể dùng HTML (p, h3, ul, li). Nội dung này hiển thị như một slide dài."
+          />
+          <div className="mt-4">
+            <textarea
+              className={textareaClass}
+              value={value.storyHtml || ""}
+              onChange={(event) => handleStoryChange(event.target.value)}
+              rows={8}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader title="CTA cuối trang" description="Khối kêu gọi liên hệ cuối trang giới thiệu." />
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <AdminField label="Tiêu đề" helper="Dùng tiêu đề kêu gọi hành động.">
+              <input
+                className={inputClass}
+                value={value.contact.title}
+                onChange={(event) => handleContactChange({ title: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Nội dung" helper="Mô tả ngắn bên dưới tiêu đề.">
+              <textarea
+                className={textareaClass}
+                value={value.contact.description}
+                onChange={(event) => handleContactChange({ description: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Nút CTA" helper="Ví dụ: Gửi yêu cầu.">
+              <input
+                className={inputClass}
+                value={value.contact.ctaLabel}
+                onChange={(event) => handleContactChange({ ctaLabel: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Link CTA" helper="Ví dụ: /pages/lien-he">
+              <input
+                className={inputClass}
+                value={value.contact.ctaHref}
+                onChange={(event) => handleContactChange({ ctaHref: event.target.value })}
+              />
+            </AdminField>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader
+            title="Danh sách slide"
+            description="Các slide giới thiệu hiển thị theo chiều dọc trên trang."
+          />
+          <div className="mt-4 space-y-4">
+            {value.slides.length ? (
+              value.slides.map((slide) => (
+                <div
+                  key={slide.id}
+                  className="flex flex-wrap items-start gap-4 rounded-xl border border-slate-200 p-4"
+                >
+                  <div className="h-20 w-32 overflow-hidden rounded-lg bg-slate-100">
+                    <Image
+                      src={slide.image}
+                      alt={slide.imageAlt}
+                      width={128}
+                      height={80}
+                      className="h-full w-full object-cover"
+                      sizes="128px"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-base font-semibold text-slate-900 md:text-sm">{slide.title}</p>
+                    <p className="text-base text-slate-500 md:text-sm">
+                      {slide.tag} • CTA: {slide.ctaLabel}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSlideEdit(slide)}
+                      className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
+                    >
+                      Sửa
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSlideDelete(slide)}
+                      className="normal-case tracking-normal text-rose-600 hover:bg-rose-50 text-base md:text-sm cursor-pointer"
+                    >
+                      Xóa
+                    </Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-base text-slate-500 md:text-sm">
+                Chưa có slide nào. Hãy tạo slide đầu tiên.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader
+            title={editingId ? "Cập nhật slide" : "Tạo slide mới"}
+            description="Mỗi slide gồm hình ảnh, mô tả và nút liên hệ."
+          />
+          <div className="mt-4 grid gap-4">
+            <AdminField label="Tag" helper="Ví dụ: Chặng 01 (có thể để trống).">
+              <input
+                className={inputClass}
+                value={slideForm.tag}
+                onChange={(event) => setSlideForm({ ...slideForm, tag: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Tiêu đề" helper="Tiêu đề chính của slide.">
+              <input
+                className={inputClass}
+                value={slideForm.title}
+                onChange={(event) => setSlideForm({ ...slideForm, title: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Mô tả" helper="Đoạn mô tả ngắn.">
+              <textarea
+                className={textareaClass}
+                value={slideForm.description}
+                onChange={(event) => setSlideForm({ ...slideForm, description: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Danh sách bullet" helper="Mỗi dòng là một bullet.">
+              <textarea
+                className={textareaClass}
+                value={slideForm.bullets}
+                onChange={(event) => setSlideForm({ ...slideForm, bullets: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Ảnh slide" helper="URL ảnh (ưu tiên 1200x800px).">
+              <input
+                className={inputClass}
+                value={slideForm.image}
+                onChange={(event) => setSlideForm({ ...slideForm, image: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Alt ảnh" helper="Mô tả ảnh cho SEO.">
+              <input
+                className={inputClass}
+                value={slideForm.imageAlt}
+                onChange={(event) => setSlideForm({ ...slideForm, imageAlt: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Nút CTA" helper="Ví dụ: Liên hệ tư vấn.">
+              <input
+                className={inputClass}
+                value={slideForm.ctaLabel}
+                onChange={(event) => setSlideForm({ ...slideForm, ctaLabel: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Link CTA" helper="Ví dụ: /pages/lien-he">
+              <input
+                className={inputClass}
+                value={slideForm.ctaHref}
+                onChange={(event) => setSlideForm({ ...slideForm, ctaHref: event.target.value })}
+              />
+            </AdminField>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={handleSlideSubmit}
+                className="bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+              >
+                {editingId ? "Lưu slide" : "Tạo slide"}
+              </Button>
+              {editingId ? (
+                <Button
+                  variant="outline"
+                  onClick={resetSlideForm}
+                  className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
+                >
+                  Hủy
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminContactSection({
   value,
   onChange,
@@ -2529,6 +3175,400 @@ function AdminContactSection({
             onChange={(event) => onChange({ mapUrl: event.target.value })}
           />
         </AdminField>
+        <div className="grid gap-4 lg:col-span-2 lg:grid-cols-3">
+          <AdminField
+            label="So dien thoai di dong"
+            helper="Dung cho nut goi nhanh."
+          >
+            <input
+              className={inputClass}
+              value={value.mobilePhone}
+              onChange={(event) => onChange({ mobilePhone: event.target.value })}
+            />
+          </AdminField>
+          <AdminField
+            label="Link Facebook"
+            helper="Dung cho nut lien he Facebook."
+          >
+            <input
+              className={inputClass}
+              value={value.facebookUrl}
+              onChange={(event) => onChange({ facebookUrl: event.target.value })}
+            />
+          </AdminField>
+          <AdminField
+            label="Link Zalo"
+            helper="Dung cho nut lien he Zalo."
+          >
+            <input
+              className={inputClass}
+              value={value.zaloUrl}
+              onChange={(event) => onChange({ zaloUrl: event.target.value })}
+            />
+          </AdminField>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminPromoPopupSection({
+  value,
+  onChange,
+  onSave,
+  isDirty,
+  savedAt
+}: {
+  value: PromoPopupSettings;
+  onChange: (patch: Partial<PromoPopupSettings>) => void;
+  onSave: () => void;
+  isDirty: boolean;
+  savedAt: string | null;
+}) {
+  const handleProgramChange = (index: number, patch: Partial<PromoProgram>) => {
+    const next = value.programs.map((item, idx) =>
+      idx === index ? { ...item, ...patch } : item
+    );
+    onChange({ programs: next });
+  };
+
+  const handleCouponChange = (index: number, patch: Partial<PromoCoupon>) => {
+    const next = value.coupons.map((item, idx) =>
+      idx === index ? { ...item, ...patch } : item
+    );
+    onChange({ coupons: next });
+  };
+
+  const addProgram = () => {
+    onChange({
+      programs: [...value.programs, { title: "Ưu đãi mới", description: "" }]
+    });
+  };
+
+  const removeProgram = (index: number) => {
+    onChange({ programs: value.programs.filter((_, idx) => idx != index) });
+  };
+
+  const addCoupon = () => {
+    onChange({
+      coupons: [...value.coupons, { label: "Mã ưu đãi", code: "", description: "" }]
+    });
+  };
+
+  const removeCoupon = (index: number) => {
+    onChange({ coupons: value.coupons.filter((_, idx) => idx != index) });
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <AdminSectionHeader
+        title="Popup khuyến mãi"
+        description="Thiết lập nội dung popup khuyến mãi hiển thị ở trang chủ."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {savedAt ? (
+              <span className="text-base text-slate-500 md:text-sm">
+                Đã lưu: {savedAt}
+              </span>
+            ) : null}
+            <Button
+              onClick={onSave}
+              disabled={!isDirty}
+              className="bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+            >
+              Lưu popup
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <AdminField label="Bật popup" helper="Bật/tắt popup khuyến mãi trên trang chủ.">
+          <select
+            className={selectClass}
+            value={value.isActive ? "true" : "false"}
+            onChange={(event) => onChange({ isActive: event.target.value === "true" })}
+          >
+            <option value="true">Đang bật</option>
+            <option value="false">Đang tắt</option>
+          </select>
+        </AdminField>
+        <AdminField label="Độ trễ (giây)" helper="Popup sẽ hiển thị sau số giây này.">
+          <input
+            className={inputClass}
+            type="number"
+            min={0}
+            value={value.delaySeconds}
+            onChange={(event) => onChange({ delaySeconds: Number(event.target.value) || 0 })}
+          />
+        </AdminField>
+        <AdminField label="Tiêu đề" helper="Tiêu đề nổi bật của popup.">
+          <input
+            className={inputClass}
+            value={value.title}
+            onChange={(event) => onChange({ title: event.target.value })}
+          />
+        </AdminField>
+        <AdminField label="Phụ đề" helper="Dòng mô tả ngắn bên dưới tiêu đề.">
+          <input
+            className={inputClass}
+            value={value.subtitle}
+            onChange={(event) => onChange({ subtitle: event.target.value })}
+          />
+        </AdminField>
+        <AdminField label="Ảnh popup" helper="URL ảnh hiển thị ở phần trên của popup.">
+          <input
+            className={inputClass}
+            value={value.imageSrc}
+            onChange={(event) => onChange({ imageSrc: event.target.value })}
+          />
+        </AdminField>
+        <AdminField label="Alt ảnh" helper="Mô tả ngắn cho ảnh.">
+          <input
+            className={inputClass}
+            value={value.imageAlt}
+            onChange={(event) => onChange({ imageAlt: event.target.value })}
+          />
+        </AdminField>
+        <AdminField label="Nút CTA" helper="Nhãn nút liên hệ trong popup.">
+          <input
+            className={inputClass}
+            value={value.ctaLabel}
+            onChange={(event) => onChange({ ctaLabel: event.target.value })}
+          />
+        </AdminField>
+        <AdminField label="Liên kết CTA" helper="Đường dẫn khi bấm nút CTA.">
+          <input
+            className={inputClass}
+            value={value.ctaHref}
+            onChange={(event) => onChange({ ctaHref: event.target.value })}
+          />
+        </AdminField>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-slate-900 md:text-sm">
+              Chương trình ưu đãi
+            </h3>
+            <Button
+              onClick={addProgram}
+              className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+            >
+              Thêm ưu đãi
+            </Button>
+          </div>
+          <div className="mt-4 space-y-4">
+            {value.programs.map((item, index) => (
+              <div key={`program-${index}`} className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">Ưu đãi #{index + 1}</span>
+                  <Button
+                    onClick={() => removeProgram(index)}
+                    className="h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 normal-case tracking-normal text-sm cursor-pointer"
+                  >
+                    Xóa
+                  </Button>
+                </div>
+                <div className="mt-3 space-y-3">
+                  <input
+                    className={inputClass}
+                    value={item.title}
+                    onChange={(event) => handleProgramChange(index, { title: event.target.value })}
+                  />
+                  <textarea
+                    className={textareaClass}
+                    value={item.description}
+                    onChange={(event) => handleProgramChange(index, { description: event.target.value })}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-slate-900 md:text-sm">
+              Mã giảm giá
+            </h3>
+            <Button
+              onClick={addCoupon}
+              className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+            >
+              Thêm mã
+            </Button>
+          </div>
+          <div className="mt-4 space-y-4">
+            {value.coupons.map((item, index) => (
+              <div key={`coupon-${index}`} className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">Mã #{index + 1}</span>
+                  <Button
+                    onClick={() => removeCoupon(index)}
+                    className="h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 normal-case tracking-normal text-sm cursor-pointer"
+                  >
+                    Xóa
+                  </Button>
+                </div>
+                <div className="mt-3 space-y-3">
+                  <input
+                    className={inputClass}
+                    value={item.label}
+                    onChange={(event) => handleCouponChange(index, { label: event.target.value })}
+                    placeholder="Tên ưu đãi"
+                  />
+                  <input
+                    className={inputClass}
+                    value={item.code}
+                    onChange={(event) => handleCouponChange(index, { code: event.target.value })}
+                    placeholder="Mã giảm giá"
+                  />
+                  <textarea
+                    className={textareaClass}
+                    value={item.description}
+                    onChange={(event) => handleCouponChange(index, { description: event.target.value })}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminNotificationsSection({
+  value,
+  onChange,
+  onSave,
+  isDirty,
+  savedAt
+}: {
+  value: NotificationSettings;
+  onChange: (next: NotificationSettings) => void;
+  onSave: () => void;
+  isDirty: boolean;
+  savedAt: string | null;
+}) {
+  const handleItemChange = (index: number, patch: Partial<NotificationItem>) => {
+    const next = value.items.map((item, idx) =>
+      idx === index ? { ...item, ...patch } : item
+    );
+    onChange({ items: next });
+  };
+
+  const addItem = () => {
+    const nextItem: NotificationItem = {
+      id: `notify-${Date.now()}`,
+      title: "Thông báo mới",
+      description: "",
+      href: "/",
+      isActive: true
+    };
+    onChange({ items: [...value.items, nextItem] });
+  };
+
+  const removeItem = (index: number) => {
+    onChange({ items: value.items.filter((_, idx) => idx !== index) });
+  };
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <AdminSectionHeader
+        title="Thông báo"
+        description="Thông báo popup lấy từ mục Popup khuyến mãi."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {savedAt ? (
+              <span className="text-base text-slate-500 md:text-sm">
+                Đã lưu: {savedAt}
+              </span>
+            ) : null}
+            <Button
+              onClick={onSave}
+              disabled={!isDirty}
+              className="bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+            >
+              Lưu thông báo
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-slate-900 md:text-sm">
+            Danh sách thông báo
+          </h3>
+          <Button
+            onClick={addItem}
+            className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+          >
+            Thêm thông báo
+          </Button>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          {value.items.length === 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+              Chưa có thông báo tuỳ chỉnh.
+            </div>
+          ) : (
+            value.items.map((item, index) => (
+              <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">Thông báo #{index + 1}</span>
+                  <Button
+                    onClick={() => removeItem(index)}
+                    className="h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 normal-case tracking-normal text-sm cursor-pointer"
+                  >
+                    Xóa
+                  </Button>
+                </div>
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                  <AdminField label="Tiêu đề">
+                    <input
+                      className={inputClass}
+                      value={item.title}
+                      onChange={(event) => handleItemChange(index, { title: event.target.value })}
+                    />
+                  </AdminField>
+                  <AdminField label="Liên kết">
+                    <input
+                      className={inputClass}
+                      value={item.href}
+                      onChange={(event) => handleItemChange(index, { href: event.target.value })}
+                    />
+                  </AdminField>
+                  <AdminField label="Trạng thái">
+                    <select
+                      className={selectClass}
+                      value={item.isActive ? "true" : "false"}
+                      onChange={(event) =>
+                        handleItemChange(index, { isActive: event.target.value === "true" })
+                      }
+                    >
+                      <option value="true">Đang bật</option>
+                      <option value="false">Đang tắt</option>
+                    </select>
+                  </AdminField>
+                  <AdminField label="Mô tả">
+                    <textarea
+                      className={textareaClass}
+                      value={item.description}
+                      onChange={(event) =>
+                        handleItemChange(index, { description: event.target.value })
+                      }
+                    />
+                  </AdminField>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

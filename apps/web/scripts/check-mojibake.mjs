@@ -1,13 +1,26 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+﻿import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import * as ts from "typescript";
 
 const root = path.resolve(process.cwd());
 const ignoreDirs = new Set([".next", "node_modules", "dist", "build", ".git"]);
 const includeExt = new Set([".ts", ".tsx", ".js", ".jsx", ".json", ".md"]);
+const scriptExt = new Set([".ts", ".tsx", ".js", ".jsx"]);
 
-const mojibakeMarkers = ["Ã", "Â", "Ä", "Å", "Æ", "á»", "áº", "�"];
-const literalRegex = /("([^"\\]|\\.)*"|'([^'\\]|\\.)*')/g;
-const inlineBadRegex = /[A-Za-zÀ-ỹ]\?[A-Za-zÀ-ỹ]/;
+const mojibakeMarkers = [
+  "Ã",
+  "Ä",
+  "Ãƒ",
+  "Ã‚",
+  "Ã„",
+  "Ã…",
+  "Ã†",
+  "Ã¡Â»",
+  "Ã¡Âº",
+  "\uFFFD",
+  "ï¿½"
+];
+const inlineBadRegex = /\p{L}\?\p{L}/u;
 
 const issues = [];
 
@@ -40,36 +53,102 @@ async function walk(dir) {
 }
 
 function checkFile(filePath, content) {
-  for (const marker of mojibakeMarkers) {
-    if (content.includes(marker)) {
-      issues.push({
-        filePath,
-        reason: `Contains mojibake marker "${marker}".`
-      });
-      break;
+  const ext = path.extname(filePath);
+
+  if (!scriptExt.has(ext)) {
+    for (const marker of mojibakeMarkers) {
+      if (content.includes(marker)) {
+        issues.push({
+          filePath,
+          reason: `Contains mojibake marker "${marker}".`
+        });
+        break;
+      }
     }
+    return;
   }
 
-  for (const match of content.matchAll(literalRegex)) {
-    const literal = match[0];
-    if (!literal.includes("?")) {
-      continue;
+  const scriptKind =
+    ext === ".tsx"
+      ? ts.ScriptKind.TSX
+      : ext === ".jsx"
+        ? ts.ScriptKind.JSX
+        : ext === ".js"
+          ? ts.ScriptKind.JS
+          : ts.ScriptKind.TS;
+
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind
+  );
+
+  const maybeFlag = (value) => {
+    if (!value || !value.includes("?")) {
+      return false;
     }
-    if (literal.includes("http://") || literal.includes("https://")) {
-      continue;
+    if (value.includes("http://") || value.includes("https://")) {
+      return false;
     }
-    if (literal.includes("\\?")) {
-      continue;
+    return inlineBadRegex.test(value);
+  };
+
+  const hasMojibake = (value) =>
+    mojibakeMarkers.some((marker) => value.includes(marker));
+
+  let reported = false;
+  const visit = (node) => {
+    if (reported) {
+      return;
     }
-    if (inlineBadRegex.test(literal)) {
-      issues.push({
-        filePath,
-        reason: "Suspicious '?' inside a string literal.",
-        snippet: literal.slice(0, 200)
-      });
-      break;
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      const value = node.text;
+      if (hasMojibake(value)) {
+        issues.push({
+          filePath,
+          reason: "Contains mojibake marker inside a string literal.",
+          snippet: value.slice(0, 200)
+        });
+        reported = true;
+        return;
+      }
+      if (maybeFlag(value)) {
+        issues.push({
+          filePath,
+          reason: "Suspicious '?' inside a string literal.",
+          snippet: value.slice(0, 200)
+        });
+        reported = true;
+        return;
+      }
+    } else if (ts.isJsxText(node)) {
+      const value = node.getText(sourceFile);
+      if (hasMojibake(value)) {
+        issues.push({
+          filePath,
+          reason: "Contains mojibake marker inside JSX text.",
+          snippet: value.slice(0, 200)
+        });
+        reported = true;
+        return;
+      }
+      if (maybeFlag(value)) {
+        issues.push({
+          filePath,
+          reason: "Suspicious '?' inside JSX text.",
+          snippet: value.slice(0, 200)
+        });
+        reported = true;
+        return;
+      }
     }
-  }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
 }
 
 await walk(root);

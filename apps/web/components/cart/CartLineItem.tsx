@@ -25,7 +25,7 @@ export default function CartLineItem({ item }: { item: CartItem }) {
             />
           ) : (
             <Image
-              src="/tam-bo/cart/no_image.jpg"
+              src="https://images.pexels.com/photos/9816769/pexels-photo-9816769.jpeg?cs=srgb&dl=pexels-brianjiz-9816769.jpg&fm=jpg"
               alt="No image"
               width={96}
               height={96}

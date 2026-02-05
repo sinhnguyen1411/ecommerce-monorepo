@@ -55,7 +55,7 @@ export default function CartDrawer() {
             {items.length === 0 ? (
               <div className="border border-dashed border-forest/20 bg-white p-6 text-center text-sm text-ink/70">
                 <Image
-                  src="/tam-bo/cart/no_image.jpg"
+                  src="https://images.pexels.com/photos/9816769/pexels-photo-9816769.jpeg?cs=srgb&dl=pexels-brianjiz-9816769.jpg&fm=jpg"
                   alt="empty"
                   width={96}
                   height={96}

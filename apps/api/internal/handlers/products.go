@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +21,8 @@ type Product struct {
 	Images         []ProductImage   `json:"images"`
 	Categories     []CategorySimple `json:"categories"`
 	Tags           []string         `json:"tags,omitempty"`
+	CreatedAt      *time.Time       `json:"created_at,omitempty"`
+	UpdatedAt      *time.Time       `json:"updated_at,omitempty"`
 }
 
 type ProductImage struct {
@@ -35,13 +38,20 @@ type CategorySimple struct {
 }
 
 func (s *Server) ListProducts(c *gin.Context) {
-	category := c.Query("category")
-	sortParam := c.DefaultQuery("sort", "latest")
-	featured := c.Query("featured")
-	limitParam := c.Query("limit")
+	category := strings.TrimSpace(c.Query("category"))
+	sortParam := strings.TrimSpace(c.Query("sort"))
+	if sortParam == "" {
+		sortParam = strings.TrimSpace(c.Query("sort_by"))
+	}
+	featured := strings.TrimSpace(c.Query("featured"))
+	limitParam := strings.TrimSpace(c.Query("limit"))
+	queryParam := strings.TrimSpace(c.Query("q"))
+	priceMinParam := strings.TrimSpace(c.Query("price_min"))
+	priceMaxParam := strings.TrimSpace(c.Query("price_max"))
+	tagsParam := strings.TrimSpace(c.Query("tags"))
 
 	query := strings.Builder{}
-	query.WriteString("SELECT DISTINCT p.id, p.name, p.slug, IFNULL(p.description, ''), p.price, p.compare_at_price, p.featured, IFNULL(p.tags, ''), p.created_at ")
+	query.WriteString("SELECT DISTINCT p.id, p.name, p.slug, IFNULL(p.description, ''), p.price, p.compare_at_price, p.featured, IFNULL(p.tags, ''), p.created_at, p.updated_at ")
 	query.WriteString("FROM products p ")
 
 	args := make([]any, 0)
@@ -62,11 +72,55 @@ func (s *Server) ListProducts(c *gin.Context) {
 		args = append(args, category)
 	}
 
+	if queryParam != "" {
+		like := "%" + queryParam + "%"
+		query.WriteString("AND (p.name LIKE ? OR IFNULL(p.description, '') LIKE ? OR IFNULL(p.tags, '') LIKE ?) ")
+		args = append(args, like, like, like)
+	}
+
+	if priceMinParam != "" {
+		if minPrice, err := strconv.ParseFloat(priceMinParam, 64); err == nil {
+			query.WriteString("AND p.price >= ? ")
+			args = append(args, minPrice)
+		}
+	}
+
+	if priceMaxParam != "" {
+		if maxPrice, err := strconv.ParseFloat(priceMaxParam, 64); err == nil {
+			query.WriteString("AND p.price <= ? ")
+			args = append(args, maxPrice)
+		}
+	}
+
+	if tagsParam != "" {
+		rawTags := strings.Split(tagsParam, ",")
+		tagConditions := make([]string, 0, len(rawTags))
+		for _, raw := range rawTags {
+			tag := strings.TrimSpace(raw)
+			if tag == "" {
+				continue
+			}
+			tagConditions = append(tagConditions, "IFNULL(p.tags, '') LIKE ?")
+			args = append(args, "%"+tag+"%")
+		}
+		if len(tagConditions) > 0 {
+			query.WriteString("AND (" + strings.Join(tagConditions, " OR ") + ") ")
+		}
+	}
+
 	switch sortParam {
-	case "price_asc":
+	case "price_asc", "price-ascending":
 		query.WriteString("ORDER BY p.price ASC ")
-	case "price_desc":
+	case "price_desc", "price-descending":
 		query.WriteString("ORDER BY p.price DESC ")
+	case "title-ascending", "title_asc":
+		query.WriteString("ORDER BY p.name ASC ")
+	case "title-descending", "title_desc":
+		query.WriteString("ORDER BY p.name DESC ")
+	case "created-ascending", "created_asc", "oldest":
+		query.WriteString("ORDER BY p.created_at ASC ")
+	case "created-descending", "created_desc", "latest", "newest":
+		query.WriteString("ORDER BY p.created_at DESC ")
 	default:
 		query.WriteString("ORDER BY p.created_at DESC ")
 	}
@@ -91,7 +145,8 @@ func (s *Server) ListProducts(c *gin.Context) {
 		var compareAt sql.NullFloat64
 		var rawTags string
 		var createdAt sql.NullTime
-		if err := rows.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured, &rawTags, &createdAt); err != nil {
+		var updatedAt sql.NullTime
+		if err := rows.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured, &rawTags, &createdAt, &updatedAt); err != nil {
 			respondError(c, http.StatusInternalServerError, "db_error", "Failed to parse products")
 			return
 		}
@@ -99,6 +154,12 @@ func (s *Server) ListProducts(c *gin.Context) {
 			product.CompareAtPrice = &compareAt.Float64
 		}
 		product.Tags = parseTags(rawTags)
+		if createdAt.Valid {
+			product.CreatedAt = &createdAt.Time
+		}
+		if updatedAt.Valid {
+			product.UpdatedAt = &updatedAt.Time
+		}
 		products = append(products, product)
 	}
 
@@ -124,7 +185,7 @@ func (s *Server) GetProduct(c *gin.Context) {
 	slug := c.Param("slug")
 
 	row := s.DB.QueryRow(`
-    SELECT id, name, slug, IFNULL(description, ''), price, compare_at_price, featured, IFNULL(tags, '')
+    SELECT id, name, slug, IFNULL(description, ''), price, compare_at_price, featured, IFNULL(tags, ''), created_at, updated_at
     FROM products
     WHERE slug = ? AND status = 'published'
     LIMIT 1
@@ -133,7 +194,9 @@ func (s *Server) GetProduct(c *gin.Context) {
 	var product Product
 	var compareAt sql.NullFloat64
 	var rawTags string
-	if err := row.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured, &rawTags); err != nil {
+	var createdAt sql.NullTime
+	var updatedAt sql.NullTime
+	if err := row.Scan(&product.ID, &product.Name, &product.Slug, &product.Description, &product.Price, &compareAt, &product.Featured, &rawTags, &createdAt, &updatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			respondError(c, http.StatusNotFound, "not_found", "Product not found")
 			return
@@ -146,6 +209,12 @@ func (s *Server) GetProduct(c *gin.Context) {
 		product.CompareAtPrice = &compareAt.Float64
 	}
 	product.Tags = parseTags(rawTags)
+	if createdAt.Valid {
+		product.CreatedAt = &createdAt.Time
+	}
+	if updatedAt.Valid {
+		product.UpdatedAt = &updatedAt.Time
+	}
 
 	products := []Product{product}
 	if err := s.attachProductImages(products); err != nil {

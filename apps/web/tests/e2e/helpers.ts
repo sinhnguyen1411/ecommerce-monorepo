@@ -30,11 +30,14 @@ const demoBanners = [
 
 const demoContactSettings = {
   phone: "0900 111 222",
+  mobilePhone: "0900 111 222",
   fax: "0251 111 222",
   email: "support@tam-bo.vn",
   address: "123 Đường Nông Nghiệp, Lâm Đồng",
   businessHours: "Thứ 2 - Chủ nhật, 08:00 - 18:00",
-  mapUrl: "https://www.google.com/maps?q=11.6216306,108.2261405&hl=vi&z=16&output=embed"
+  mapUrl: "https://www.google.com/maps?q=11.6216306,108.2261405&hl=vi&z=16&output=embed",
+  facebookUrl: "https://www.facebook.com/tambo-demo",
+  zaloUrl: "https://zalo.me/0900111222"
 };
 
 export const seedContentStorage = async (page: Page) => {

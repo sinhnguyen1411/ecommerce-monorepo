@@ -21,7 +21,6 @@ import MobileMenu from "./MobileMenu";
 import SearchDialog from "./SearchDialog";
 
 const navLinks = [
-  { href: "/", label: "Trang ch\u1EE7" },
   { href: "/pages/about-us", label: "Gi\u1EDBi thi\u1EC7u" },
   { href: "/collections/all", label: "S\u1EA3n ph\u1EA9m" },
   { href: "/blogs/news", label: "Ki\u1EBFn th\u1EE9c nh\u00E0 n\u00F4ng" },
@@ -105,10 +104,13 @@ export default function Header() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <button onClick={open} className="header-action-cart">
+                <button
+                  onClick={open}
+                  className="header-action-btn relative"
+                  aria-label="Gi\u1ECF h\u00E0ng"
+                >
                   <ShoppingBag className="h-4 w-4" />
-                  {"Gi\u1ECF h\u00E0ng"}
-                  <span>({count})</span>
+                  <span className="badge-count">{count}</span>
                 </button>
               </div>
             </div>

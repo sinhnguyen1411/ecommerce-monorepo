@@ -15,25 +15,14 @@ infra\env\api.env
 infra\env\web.env
 ```
 
-2) Configure Phase 2 auth (optional for local):
-
-```
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URL=http://localhost:8080/api/auth/google/callback
-FRONTEND_BASE_URL=http://localhost:3000
-```
-
-If Google OAuth is not configured, user login will be unavailable.
-
-3) Start the stack:
+2) Start the stack:
 
 ```
 cd infra
 docker compose up -d --build
 ```
 
-4) Verify services:
+3) Verify services:
 
 ```
 curl http://localhost:8080/healthz
@@ -41,10 +30,11 @@ curl http://localhost:3000
 ```
 
 ## Notes
-- Migrations run on API start (MIGRATE_ON_START=true).
-- Seed data loads on first start (SEED_ON_START=true).
-- Uploaded files are stored in the api_uploads volume.
-- Admin seed account (local): `admin@tambo.local` / `admin123`
+- Migrations run on API start (`MIGRATE_ON_START=true`).
+- Seed data loads on first start (`SEED_ON_START=true`).
+- Uploaded files are stored in the `api_uploads` volume.
+- Admin seed account (local): `admin@tambo.local` / `admin123`.
+- If SMTP is not configured, OTP emails are logged to the API console in non-production environments.
 
 ## Reset data
 
@@ -54,6 +44,30 @@ docker compose down -v
 
 Then start again to re-run migrations and seeds.
 
+## Run services manually (optional)
+
+### API
+1) Start MySQL:
+```
+cd infra
+docker compose up -d mysql
+```
+2) Update `infra/env/api.env`: `DB_HOST=localhost`, `DB_PORT=3007`.
+3) Run API:
+```
+cd apps/api
+go run .
+```
+
+### Web
+```
+cd apps/web
+npm.cmd install
+npm.cmd run dev
+```
+
+Ensure `NEXT_PUBLIC_API_URL=http://localhost:8080`.
+
 ## Useful commands
 
 ```
@@ -62,16 +76,12 @@ docker compose logs -f api
 docker compose logs -f web
 ```
 
-## Phase 2 manual checks
-
-User account:
-- Visit `http://localhost:3000/login` and sign in with Google.
-- After redirect, confirm profile loads on `/account`.
-- Add an address in `/account/addresses`.
-- Confirm order history in `/account/orders` after placing an order.
-
-Admin:
-- Visit `http://localhost:3000/admin/login`.
-- Login with `admin@tambo.local` / `admin123`.
-- Create a category and product, then verify it appears on the storefront.
-- Update order status and payment status in Admin > Orders.
+## Manual QA checklist
+- Storefront: open home, browse collections, filter/sort products, view detail.
+- Cart: add products, update quantity, verify min order + free shipping thresholds.
+- Checkout: select shipping/payment, apply coupon (`WELCOME50`, `FRESH10`), place order.
+- Payment proof: upload file on thank-you page and confirm `/uploads`.
+- Blog: view list and detail pages.
+- Auth: register, login, forgot password flow.
+- Account: update profile, add address, view order history.
+- Admin: login, CRUD products/categories/posts/Q&A, update orders and payment settings.

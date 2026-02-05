@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 import PostCard from "@/components/blog/PostCard";
+import PromoPopup from "@/components/common/PromoPopup";
 import HomeSlider from "@/components/home/HomeSlider";
 import ProductGrid from "@/components/product/ProductGrid";
 import { defaultHomeBanners } from "@/lib/content";
@@ -22,6 +23,7 @@ export default async function HomePage() {
 
   return (
     <main className="mainWrapper--content">
+      <PromoPopup />
       <HomeSlider slides={slides} />
 
       <section className="section-home-introduce">
@@ -32,7 +34,7 @@ export default async function HomePage() {
           </div>
           <div className="intro-grid">
             <div className="intro-content">
-              <div className="block-introduce">
+              <div className="block-introduce home-square-card">
                 <div className="block-introduce__title">
                   Giải pháp cho tương lai thông minh
                 </div>
@@ -58,28 +60,25 @@ export default async function HomePage() {
                 <div className="block-introduce__link">
                   <span className="link1">
                     <Link href="/collections/all" className="button">
-                      Tìm hiểu thêm
-                    </Link>
-                  </span>
-                  <span className="link2">
-                    <Link href="/pages/lien-he" className="button">
-                      Liên hệ đặt hàng
+                      Xem chi tiết
                     </Link>
                   </span>
                 </div>
               </div>
             </div>
             <div className="intro-image">
-              <Link href="/collections/all" className="image-use-effect3">
-                <Image
-                  src="/tam-bo/home/home_introduce_img.svg"
-                  alt="Nông Dược Tam Bố"
-                  width={640}
-                  height={520}
-                  className="h-auto w-full"
-                  sizes="(max-width: 768px) 90vw, 520px"
-                />
-              </Link>
+              <div className="home-square-media">
+                <Link href="/collections/all" className="image-use-effect3">
+                  <Image
+                    src="https://images.pexels.com/photos/19000373/pexels-photo-19000373.jpeg?cs=srgb&dl=pexels-abdulkayum97-19000373.jpg&fm=jpg"
+                    alt="Nông Dược Tam Bố"
+                    width={640}
+                    height={520}
+                    className="h-full w-full object-cover"
+                    sizes="(max-width: 768px) 90vw, 520px"
+                  />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -89,19 +88,21 @@ export default async function HomePage() {
         <div className="container">
           <div className="banner-block banner-left">
             <div className="banner-block__left">
-              <Link href="/collections/all" className="image-use-effect3">
-                <Image
-                  src="/tam-bo/home/home_banner_1_img.svg"
-                  alt="Organic Master"
-                  width={640}
-                  height={520}
-                  className="h-auto w-full"
-                  sizes="(max-width: 768px) 90vw, 520px"
-                />
-              </Link>
+              <div className="home-square-media">
+                <Link href="/collections/all" className="image-use-effect3">
+                  <Image
+                    src="https://images.pexels.com/photos/19455179/pexels-photo-19455179.jpeg?cs=srgb&dl=pexels-julian-cabrera-s-3685809-19455179.jpg&fm=jpg"
+                    alt="Organic Master"
+                    width={640}
+                    height={520}
+                    className="h-full w-full object-cover"
+                    sizes="(max-width: 768px) 90vw, 520px"
+                  />
+                </Link>
+              </div>
             </div>
             <div className="banner-block__right banner-block__info">
-              <div className="info">
+              <div className="info home-square-card">
                 <h3 className="title">ORGANIC MASTER</h3>
                 <p className="text">
                   Phân bón hữu cơ Organic Master là giải pháp đột phá cho nông
@@ -134,7 +135,7 @@ export default async function HomePage() {
           </div>
           <div className="banner-block banner-right">
             <div className="banner-block__left banner-block__info">
-              <div className="info">
+              <div className="info home-square-card">
                 <h3 className="title">MICROBIAL</h3>
                 <p className="text">
                   Chế phẩm vi sinh Microbial là sản phẩm sinh học tiên tiến được
@@ -163,16 +164,18 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="banner-block__right">
-              <Link href="/collections/all" className="image-use-effect3">
-                <Image
-                  src="/tam-bo/home/home_banner_2_img.svg"
-                  alt="Microbial"
-                  width={640}
-                  height={520}
-                  className="h-auto w-full"
-                  sizes="(max-width: 768px) 90vw, 520px"
-                />
-              </Link>
+              <div className="home-square-media">
+                <Link href="/collections/all" className="image-use-effect3">
+                  <Image
+                    src="https://images.pexels.com/photos/9816769/pexels-photo-9816769.jpeg?cs=srgb&dl=pexels-brianjiz-9816769.jpg&fm=jpg"
+                    alt="Microbial"
+                    width={640}
+                    height={520}
+                    className="h-full w-full object-cover"
+                    sizes="(max-width: 768px) 90vw, 520px"
+                  />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -184,14 +187,14 @@ export default async function HomePage() {
             <div className="feature-block">
               <div className="feature-block__inner image-use-effect4">
                 <div className="feature-block__img">
-                  <Image
-                    src="/tam-bo/home/home_feature_1_img.jpg"
-                    alt="FREESHIP TOÀN QUỐC"
-                    width={480}
-                    height={360}
-                    className="h-auto w-full"
-                    sizes="(max-width: 768px) 90vw, 320px"
-                  />
+                  <div className="feature-block__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" aria-label="Freeship toàn quốc">
+                      <path d="M3 16V6h11v10" />
+                      <path d="M14 10h4l3 3v3h-3" />
+                      <circle cx="7" cy="17" r="2" />
+                      <circle cx="17" cy="17" r="2" />
+                    </svg>
+                  </div>
                 </div>
                 <div className="feature-block__title">
                   <h4>FREESHIP TOÀN QUỐC</h4>
@@ -208,14 +211,12 @@ export default async function HomePage() {
             <div className="feature-block">
               <div className="feature-block__inner image-use-effect4">
                 <div className="feature-block__img">
-                  <Image
-                    src="/tam-bo/home/home_feature_2_img.jpg"
-                    alt="TĂNG NĂNG SUẤT VƯỢT TRỘI"
-                    width={480}
-                    height={360}
-                    className="h-auto w-full"
-                    sizes="(max-width: 768px) 90vw, 320px"
-                  />
+                  <div className="feature-block__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" aria-label="Tăng năng suất vượt trội">
+                      <path d="M3 17l6-6 4 4 7-7" />
+                      <path d="M14 8h6v6" />
+                    </svg>
+                  </div>
                 </div>
                 <div className="feature-block__title">
                   <h4>TĂNG NĂNG SUẤT VƯỢT TRỘI</h4>
@@ -232,14 +233,24 @@ export default async function HomePage() {
             <div className="feature-block">
               <div className="feature-block__inner image-use-effect4">
                 <div className="feature-block__img">
-                  <Image
-                    src="/tam-bo/home/home_feature_3_img.jpg"
-                    alt="HỖ TRỢ 24/7"
-                    width={480}
-                    height={360}
-                    className="h-auto w-full"
-                    sizes="(max-width: 768px) 90vw, 320px"
-                  />
+                  <div className="feature-block__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" aria-label="Hỗ trợ 24/7">
+                      <path d="M4 13a8 8 0 0 1 16 0" />
+                      <path d="M4 13v5a2 2 0 0 0 2 2h2v-6H6" />
+                      <path d="M20 13v5a2 2 0 0 1-2 2h-2v-6h2" />
+                      <text
+                        x="12"
+                        y="16"
+                        textAnchor="middle"
+                        fontSize="6"
+                        fontFamily="Arial, sans-serif"
+                        fill="currentColor"
+                        stroke="none"
+                      >
+                        24/7
+                      </text>
+                    </svg>
+                  </div>
                 </div>
                 <div className="feature-block__title">
                   <h4>HỖ TRỢ 24/7</h4>
@@ -276,23 +287,41 @@ export default async function HomePage() {
       <section className="section-home-aboutus">
         <div className="container">
           <div className="section-content">
-            <div className="aboutus-block text-center">
-              <div className="aboutus-block__text">
-                <h4>Nông Dược Tam Bố</h4>
-                <h3>Nông nghiệp hữu cơ bền vững</h3>
-                <p>Giải pháp cho tương lai thông minh</p>
+            <div className="aboutus-hero">
+              <div className="aboutus-hero__decor aboutus-hero__leaf" aria-hidden="true">
+                <svg viewBox="0 0 120 120" role="img">
+                  <path
+                    d="M20 80C20 40 58 18 96 20c2 38-18 76-58 76-6 0-12-1-18-4z"
+                    fill="currentColor"
+                  />
+                </svg>
               </div>
-              <div className="aboutus-block__link">
-                <span className="link1">
-                  <Link href="/pages/lien-he" className="button">
-                    Liên hệ đặt hàng
-                  </Link>
-                </span>
-                <span className="link2">
-                  <Link href="/pages/locations" className="button">
-                    Tìm hiểu thêm
-                  </Link>
-                </span>
+              <div className="aboutus-hero__decor aboutus-hero__arrow" aria-hidden="true">
+                <svg viewBox="0 0 120 120" role="img">
+                  <path
+                    d="M20 92l48-48 14 14 18-18v52H48l18-18-14-14-32 32z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </div>
+              <div className="aboutus-block text-center">
+                <div className="aboutus-block__text">
+                  <h4>Nông Dược Tam Bố</h4>
+                  <h3>Nông nghiệp hữu cơ bền vững</h3>
+                  <p>Giải pháp cho tương lai thông minh</p>
+                </div>
+                <div className="aboutus-block__link">
+                  <span className="link1">
+                    <Link href="/pages/lien-he" className="button">
+                      Liên hệ đặt hàng
+                    </Link>
+                  </span>
+                  <span className="link2">
+                    <Link href="/pages/locations" className="button">
+                      Tìm hiểu thêm
+                    </Link>
+                  </span>
+                </div>
               </div>
             </div>
           </div>

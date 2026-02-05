@@ -15,9 +15,9 @@ import QuickViewDialog from "./QuickViewDialog";
 import SaleBadge from "./SaleBadge";
 
 const PLACEHOLDER_IMAGES = [
-  "/tam-bo/products/placeholder_1.svg",
-  "/tam-bo/products/placeholder_2.svg",
-  "/tam-bo/products/placeholder_3.svg"
+  "https://images.pexels.com/photos/10541145/pexels-photo-10541145.jpeg?cs=srgb&dl=pexels-sarahpictures-10541145.jpg&fm=jpg",
+  "https://images.pexels.com/photos/19455179/pexels-photo-19455179.jpeg?cs=srgb&dl=pexels-julian-cabrera-s-3685809-19455179.jpg&fm=jpg",
+  "https://images.pexels.com/photos/9816769/pexels-photo-9816769.jpeg?cs=srgb&dl=pexels-brianjiz-9816769.jpg&fm=jpg"
 ];
 
 export default function ProductCard({ product }: { product: Product }) {

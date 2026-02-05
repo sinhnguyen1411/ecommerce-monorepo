@@ -169,6 +169,7 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
                   <div className="pointer-events-none absolute inset-0 flex items-end md:items-center">
                     <div className="mx-auto w-full max-w-5xl px-6 pb-8 md:px-10 md:pb-0">
                       <div className="home-slider__card pointer-events-auto max-w-lg p-5 sm:p-6">
+                        <p className="home-slider__eyebrow">TAM BO AGRICULTURAL PHARMACEUTICALS JSC</p>
                         {slide.badge ? (
                           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
                             {slide.badge}
