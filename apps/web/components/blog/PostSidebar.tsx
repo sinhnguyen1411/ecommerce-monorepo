@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 
 import { Post } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -19,7 +20,14 @@ export default function PostSidebar({ posts }: { posts: Post[] }) {
                 title={post.title}
               >
                 {post.cover_image ? (
-                  <img src={post.cover_image} alt={post.title} />
+                  <Image
+                    src={post.cover_image}
+                    alt={post.title}
+                    width={320}
+                    height={200}
+                    className="h-full w-full object-cover"
+                    sizes="(max-width: 768px) 100vw, 180px"
+                  />
                 ) : (
                   <div className="no-image">{"\u0110ang c\u1EADp nh\u1EADt \u1EA3nh"}</div>
                 )}

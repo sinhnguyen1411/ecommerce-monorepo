@@ -16,10 +16,6 @@ type EmailSender interface {
 	Send(to, subject, body string) error
 }
 
-type SMSSender interface {
-	Send(to, message string) error
-}
-
 type DevEmailSender struct {
 	Enabled bool
 }
@@ -64,26 +60,6 @@ func (s *SMTPEmailSender) Send(to, subject, body string) error {
 	return smtp.SendMail(addr, auth, s.From, []string{to}, buf.Bytes())
 }
 
-type DevSMSSender struct {
-	Enabled bool
-}
-
-func (s *DevSMSSender) Send(to, message string) error {
-	if !s.Enabled {
-		return errors.New("sms not configured")
-	}
-	log.Printf("[DEV] SMS to %s message=%s", to, message)
-	return nil
-}
-
-type UnsupportedSMSSender struct {
-	Provider string
-}
-
-func (s *UnsupportedSMSSender) Send(to, message string) error {
-	return fmt.Errorf("sms provider %s not configured", s.Provider)
-}
-
 func buildEmailSender(cfg config.Config) (EmailSender, error) {
 	if cfg.SMTPHost != "" && cfg.SMTPFrom != "" {
 		port := cfg.SMTPPort
@@ -106,15 +82,6 @@ func buildEmailSender(cfg config.Config) (EmailSender, error) {
 	}
 
 	return &DevEmailSender{Enabled: true}, nil
-}
-
-func buildSMSSender(cfg config.Config) (SMSSender, error) {
-	isProd := isProdEnv(cfg.AppEnv)
-	if strings.EqualFold(cfg.SMSProvider, "dev") || cfg.SMSProvider == "" {
-		return &DevSMSSender{Enabled: !isProd}, nil
-	}
-
-	return &UnsupportedSMSSender{Provider: cfg.SMSProvider}, nil
 }
 
 func isProdEnv(env string) bool {

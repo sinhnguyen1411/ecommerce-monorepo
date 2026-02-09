@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import { ReactNode } from "react";
 
 import { Product } from "@/lib/api";
@@ -40,7 +41,7 @@ export default function QuickViewDialog({
         <div className="grid gap-6 md:grid-cols-[1.1fr_1fr]">
           <div className="overflow-hidden rounded-2xl bg-mist">
             {image ? (
-              <img src={image} alt={product.name} className="h-full w-full object-cover" />
+              <Image src={image} alt={product.name} width={520} height={520} className="h-full w-full object-cover" sizes="(max-width: 768px) 90vw, 520px" />
             ) : (
               <div className="flex h-64 items-center justify-center text-sm text-ink/50">
                 Đang cập nhật ảnh

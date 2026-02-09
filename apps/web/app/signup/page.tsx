@@ -1,230 +1,153 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 import SectionTitle from "@/components/common/SectionTitle";
 import { Button } from "@/components/ui/button";
-import { getRefreshToken, getUserToken, setAuthTokens } from "@/lib/auth";
-import {
-  completeSignup,
-  requestSignupOTP,
-  verifySignupOTP
-} from "@/lib/user-auth";
-
-type Step = "request" | "verify" | "complete";
-
-type Channel = "email" | "sms";
+import { getProfile } from "@/lib/account";
+import { register } from "@/lib/user-auth";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("request");
-  const [channel, setChannel] = useState<Channel>("email");
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [dob, setDob] = useState("");
   const [phone, setPhone] = useState("");
-  const [requestId, setRequestId] = useState<number | null>(null);
-  const [cooldown, setCooldown] = useState(0);
-  const [otpCode, setOtpCode] = useState("");
-  const [verificationToken, setVerificationToken] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [password, setPassword] = useState("");
   const [address, setAddress] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (getUserToken() || getRefreshToken()) {
-      router.replace("/account");
-    }
+    let active = true;
+    getProfile()
+      .then(() => {
+        if (active) {
+          router.replace("/account");
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [router]);
 
-  useEffect(() => {
-    if (cooldown <= 0) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      setCooldown((prev) => Math.max(prev - 1, 0));
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [cooldown]);
-
-  const helperText = useMemo(() => {
-    return channel === "email"
-      ? "Chúng tôi sẽ gửi mã đến email của bạn."
-      : "Chúng tôi sẽ gửi mã đến số điện thoại di động Việt Nam của bạn.";
-  }, [channel]);
-
-  const handleRequest = async (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const payload =
-        channel === "email"
-          ? { channel, email: email.trim() }
-          : { channel, phone: phone.trim() };
-      const result = await requestSignupOTP(payload);
-      setRequestId(result.request_id);
-      setCooldown(result.cooldown_seconds || 0);
-      setStep("verify");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể gửi OTP");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerify = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setLoading(true);
     try {
-      if (!requestId) {
-        throw new Error("Thiếu mã yêu cầu");
-      }
-      const result = await verifySignupOTP({ request_id: requestId, code: otpCode.trim() });
-      setVerificationToken(result.verification_token);
-      setStep("complete");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể xác minh OTP");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleComplete = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const result = await completeSignup({
-        verification_token: verificationToken,
+      await register({
+        email: email.trim(),
+        name: name.trim(),
+        dob: dob.trim(),
+        phone: phone.trim() || undefined,
+        address: address.trim(),
         password,
-        full_name: fullName.trim() || undefined,
-        address: address.trim() || undefined
+        password_confirm: passwordConfirm
       });
-      setAuthTokens(result.access_token, result.refresh_token);
       router.push("/account");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể hoàn tất đăng ký");
+      setError(err instanceof Error ? err.message : "Đăng ký thất bại");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <section className="section-shell pb-10 pt-14">
-        <SectionTitle
-          eyebrow="Tài khoản"
-          title="Tạo tài khoản"
-          description="Xác minh email hoặc số điện thoại để hoàn tất đăng ký."
-        />
-      </section>
-
-      <section className="section-shell pb-16">
-        <div className="border border-forest/10 bg-white p-8">
-          {error ? <p className="mb-4 text-sm text-clay">{error}</p> : null}
-          {step === "request" ? (
-            <form className="grid gap-4" onSubmit={handleRequest}>
-              <div className="flex flex-wrap gap-3 text-xs font-semibold">
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="channel"
-                    value="email"
-                    checked={channel === "email"}
-                    onChange={() => setChannel("email")}
-                  />
-                  Email
-                </label>
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="channel"
-                    value="sms"
-                    checked={channel === "sms"}
-                    onChange={() => setChannel("sms")}
-                  />
-                  Số điện thoại
-                </label>
-              </div>
-              {channel === "email" ? (
-                <input
-                  className="field"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Địa chỉ email"
-                />
-              ) : (
-                <input
-                  className="field"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="Số điện thoại Việt Nam (0xxxxxxxxx)"
-                />
-              )}
-              <p className="text-xs text-ink/60">{helperText}</p>
-              <Button type="submit" disabled={loading}>
-                {loading ? "Đang gửi..." : "Gửi mã"}
-              </Button>
-            </form>
-          ) : null}
-
-          {step === "verify" ? (
-            <form className="grid gap-4" onSubmit={handleVerify}>
+    <div className="auth-shell">
+      <section className="section-shell pb-16 pt-14">
+        <div className="auth-grid auth-grid--single">
+          <div className="auth-card auth-card--wide auth-card--center">
+            <SectionTitle
+              eyebrow="Tài khoản"
+              title="Tạo tài khoản"
+              description="Đăng ký bằng email và mật khẩu."
+            />
+            {error ? <p className="mb-4 text-sm text-clay">{error}</p> : null}
+            <form className="grid gap-4" onSubmit={handleSubmit}>
               <input
                 className="field"
-                value={otpCode}
-                onChange={(event) => setOtpCode(event.target.value)}
-                placeholder="Mã 6 chữ số"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Email"
               />
-              <div className="flex flex-wrap items-center gap-3">
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Đang xác minh..." : "Xác minh OTP"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={loading || cooldown > 0}
-                  onClick={() => handleRequest()}
-                >
-                  {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại"}
-                </Button>
-              </div>
-            </form>
-          ) : null}
-
-          {step === "complete" ? (
-            <form className="grid gap-4" onSubmit={handleComplete}>
               <input
                 className="field"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Họ và tên"
               />
               <input
                 className="field"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Mật khẩu"
+                type="date"
+                value={dob}
+                onChange={(event) => setDob(event.target.value)}
+                placeholder="Ngày sinh (YYYY-MM-DD)"
+              />
+              <input
+                className="field"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                placeholder="Số điện thoại (tùy chọn)"
               />
               <input
                 className="field"
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
-                placeholder="Địa chỉ (tùy chọn)"
+                placeholder="Địa chỉ"
               />
+              <div className="auth-password">
+                <input
+                  className="field"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Mật khẩu"
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <div className="auth-password">
+                <input
+                  className="field"
+                  type={showPasswordConfirm ? "text" : "password"}
+                  value={passwordConfirm}
+                  onChange={(event) => setPasswordConfirm(event.target.value)}
+                  placeholder="Xác nhận mật khẩu"
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowPasswordConfirm((prev) => !prev)}
+                  aria-label={showPasswordConfirm ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <Button type="submit" disabled={loading}>
-                {loading ? "Đang tạo tài khoản..." : "Hoàn tất đăng ký"}
+                {loading ? "Đang tạo..." : "Tạo tài khoản"}
               </Button>
             </form>
-          ) : null}
 
-          <div className="mt-6 text-xs text-ink/70">
-            Đã có tài khoản? <Link className="text-forest" href="/login">Đăng nhập</Link>
+            <div className="mt-6 text-xs text-ink/70 text-center">
+              {"Đã có tài khoản? "}
+              <Link className="text-forest" href="/login">
+                {"Đăng nhập"}
+              </Link>
+            </div>
           </div>
         </div>
       </section>

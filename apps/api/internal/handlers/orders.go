@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -9,6 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"ecommerce-monorepo/apps/api/internal/auth"
 )
 
 type OrderItemInput struct {
@@ -17,16 +20,19 @@ type OrderItemInput struct {
 }
 
 type OrderRequest struct {
-	CustomerName  string           `json:"customer_name"`
-	Email         string           `json:"email"`
-	Phone         string           `json:"phone"`
-	Address       string           `json:"address"`
-	Note          string           `json:"note"`
-	DeliveryTime  string           `json:"delivery_time"`
-	ShippingMethod string          `json:"shipping_method"`
-	PaymentMethod string           `json:"payment_method"`
-	PromoCode     string           `json:"promo_code"`
-	Items         []OrderItemInput `json:"items"`
+	CustomerName   string           `json:"customer_name"`
+	Email          string           `json:"email"`
+	Phone          string           `json:"phone"`
+	Address        string           `json:"address"`
+	AddressLine    string           `json:"address_line"`
+	District       string           `json:"district"`
+	Province       string           `json:"province"`
+	Note           string           `json:"note"`
+	DeliveryTime   string           `json:"delivery_time"`
+	ShippingMethod string           `json:"shipping_method"`
+	PaymentMethod  string           `json:"payment_method"`
+	PromoCode      string           `json:"promo_code"`
+	Items          []OrderItemInput `json:"items"`
 }
 
 type OrderResponse struct {
@@ -40,6 +46,19 @@ type OrderResponse struct {
 	Status        string  `json:"status"`
 }
 
+type OrderSummaryResponse struct {
+	ID            int     `json:"id"`
+	OrderNumber   string  `json:"order_number"`
+	Total         float64 `json:"total"`
+	PaymentMethod string  `json:"payment_method"`
+	PaymentStatus string  `json:"payment_status"`
+	Status        string  `json:"status"`
+}
+
+type OrderPaymentMethodRequest struct {
+	PaymentMethod string `json:"payment_method"`
+}
+
 func (s *Server) CreateOrder(c *gin.Context) {
 	var input OrderRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -47,9 +66,44 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	if strings.TrimSpace(input.CustomerName) == "" || strings.TrimSpace(input.Email) == "" || strings.TrimSpace(input.Phone) == "" || strings.TrimSpace(input.Address) == "" {
+	name := strings.TrimSpace(input.CustomerName)
+	emailRaw := strings.TrimSpace(input.Email)
+	phoneRaw := strings.TrimSpace(input.Phone)
+	address := strings.TrimSpace(input.Address)
+	addressLine := strings.TrimSpace(input.AddressLine)
+	provinceInput := strings.TrimSpace(input.Province)
+	districtInput := strings.TrimSpace(input.District)
+	if name == "" || emailRaw == "" || phoneRaw == "" || (address == "" && addressLine == "") {
 		respondError(c, http.StatusBadRequest, "missing_fields", "Customer name, email, phone, and address are required")
 		return
+	}
+
+	email, err := auth.NormalizeEmail(emailRaw)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_email", "Invalid email address")
+		return
+	}
+
+	_, nationalPhone, err := auth.NormalizeVNPhone(phoneRaw)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_phone", "Invalid phone number")
+		return
+	}
+
+	var provinceName string
+	var districtName string
+	if provinceInput != "" || districtInput != "" || addressLine != "" {
+		if addressLine == "" || provinceInput == "" || districtInput == "" {
+			respondError(c, http.StatusBadRequest, "missing_fields", "Address line, province, and district are required")
+			return
+		}
+		provinceName, districtName, err = s.resolveProvinceDistrict(provinceInput, districtInput)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, "invalid_location", "Invalid province or district")
+			return
+		}
+		addressParts := []string{addressLine, districtName, provinceName}
+		address = strings.Join(addressParts, ", ")
 	}
 
 	if len(input.Items) == 0 {
@@ -136,9 +190,9 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	shippingFee := 30000.0
+	shippingFee := s.Config.StandardShippingFee
 	if shippingMethod == "express" {
-		shippingFee = 50000.0
+		shippingFee = s.Config.ExpressShippingFee
 	}
 	if shippingMethod == "standard" && s.Config.FreeShippingThreshold > 0 && subtotal >= s.Config.FreeShippingThreshold {
 		shippingFee = 0
@@ -176,11 +230,27 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		userID = claims.UserID
 	}
 
-	orderNumber := fmt.Sprintf("TB%v", time.Now().Unix())
+	orderNumber, err := generateOrderNumber(tx)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to generate order number")
+		return
+	}
+	var addressLineDB any = nil
+	var districtDB any = nil
+	var provinceDB any = nil
+	if addressLine != "" {
+		addressLineDB = addressLine
+	}
+	if districtName != "" {
+		districtDB = districtName
+	}
+	if provinceName != "" {
+		provinceDB = provinceName
+	}
 	result, err := tx.Exec(`
-    INSERT INTO orders (order_number, user_id, customer_name, email, phone, address, note, delivery_time, promo_code, shipping_method, subtotal, shipping_fee, discount_total, total, payment_method, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-  `, orderNumber, userID, input.CustomerName, input.Email, input.Phone, input.Address, input.Note, input.DeliveryTime, promoCode, shippingMethod, subtotal, shippingFee, discountTotal, total, input.PaymentMethod)
+    INSERT INTO orders (order_number, user_id, customer_name, email, phone, address, address_line, district, province, note, delivery_time, promo_code, shipping_method, subtotal, shipping_fee, discount_total, total, payment_method, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+  `, orderNumber, userID, name, email, nationalPhone, address, addressLineDB, districtDB, provinceDB, input.Note, input.DeliveryTime, promoCode, shippingMethod, subtotal, shippingFee, discountTotal, total, input.PaymentMethod)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create order")
 		return
@@ -192,6 +262,14 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		return
 	}
 	orderID := int(orderID64)
+
+	if input.PaymentMethod == "bank_transfer" || input.PaymentMethod == "bank_qr" {
+		transferContent := buildTransferContent(orderNumber)
+		if _, err := tx.Exec(`UPDATE orders SET transfer_content = ? WHERE id = ?`, transferContent, orderID); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to save transfer content")
+			return
+		}
+	}
 
 	for _, product := range products {
 		qty := quantities[product.ID]
@@ -220,6 +298,38 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		PaymentMethod: input.PaymentMethod,
 		Status:        "pending",
 	})
+}
+
+func generateOrderNumber(tx *sql.Tx) (string, error) {
+	now := time.Now()
+	datePart := now.Format("020106")
+	prefix := "TB" + datePart + "N"
+
+	var lastNumber sql.NullString
+	row := tx.QueryRow(`
+    SELECT order_number
+    FROM orders
+    WHERE order_number LIKE ?
+    ORDER BY order_number DESC
+    LIMIT 1
+    FOR UPDATE
+  `, prefix+"%")
+	if err := row.Scan(&lastNumber); err != nil && err != sql.ErrNoRows {
+		return "", err
+	}
+
+	seq := 1
+	if lastNumber.Valid && strings.HasPrefix(lastNumber.String, prefix) {
+		suffix := strings.TrimPrefix(lastNumber.String, prefix)
+		if n, err := strconv.Atoi(suffix); err == nil {
+			seq = n + 1
+		}
+	}
+	if seq > 9999 {
+		return "", fmt.Errorf("order sequence overflow for %s", prefix)
+	}
+
+	return fmt.Sprintf("%s%04d", prefix, seq), nil
 }
 
 func (s *Server) UploadPaymentProof(c *gin.Context) {
@@ -252,4 +362,115 @@ func (s *Server) UploadPaymentProof(c *gin.Context) {
 	}
 
 	respondOK(c, gin.H{"payment_proof_url": s.buildAssetURL(url)})
+}
+
+func (s *Server) GetOrderSummary(c *gin.Context) {
+	orderID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_order", "Invalid order ID")
+		return
+	}
+
+	var (
+		id            int
+		orderNumber   string
+		total         float64
+		paymentMethod string
+		paymentStatus string
+		status        string
+	)
+	row := s.DB.QueryRow(`SELECT id, order_number, total, payment_method, IFNULL(payment_status, ''), status FROM orders WHERE id = ?`, orderID)
+	if err := row.Scan(&id, &orderNumber, &total, &paymentMethod, &paymentStatus, &status); err != nil {
+		if err == sql.ErrNoRows {
+			respondError(c, http.StatusNotFound, "not_found", "Order not found")
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load order")
+		return
+	}
+
+	respondOK(c, OrderSummaryResponse{
+		ID:            id,
+		OrderNumber:   orderNumber,
+		Total:         total,
+		PaymentMethod: strings.TrimSpace(paymentMethod),
+		PaymentStatus: normalizePaymentStatus(paymentStatus),
+		Status:        strings.TrimSpace(status),
+	})
+}
+
+func (s *Server) UpdateOrderPaymentMethod(c *gin.Context) {
+	orderID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_order", "Invalid order ID")
+		return
+	}
+
+	var input OrderPaymentMethodRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid payment method payload")
+		return
+	}
+
+	method := strings.TrimSpace(input.PaymentMethod)
+	if method == "" {
+		respondError(c, http.StatusBadRequest, "missing_fields", "Payment method is required")
+		return
+	}
+
+	settings, err := s.loadPaymentSettings()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load payment settings")
+		return
+	}
+	if !isPaymentMethodEnabled(method, settings) {
+		respondError(c, http.StatusBadRequest, "payment_disabled", "Selected payment method is not available")
+		return
+	}
+
+	var (
+		orderNumber     string
+		status          string
+		paymentStatus   sql.NullString
+		transferContent sql.NullString
+	)
+	row := s.DB.QueryRow(`SELECT order_number, status, IFNULL(payment_status, ''), IFNULL(transfer_content, '') FROM orders WHERE id = ?`, orderID)
+	if err := row.Scan(&orderNumber, &status, &paymentStatus, &transferContent); err != nil {
+		if err == sql.ErrNoRows {
+			respondError(c, http.StatusNotFound, "not_found", "Order not found")
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load order")
+		return
+	}
+
+	if normalizePaymentStatus(paymentStatus.String) == "PAID" {
+		respondError(c, http.StatusBadRequest, "payment_locked", "Order payment is already completed")
+		return
+	}
+
+	if strings.TrimSpace(status) != "pending" {
+		respondError(c, http.StatusBadRequest, "order_locked", "Order can no longer change payment method")
+		return
+	}
+
+	if method == "cod" {
+		if _, err := s.DB.Exec(`UPDATE orders SET payment_method = ?, transfer_content = NULL, qr_method = NULL, qr_template = NULL, qr_value = NULL, qr_created_at = NULL WHERE id = ?`, method, orderID); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to update payment method")
+			return
+		}
+		respondOK(c, gin.H{"order_id": orderID, "payment_method": method})
+		return
+	}
+
+	content := strings.TrimSpace(transferContent.String)
+	if content == "" || len(content) > 25 {
+		content = buildTransferContent(orderNumber)
+	}
+	if _, err := s.DB.Exec(`UPDATE orders SET payment_method = ?, transfer_content = ? WHERE id = ?`, method, content, orderID); err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update payment method")
+		return
+	}
+
+	respondOK(c, gin.H{"order_id": orderID, "payment_method": method, "transfer_content": content})
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -14,14 +14,11 @@ import {
 } from "@/lib/user-auth";
 
 type Step = "request" | "verify" | "reset" | "done";
-type Channel = "email" | "sms";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("request");
-  const [channel, setChannel] = useState<Channel>("email");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [requestId, setRequestId] = useState<number | null>(null);
   const [cooldown, setCooldown] = useState(0);
   const [otpCode, setOtpCode] = useState("");
@@ -47,12 +44,6 @@ export default function ForgotPasswordPage() {
     return () => window.clearInterval(timer);
   }, [cooldown]);
 
-  const helperText = useMemo(() => {
-    return channel === "email"
-      ? "Chúng tôi sẽ gửi mã đến email của bạn."
-      : "Chúng tôi sẽ gửi mã đến số điện thoại di động Việt Nam của bạn.";
-  }, [channel]);
-
   const handleRequest = async (event?: React.FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
     setError("");
@@ -60,17 +51,13 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setRequestId(null);
     try {
-      const payload =
-        channel === "email"
-          ? { channel, email: email.trim() }
-          : { channel, phone: phone.trim() };
-      const result = await requestForgotPasswordOTP(payload);
+      const result = await requestForgotPasswordOTP({ email: email.trim() });
       setCooldown(result.cooldown_seconds || 0);
       if (result.request_id) {
         setRequestId(result.request_id);
         setStep("verify");
       } else {
-        setNotice("Nếu tài khoản tồn tại, mã đã được gửi.");
+        setNotice("Nếu tài khoản tồn tại, mã OTP đã được gửi.");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể gửi OTP");
@@ -86,7 +73,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     try {
       if (!requestId) {
-        throw new Error("Thiếu mã yêu cầu");
+        throw new Error("Thiếu yêu cầu OTP");
       }
       const result = await verifyForgotPasswordOTP({
         request_id: requestId,
@@ -95,7 +82,7 @@ export default function ForgotPasswordPage() {
       setVerificationToken(result.verification_token);
       setStep("reset");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể xác minh OTP");
+      setError(err instanceof Error ? err.message : "Xác minh OTP thất bại");
     } finally {
       setLoading(false);
     }
@@ -113,7 +100,7 @@ export default function ForgotPasswordPage() {
       });
       setStep("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể đặt lại mật khẩu");
+      setError(err instanceof Error ? err.message : "Đặt lại mật khẩu thất bại");
     } finally {
       setLoading(false);
     }
@@ -125,7 +112,7 @@ export default function ForgotPasswordPage() {
         <SectionTitle
           eyebrow="Tài khoản"
           title="Quên mật khẩu"
-          description="Xác minh email hoặc số điện thoại để đặt lại mật khẩu."
+          description="Xác minh email và đặt lại mật khẩu."
         />
       </section>
 
@@ -136,46 +123,14 @@ export default function ForgotPasswordPage() {
 
           {step === "request" ? (
             <form className="grid gap-4" onSubmit={handleRequest}>
-              <div className="flex flex-wrap gap-3 text-xs font-semibold">
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="channel"
-                    value="email"
-                    checked={channel === "email"}
-                    onChange={() => setChannel("email")}
-                  />
-                  Email
-                </label>
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="channel"
-                    value="sms"
-                    checked={channel === "sms"}
-                    onChange={() => setChannel("sms")}
-                  />
-                  Số điện thoại
-                </label>
-              </div>
-              {channel === "email" ? (
-                <input
-                  className="field"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Địa chỉ email"
-                />
-              ) : (
-                <input
-                  className="field"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="Số điện thoại Việt Nam (0xxxxxxxxx)"
-                />
-              )}
-              <p className="text-xs text-ink/60">{helperText}</p>
+              <input
+                className="field"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Email"
+              />
               <Button type="submit" disabled={loading}>
-                {loading ? "Đang gửi..." : "Gửi mã"}
+                {loading ? "Đang gửi..." : "Gửi OTP"}
               </Button>
             </form>
           ) : null}
@@ -186,7 +141,7 @@ export default function ForgotPasswordPage() {
                 className="field"
                 value={otpCode}
                 onChange={(event) => setOtpCode(event.target.value)}
-                placeholder="Mã 6 chữ số"
+                placeholder="Mã OTP"
               />
               <div className="flex flex-wrap items-center gap-3">
                 <Button type="submit" disabled={loading}>
@@ -221,15 +176,15 @@ export default function ForgotPasswordPage() {
 
           {step === "done" ? (
             <div className="grid gap-3 text-sm">
-              <p>Mật khẩu đã được đặt lại.</p>
+              <p>Đặt lại mật khẩu thành công.</p>
               <Link className="text-forest" href="/login">
-                Quay lại Đăng nhập
+                Quay lại đăng nhập
               </Link>
             </div>
           ) : null}
 
           <div className="mt-6 text-xs text-ink/70">
-            Nhớ mật khẩu?{" "}
+            Nhớ mật khẩu rồi?{" "}
             <Link className="text-forest" href="/login">
               Đăng nhập
             </Link>

@@ -1,70 +1,176 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { MapPin } from "lucide-react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Location, getLocations } from "@/lib/api";
+import {
+  GeoDistrict,
+  GeoProvince,
+  Location,
+  getGeoDistricts,
+  getGeoProvinces,
+  getLocations
+} from "@/lib/api";
 import { siteConfig } from "@/lib/site";
+
+const normalizeLocationKey = (value?: string | null) => {
+  if (!value) return "";
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .trim();
+};
 
 export default function LocationDropdown() {
   const [locations, setLocations] = useState<Location[]>([]);
+  const [geoProvinces, setGeoProvinces] = useState<GeoProvince[]>([]);
+  const [geoDistricts, setGeoDistricts] = useState<GeoDistrict[]>([]);
+  const [isGeoLoading, setIsGeoLoading] = useState(false);
+  const [isDistrictLoading, setIsDistrictLoading] = useState(false);
   const [province, setProvince] = useState("");
   const [district, setDistrict] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
-    getLocations()
-      .then((data) => {
-        if (active) {
-          setLocations(data);
-        }
+    setIsGeoLoading(true);
+
+    Promise.all([
+      getLocations().catch(() => [] as Location[]),
+      getGeoProvinces().catch(() => [] as GeoProvince[])
+    ])
+      .then(([locationData, provinceData]) => {
+        if (!active) return;
+        setLocations(locationData);
+        setGeoProvinces(provinceData);
       })
-      .catch(() => {
+      .finally(() => {
         if (active) {
-          setLocations([]);
+          setIsGeoLoading(false);
         }
       });
+
     return () => {
       active = false;
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    if (!province || geoProvinces.length === 0) {
+      setGeoDistricts([]);
+      setIsDistrictLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    const provinceKey = normalizeLocationKey(province);
+    const selectedProvince = geoProvinces.find(
+      (item) => normalizeLocationKey(item.name) === provinceKey
+    );
+
+    if (!selectedProvince) {
+      setGeoDistricts([]);
+      setIsDistrictLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setIsDistrictLoading(true);
+    getGeoDistricts(selectedProvince.code)
+      .then((data) => {
+        if (!active) return;
+        setGeoDistricts(data);
+        if (district && !data.some((item) => normalizeLocationKey(item.name) === normalizeLocationKey(district))) {
+          setDistrict("");
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setGeoDistricts([]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsDistrictLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [province, geoProvinces, district]);
+
   const provinces = useMemo(() => {
+    if (geoProvinces.length > 0) {
+      return geoProvinces.map((item) => item.name).filter(Boolean);
+    }
     return Array.from(new Set(locations.map((item) => item.province))).filter(Boolean);
-  }, [locations]);
+  }, [geoProvinces, locations]);
 
   const districts = useMemo(() => {
+    if (geoDistricts.length > 0) {
+      return geoDistricts.map((item) => item.name).filter(Boolean);
+    }
     if (!province) {
       return Array.from(new Set(locations.map((item) => item.district))).filter(Boolean);
     }
+    const provinceKey = normalizeLocationKey(province);
     return Array.from(
-      new Set(locations.filter((item) => item.province === province).map((item) => item.district))
+      new Set(
+        locations
+          .filter((item) => normalizeLocationKey(item.province) === provinceKey)
+          .map((item) => item.district)
+      )
     ).filter(Boolean);
-  }, [locations, province]);
+  }, [geoDistricts, locations, province]);
 
   const filteredLocations = useMemo(() => {
+    const provinceKey = normalizeLocationKey(province);
+    const districtKey = normalizeLocationKey(district);
+
     return locations.filter((item) => {
-      if (province && item.province !== province) {
+      if (provinceKey && normalizeLocationKey(item.province) !== provinceKey) {
         return false;
       }
-      if (district && item.district !== district) {
+      if (districtKey && normalizeLocationKey(item.district) !== districtKey) {
         return false;
       }
       return true;
     });
   }, [locations, province, district]);
 
+  useEffect(() => {
+    if (filteredLocations.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+
+    if (selectedId === null || !filteredLocations.some((item) => item.id === selectedId)) {
+      setSelectedId(filteredLocations[0].id);
+    }
+  }, [filteredLocations, selectedId]);
+
   const selectedLocation = locations.find((item) => item.id === selectedId);
-  const label = selectedLocation ? `${selectedLocation.name}` : "Giao hoặc đến lấy tại";
+  const activeLocation = selectedLocation ?? filteredLocations[0] ?? locations[0];
+  const activeAddress = activeLocation
+    ? `${activeLocation.address}, ${activeLocation.district}, ${activeLocation.province}`
+    : siteConfig.address;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="hidden items-center gap-2 border border-forest/20 bg-white px-3 py-2 text-xs font-semibold text-forest lg:flex">
+        <button
+          className="header-action-btn hidden lg:inline-flex"
+          aria-label={`V\u1ECB tr\u00ED giao h\u00E0ng: ${activeAddress}`}
+        >
           <MapPin className="h-4 w-4" />
-          <span className="max-w-[180px] truncate">{label}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[360px] p-4">
@@ -82,8 +188,11 @@ export default function LocationDropdown() {
                   setProvince(event.target.value);
                   setDistrict("");
                 }}
+                disabled={isGeoLoading || provinces.length === 0}
               >
-                <option value="">- Chọn Tỉnh thành -</option>
+                <option value="">
+                  {isGeoLoading ? "Đang tải..." : "- Chọn Tỉnh/Thành -"}
+                </option>
                 {provinces.map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -92,13 +201,16 @@ export default function LocationDropdown() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold">Quận/huyện</label>
+              <label className="text-xs font-semibold">Quận/Huyện</label>
               <select
                 className="field mt-2"
                 value={district}
                 onChange={(event) => setDistrict(event.target.value)}
+                disabled={!province || isDistrictLoading}
               >
-                <option value="">- Chọn Quận huyện -</option>
+                <option value="">
+                  {isDistrictLoading ? "Đang tải..." : "- Chọn Quận/Huyện -"}
+                </option>
                 {districts.map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -108,8 +220,7 @@ export default function LocationDropdown() {
             </div>
           </div>
           <div className="border border-forest/10 bg-white p-3 text-xs text-ink/70">
-            Giao hoặc đến lấy tại:{" "}
-            <span className="font-semibold">{selectedLocation?.address || siteConfig.address}</span>
+            Giao hoặc đến lấy tại: <span className="font-semibold">{activeAddress}</span>
           </div>
           <p className="text-xs text-ink/60">
             Chọn cửa hàng gần bạn nhất để tối ưu chi phí giao hàng. Hoặc đến lấy hàng.

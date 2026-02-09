@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 type CartItem = {
   id: number;
@@ -81,7 +81,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(storageKey, JSON.stringify(payload));
   }, [items, note, promoCode, deliveryTime]);
 
-  const addItem = (item: Omit<CartItem, "quantity">) => {
+  const addItem = useCallback((item: Omit<CartItem, "quantity">) => {
     setItems((prev) => {
       const existing = prev.find((entry) => entry.id === item.id);
       if (existing) {
@@ -95,13 +95,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prev, { ...item, quantity: 1 }];
     });
     setIsOpen(true);
-  };
+  }, []);
 
-  const removeItem = (id: number) => {
+  const removeItem = useCallback((id: number) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
-  };
+  }, []);
 
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = useCallback((id: number, quantity: number) => {
     if (quantity <= 0) {
       removeItem(id);
       return;
@@ -110,14 +110,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, quantity } : item))
     );
-  };
+  }, [removeItem]);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setItems([]);
     setNote("");
     setPromoCode("");
     setDeliveryTime("");
-  };
+  }, []);
 
   const itemCount = useMemo(
     () => items.reduce((total, item) => total + item.quantity, 0),
@@ -148,7 +148,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       open: () => setIsOpen(true),
       close: () => setIsOpen(false)
     }),
-    [items, note, promoCode, deliveryTime, isOpen, itemCount, subtotal]
+    [
+      items,
+      note,
+      promoCode,
+      deliveryTime,
+      isOpen,
+      itemCount,
+      subtotal,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clearCart,
+      setNote,
+      setPromoCode,
+      setDeliveryTime
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

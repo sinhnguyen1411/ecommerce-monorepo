@@ -22,16 +22,17 @@ type userAuthRecord struct {
 }
 
 type AuthUserResponse struct {
-	ID              int     `json:"id"`
-	Email           *string `json:"email,omitempty"`
-	Phone           *string `json:"phone,omitempty"`
-	FullName        *string `json:"full_name,omitempty"`
-	AvatarURL       *string `json:"avatar_url,omitempty"`
-	Address         *string `json:"address,omitempty"`
-	Birthdate       *string `json:"birthdate,omitempty"`
-	IsEmailVerified bool    `json:"is_email_verified"`
-	IsPhoneVerified bool    `json:"is_phone_verified"`
-	Status          string  `json:"status"`
+	ID                      int     `json:"id"`
+	Email                   *string `json:"email,omitempty"`
+	Phone                   *string `json:"phone,omitempty"`
+	FullName                *string `json:"full_name,omitempty"`
+	AvatarURL               *string `json:"avatar_url,omitempty"`
+	Address                 *string `json:"address,omitempty"`
+	Birthdate               *string `json:"birthdate,omitempty"`
+	IsEmailVerified         bool    `json:"is_email_verified"`
+	IsPhoneVerified         bool    `json:"is_phone_verified"`
+	EmailVerificationStatus string  `json:"emailVerificationStatus"`
+	Status                  string  `json:"status"`
 }
 
 func (s *Server) loadUserByID(userID int) (*userAuthRecord, error) {
@@ -91,16 +92,17 @@ func scanUserAuthRecord(row *sql.Row) (*userAuthRecord, error) {
 
 func authUserResponse(user *userAuthRecord) AuthUserResponse {
 	return AuthUserResponse{
-		ID:              user.ID,
-		Email:           nullStringPtr(user.Email),
-		Phone:           preferredPhone(user),
-		FullName:        nullStringPtr(user.FullName),
-		AvatarURL:       nullStringPtr(user.AvatarURL),
-		Address:         nullStringPtr(user.Address),
-		Birthdate:       datePtr(user.Birthdate),
-		IsEmailVerified: user.IsEmailVerified,
-		IsPhoneVerified: user.IsPhoneVerified,
-		Status:          user.Status,
+		ID:                      user.ID,
+		Email:                   nullStringPtr(user.Email),
+		Phone:                   preferredPhone(user),
+		FullName:                nullStringPtr(user.FullName),
+		AvatarURL:               nullStringPtr(user.AvatarURL),
+		Address:                 nullStringPtr(user.Address),
+		Birthdate:               datePtr(user.Birthdate),
+		IsEmailVerified:         user.IsEmailVerified,
+		IsPhoneVerified:         user.IsPhoneVerified,
+		EmailVerificationStatus: emailVerificationStatus(user.IsEmailVerified),
+		Status:                  user.Status,
 	}
 }
 
@@ -127,4 +129,11 @@ func datePtr(value sql.NullTime) *string {
 	}
 	formatted := value.Time.Format("2006-01-02")
 	return &formatted
+}
+
+func emailVerificationStatus(verified bool) string {
+	if verified {
+		return "VERIFIED"
+	}
+	return "UNVERIFIED"
 }

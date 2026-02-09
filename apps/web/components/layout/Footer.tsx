@@ -1,9 +1,15 @@
-﻿import Link from "next/link";
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
 import { Facebook, MessageCircle, MessageSquare } from "lucide-react";
 
+import { useContactSettings } from "@/lib/client-content";
 import { siteConfig } from "@/lib/site";
 
 export default function Footer() {
+  const settings = useContactSettings();
+
   return (
     <footer className="footer-main">
       <div className="footer-top">
@@ -53,21 +59,21 @@ export default function Footer() {
             </Link>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
-            <img src="/tam-bo/footer/payment_1_img.png" alt="payment" className="h-7" />
-            <img src="/tam-bo/footer/payment_2_img.png" alt="payment" className="h-7" />
+            <Image src="/tam-bo/footer/payment_1_img.png" alt="payment" width={80} height={28} className="h-7 w-auto" sizes="80px" />
+            <Image src="/tam-bo/footer/payment_2_img.png" alt="payment" width={80} height={28} className="h-7 w-auto" sizes="80px" />
           </div>
         </div>
 
         <div className="space-y-2 text-sm text-white/70">
           <p className="footer-widget-title">{"Li\u00EAn h\u1EC7"}</p>
-          <p>{siteConfig.address}</p>
-          <p>Hotline: {siteConfig.phone}</p>
-          <p>KTV: {siteConfig.fax}</p>
-          <p>Email: {siteConfig.email}</p>
+          <p>{settings.address}</p>
+          <p>Hotline: {settings.phone}</p>
+          <p>KTV: {settings.fax}</p>
+          <p>Email: {settings.email}</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <img src="/tam-bo/footer/shipment_1_img.png" alt="shipping" className="h-8" />
-            <img src="/tam-bo/footer/shipment_2_img.png" alt="shipping" className="h-8" />
-            <img src="/tam-bo/footer/shipment_4_img.png" alt="shipping" className="h-8" />
+            <Image src="/tam-bo/footer/shipment_1_img.png" alt="shipping" width={90} height={32} className="h-8 w-auto" sizes="90px" />
+            <Image src="/tam-bo/footer/shipment_2_img.png" alt="shipping" width={90} height={32} className="h-8 w-auto" sizes="90px" />
+            <Image src="/tam-bo/footer/shipment_4_img.png" alt="shipping" width={90} height={32} className="h-8 w-auto" sizes="90px" />
           </div>
         </div>
 

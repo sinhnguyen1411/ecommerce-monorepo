@@ -56,6 +56,7 @@ func (s *Server) AdminLogin(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "token_error", "Failed to issue token")
 		return
 	}
+	s.setAdminCookie(c, token)
 
 	respondOK(c, gin.H{"token": token, "admin": admin})
 }
@@ -70,4 +71,9 @@ func (s *Server) AdminMe(c *gin.Context) {
 	}
 
 	respondOK(c, admin)
+}
+
+func (s *Server) AdminLogout(c *gin.Context) {
+	s.clearAdminCookie(c)
+	respondOK(c, gin.H{"logged_out": true})
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 import PostCard from "@/components/blog/PostCard";
 import PostSidebar from "@/components/blog/PostSidebar";
@@ -70,7 +71,14 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                   className="news-featured__media"
                 >
                   {featured.cover_image ? (
-                    <img src={featured.cover_image} alt={featured.title} />
+                    <Image
+                      src={featured.cover_image}
+                      alt={featured.title}
+                      width={1200}
+                      height={675}
+                      className="h-full w-full object-cover"
+                      sizes="(max-width: 768px) 100vw, 900px"
+                    />
                   ) : (
                     <div className="news-featured__empty">
                       {"\u1EA2nh b\u00E0i vi\u1EBFt \u0111ang c\u1EADp nh\u1EADt"}

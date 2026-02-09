@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -15,12 +16,13 @@ type ProductCardProps = {
   product: Product;
 };
 
+const PLACEHOLDER_IMAGES = [
+  "https://images.pexels.com/photos/10541145/pexels-photo-10541145.jpeg?cs=srgb&dl=pexels-sarahpictures-10541145.jpg&fm=jpg",
+  "https://images.pexels.com/photos/19455179/pexels-photo-19455179.jpeg?cs=srgb&dl=pexels-julian-cabrera-s-3685809-19455179.jpg&fm=jpg",
+  "https://images.pexels.com/photos/9816769/pexels-photo-9816769.jpeg?cs=srgb&dl=pexels-brianjiz-9816769.jpg&fm=jpg"
+];
+
 export default function ProductCard({ product }: ProductCardProps) {
-  const placeholderImages = [
-    "/tam-bo/products/placeholder_1.svg",
-    "/tam-bo/products/placeholder_2.svg",
-    "/tam-bo/products/placeholder_3.svg"
-  ];
   const images = useMemo(() => {
     const sources = [...(product.images || [])]
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -28,7 +30,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       .filter(Boolean);
     const fallback = [...sources];
     while (fallback.length < 3) {
-      fallback.push(placeholderImages[fallback.length % placeholderImages.length]);
+      fallback.push(PLACEHOLDER_IMAGES[fallback.length % PLACEHOLDER_IMAGES.length]);
     }
     return fallback;
   }, [product.images]);
@@ -82,10 +84,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         ) : null}
         <Link href={`/products/${product.slug}`} className="block">
           <div className="relative h-52 w-full">
-            <img
+            <Image
               src={images[activeImage]}
               alt={product.name}
+              width={480}
+              height={360}
               className="h-full w-full object-cover transition duration-300 hover:scale-105"
+              sizes="(max-width: 768px) 90vw, 320px"
             />
           </div>
         </Link>

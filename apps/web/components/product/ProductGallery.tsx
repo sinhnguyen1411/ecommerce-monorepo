@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 import { ProductImage } from "@/lib/api";
@@ -24,7 +25,14 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
   return (
     <div className="product-gallery__inner sticky-gallery not_slide">
       <div className="product-gallery__photo">
-        <img src={activeImage.url} alt={name} />
+        <Image
+          src={activeImage.url}
+          alt={name}
+          width={640}
+          height={640}
+          className="h-full w-full object-cover"
+          sizes="(max-width: 768px) 90vw, 520px"
+        />
       </div>
       {images.length > 1 ? (
         <div className="product-gallery__thumbs">
@@ -36,7 +44,14 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
               className={`product-gallery__thumb ${activeIndex === index ? "active" : ""}`}
               aria-label={`Xem ảnh ${index + 1}`}
             >
-              <img src={image.url} alt={name} />
+              <Image
+                src={image.url}
+                alt={name}
+                width={120}
+                height={120}
+                className="h-full w-full object-cover"
+                sizes="120px"
+              />
             </button>
           ))}
         </div>

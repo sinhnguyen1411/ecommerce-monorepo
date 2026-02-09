@@ -1,49 +1,49 @@
-# Tam Bo Ecommerce + Blog Monorepo (Phase 1-2)
+# Tam Bo Ecommerce + Blog Monorepo
 
-Monorepo full-stack cho website thuong mai dien tu + blog, lay cam hung tu nongduoctambo.com.vn. Repo gom storefront Next.js, API Go (Gin) va MySQL, kem admin dashboard va he thong auth (OTP + Google OAuth). Phu hop demo nhanh, ban giao khach hang va trien khai production.
+Full-stack ecommerce + blog platform inspired by nongduoctambo.com.vn. Includes a Next.js storefront + admin UI, Go (Gin) API, and MySQL.
 
-## Tinh nang chinh
-- Storefront: trang chu, danh muc, loc/sap xep, chi tiet san pham, quick view, san pham lien quan, recently viewed.
-- Gio hang: cap nhat so luong, ghi chu, kiem tra don toi thieu, tien trinh free shipping.
-- Checkout: chon shipping/payment, ap ma khuyen mai, tao don, upload bang chung chuyen khoan.
-- Blog + trang tinh: bai viet, About, Q&A, Locations, Return Policy, Terms.
-- Auth nguoi dung: dang ky OTP email/SMS, dang nhap email/phone + mat khau, Google OAuth, refresh token.
-- Tai khoan: thong tin ca nhan, dia chi giao hang, lich su don.
-- Admin: CRUD san pham, danh muc, bai viet, Q&A, payment settings, quan ly don hang, upload assets.
+## Key Features
+- Storefront: home, collections, filtering/sorting, product detail, quick view, related + recently viewed.
+- Cart: quantity updates, notes, minimum order enforcement, free shipping progress.
+- Checkout: shipping/payment selection, promo code validation, order creation, bank transfer proof upload.
+- Content: blog posts and static pages (About, Q&A, Locations, Return Policy, Terms).
+- User Auth: email registration, login, OTP email verification, password reset, session management.
+- Account: profile, addresses, order history.
+- Admin: CRUD for products, categories, posts, Q&A, payment settings, orders, uploads.
 
-## Tech stack
+## Tech Stack
 - Web: Next.js 14 (App Router) + Tailwind + shadcn/ui
 - API: Go 1.22 + Gin
 - DB: MySQL 8
 - Infra: Docker Compose + Nginx (prod template)
 
-## Kien truc
-- MySQL luu catalog, bai viet, don hang, nguoi dung.
-- Go API cung cap REST endpoints cho storefront, checkout va admin.
-- Next.js consume API, render trang va xu ly cart client-side.
-- Uploads duoc luu o disk va public qua `/uploads`.
+## Architecture
+- MySQL stores catalog, content, orders, and users.
+- Go API exposes REST endpoints for storefront, checkout, and admin.
+- Next.js consumes the API and handles client-side cart state.
+- Uploads are stored on disk and served via `/uploads`.
 
-## Cau truc repo
+## Repo Layout
 ```
 .
-+-- apps/
-|   +-- api/            Go API service
-|   +-- web/            Next.js storefront + admin UI
-+-- infra/              docker compose, env, nginx config
-+-- migrations/         SQL migrations
-+-- seed/               SQL seed data (auth/admin/promotions)
-+-- docs/               huong dan local, deploy, handover
-+-- tmp_bcrypt.go       tool tao bcrypt hash nhanh
+|-- apps/
+|   |-- api/            Go API service
+|   `-- web/            Next.js storefront + admin UI
+|-- infra/             docker compose, env, nginx config
+|-- migrations/        SQL migrations
+|-- seed/              SQL seed data (auth/admin/promotions)
+|-- docs/              local/deploy/handover docs
+`-- tmp_bcrypt.go      bcrypt helper
 ```
 
-## Yeu cau
-- Docker Desktop (khuyen nghi de chay full stack)
-- Node.js 20+ (neu chay web thu cong)
-- Go 1.22 (neu chay API thu cong)
-- MySQL 8 (neu khong dung Docker)
+## Requirements
+- Docker Desktop (recommended to run full stack)
+- Node.js 20+ (manual web run)
+- Go 1.22 (manual API run)
+- MySQL 8 (if not using Docker)
 
-## Cau hinh moi truong
-Env files nam trong `infra/env/`. Sao chep tu `.example` va cap nhat gia tri:
+## Environment Setup
+Env files live in `infra/env/`. Copy from examples and update values:
 
 ```
 Copy-Item infra\env\mysql.env.example infra\env\mysql.env
@@ -51,24 +51,22 @@ Copy-Item infra\env\api.env.example infra\env\api.env
 Copy-Item infra\env\web.env.example infra\env\web.env
 ```
 
-Bien quan trong:
+Important variables:
 - API: `DB_*`, `JWT_SECRET`, `OTP_SECRET`, `MIGRATE_ON_START`, `SEED_ON_START`
-- Kinh doanh: `MIN_ORDER_AMOUNT`, `FREE_SHIPPING_THRESHOLD`
-- URL: `PUBLIC_BASE_URL`, `FRONTEND_BASE_URL`, `NEXT_PUBLIC_API_URL`, `API_INTERNAL_URL`
-- Auth: `GOOGLE_CLIENT_*`, `GOOGLE_REDIRECT_URL`
+- Business: `MIN_ORDER_AMOUNT`, `FREE_SHIPPING_THRESHOLD`
+- URLs: `PUBLIC_BASE_URL`, `FRONTEND_BASE_URL`, `NEXT_PUBLIC_API_URL`, `API_INTERNAL_URL`
 - CORS: `ALLOWED_ORIGINS`, `CORS_ALLOW_CREDENTIALS`, `TRUSTED_PROXIES`
-- OTP/SMTP/SMS: `OTP_*`, `SMTP_*`, `SMS_PROVIDER`
+- SMTP/OTP: `OTP_*`, `SMTP_*`
 
-Luu y: `NEXT_PUBLIC_*` duoc bake vao build Next.js. Doi gia tri -> rebuild web image.
+Note: `NEXT_PUBLIC_*` values are baked into the Next.js build. If they change, rebuild the web image.
 
-## Chay local bang Docker (khuyen nghi)
-
+## Local Development (Docker Recommended)
 ```
 cd infra
 docker compose up -d --build
 ```
 
-Kiem tra:
+Verify:
 ```
 curl http://localhost:8080/healthz
 curl http://localhost:3000
@@ -77,7 +75,7 @@ curl http://localhost:3000
 Ports:
 - Web: `http://localhost:3000`
 - API: `http://localhost:8080`
-- MySQL: `localhost:3007` (user/pass theo `infra/env/mysql.env`)
+- MySQL: `localhost:3007` (user/pass from `infra/env/mysql.env`)
 
 Logs:
 ```
@@ -90,16 +88,16 @@ Reset data:
 docker compose down -v
 ```
 
-## Chay rieng tung dich vu (tuy chon)
+## Run Services Manually (Optional)
 
 ### API
-1) Bat MySQL bang Docker:
+1) Start MySQL:
 ```
 cd infra
 docker compose up -d mysql
 ```
-2) Chinh `infra/env/api.env`: `DB_HOST=localhost`, `DB_PORT=3007`.
-3) Chay API:
+2) Update `infra/env/api.env`: `DB_HOST=localhost`, `DB_PORT=3007`.
+3) Run API:
 ```
 cd apps/api
 go run .
@@ -108,27 +106,25 @@ go run .
 ### Web
 ```
 cd apps/web
-npm install
-npm run dev
+npm.cmd install
+npm.cmd run dev
 ```
-Dam bao `NEXT_PUBLIC_API_URL=http://localhost:8080` (hoac set qua env).
 
-## Migrations va seed
-- Migrations tu dong chay khi `MIGRATE_ON_START=true`.
-- Seed chay 1 lan khi `SEED_ON_START=true` va bang trong.
-- File nam o `migrations/` va `seed/`.
+Ensure `NEXT_PUBLIC_API_URL=http://localhost:8080`.
 
-Seed mac dinh gom:
+## Migrations and Seed
+- Migrations run when `MIGRATE_ON_START=true`.
+- Seed runs once when `SEED_ON_START=true` and DB is empty.
+- Files: `migrations/`, `seed/`.
+
+Default seed includes:
 - Admin user: `admin@tambo.local` / `admin123`
 - Payment settings
 - Coupons: `WELCOME50`, `FRESH10`, `SAVE10`, `SAVE20`, `SAVE40`
 
-Can tao admin moi? Dung `tmp_bcrypt.go` de tao hash:
-```
-go run tmp_bcrypt.go
-```
+Need a new admin? Use `tmp_bcrypt.go` to generate a password hash.
 
-## Giao dien (routes)
+## Routes
 - `/`: home
 - `/products`, `/products/[slug]`
 - `/cart`, `/checkout`, `/checkout/thank-you`
@@ -138,120 +134,46 @@ go run tmp_bcrypt.go
 - `/account`, `/account/addresses`, `/account/orders`
 - `/admin`, `/admin/login`
 
-## API
-Base URL: `http://localhost:8080`
+## API Summary
+See the full API contract in `docs/API.md`.
 
-Response:
-```
-{ "success": true, "data": {} }
-```
+High-level groups:
+- Public: catalog, content, locations/geo, checkout config, promotions, orders.
+- Auth: register/login/logout/refresh, email OTP verify, password reset, sessions.
+- Account: profile, addresses, order history.
+- Admin: login/logout, CRUD products/categories/posts/Q&A, orders, payment settings, uploads.
 
-Public:
-- `GET /api/categories`
-- `GET /api/products?category=&sort=&featured=&limit=`
-- `GET /api/products/:slug`
-- `GET /api/posts`
-- `GET /api/posts/:slug`
-- `GET /api/pages/:slug`
-- `GET /api/qna`
-- `GET /api/locations`
-- `GET /api/payment-settings`
-- `GET /api/promotions`
-- `POST /api/promotions/validate`
-- `POST /api/orders`
-- `POST /api/orders/:id/payment-proof` (multipart field `file`)
-
-Auth:
-- `POST /api/auth/signup/request-otp`
-- `POST /api/auth/signup/verify-otp`
-- `POST /api/auth/signup/complete`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `POST /api/auth/refresh`
-- `POST /api/auth/forgot-password/request-otp`
-- `POST /api/auth/forgot-password/verify-otp`
-- `POST /api/auth/forgot-password/reset`
-- `POST /api/auth/change-password`
-- `GET /api/auth/me`
-- `PATCH /api/auth/me`
-- `GET /api/auth/sessions`
-- `POST /api/auth/sessions/:id/revoke`
-- `POST /api/auth/link-email/request-otp`
-- `POST /api/auth/link-email/verify-otp`
-- `POST /api/auth/link-email/complete`
-- `POST /api/auth/link-phone/request-otp`
-- `POST /api/auth/link-phone/verify-otp`
-- `POST /api/auth/link-phone/complete`
-- `POST /api/auth/google/start`
-- `GET /api/auth/google/login`
-- `GET /api/auth/google/callback`
-
-Account (user token):
-- `GET /api/account/profile`
-- `PATCH /api/account/profile`
-- `GET /api/account/addresses`
-- `POST /api/account/addresses`
-- `PATCH /api/account/addresses/:id`
-- `DELETE /api/account/addresses/:id`
-- `GET /api/account/orders`
-
-Admin:
-- `POST /api/admin/login`
-- `GET /api/admin/me`
-- `GET/POST/PATCH/DELETE /api/admin/products`
-- `POST /api/admin/products/:id/images`
-- `GET/POST/PATCH/DELETE /api/admin/categories`
-- `GET/POST/PATCH/DELETE /api/admin/posts`
-- `GET/POST/PATCH/DELETE /api/admin/qna`
-- `GET /api/admin/orders`
-- `GET /api/admin/orders/:id`
-- `PATCH /api/admin/orders/:id`
-- `GET /api/admin/payment-settings`
-- `PUT /api/admin/payment-settings`
-- `POST /api/admin/uploads`
-
-## Auth notes
-- Access token gui qua `Authorization: Bearer <token>`.
-- Refresh token tra ve trong response JSON.
-- OTP duoc log ra console khi `APP_ENV` khac production.
-- Neu dung cookie auth: set `CORS_ALLOW_CREDENTIALS=true` va `ALLOWED_ORIGINS` phai cu the (khong duoc `*`).
+## Auth Notes
+- Tokens can be sent via `Authorization: Bearer <token>` or cookies set by the API.
+- For cookie auth across domains: set `CORS_ALLOW_CREDENTIALS=true` and use explicit `ALLOWED_ORIGINS` (no `*`).
 
 ## Uploads
-- Local (khong Docker): `apps/api/uploads`
+- Local (no Docker): `apps/api/uploads`
 - Docker: volume `api_uploads`
-- Truy cap qua `http://localhost:8080/uploads/...`
+- Served at `http://localhost:8080/uploads/...`
 
-## Kiem thu
-
-### Tu dong
+## Testing
+API:
 ```
 cd apps/api
 go test ./...
 ```
 
+Web:
 ```
 cd apps/web
-npm run lint
+npm.cmd run lint
+npm.cmd run test:e2e
+npm.cmd run build
 ```
 
-### Manual QA checklist
-- Storefront: mo home, vao danh muc, loc/sap xep san pham, mo chi tiet.
-- Cart: them san pham, cap nhat so luong, kiem tra min order + free shipping.
-- Checkout: chon shipping/payment, ap coupon (`WELCOME50`, `FRESH10`), tao don.
-- Payment proof: upload file o trang thank-you, kiem tra file trong `/uploads`.
-- Blog: xem list va detail, related posts.
-- Auth: dang ky OTP (email/SMS), dang nhap, quen mat khau.
-- Account: cap nhat profile, them dia chi, xem lich su don.
-- Admin: dang nhap, CRUD san pham/danh muc/bai viet/Q&A, cap nhat don hang va payment settings.
+Note: Playwright requires `npx.cmd playwright install` on first run.
 
-## Deploy (VPS)
-Xem `docs/README_DEPLOY.md`. Tom tat:
-```
-docker compose --env-file infra\env\web.env -f infra\docker-compose.prod.yml up -d --build
-```
-Nginx config o `infra/nginx/default.conf`.
+## Deployment
+See `docs/README_DEPLOY.md`.
 
-## Backup/Restore MySQL
+## Backup/Restore (MySQL)
+
 Backup:
 ```
 docker exec tambo_mysql mysqldump -u root -pYOUR_ROOT_PASSWORD tambo > backup.sql
@@ -262,11 +184,12 @@ Restore:
 Get-Content backup.sql | docker exec -i tambo_mysql mysql -u root -pYOUR_ROOT_PASSWORD tambo
 ```
 
-## Tai lieu
-- `docs/README_LOCAL.md`: local setup chi tiet
-- `docs/README_DEPLOY.md`: trien khai VPS
-- `docs/HANDOVER_GUIDE.md`: quy trinh ban giao + content
-- `apps/web/README_UI.md`: tom tat UI storefront
+## Documentation
+- `docs/README_LOCAL.md`: local setup details
+- `docs/README_DEPLOY.md`: VPS deployment
+- `docs/HANDOVER_GUIDE.md`: handover + content workflow
+- `apps/web/README_UI.md`: storefront UI summary
+- `docs/API.md`: full API contract
 
 ## Roadmap
-- Phase 3: mo rong tim kiem dia diem, promotions, delivery slots
+- Phase 3: expanded location search, promotions, delivery slots

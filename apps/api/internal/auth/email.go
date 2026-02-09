@@ -38,5 +38,36 @@ func NormalizeEmail(input string) (string, error) {
 		return "", ErrInvalidEmail
 	}
 
+	parts := strings.SplitN(normalized, "@", 2)
+	if len(parts) != 2 {
+		return "", ErrInvalidEmail
+	}
+	if isGmailDomain(parts[1]) {
+		if !validGmailLocal(parts[0]) {
+			return "", ErrInvalidEmail
+		}
+	}
+
 	return normalized, nil
+}
+
+func isGmailDomain(domain string) bool {
+	domain = strings.ToLower(domain)
+	return domain == "gmail.com" || domain == "googlemail.com"
+}
+
+func validGmailLocal(local string) bool {
+	if local == "" || len(local) > 64 {
+		return false
+	}
+	if strings.HasPrefix(local, ".") || strings.HasSuffix(local, ".") {
+		return false
+	}
+	if strings.Contains(local, "..") {
+		return false
+	}
+	if strings.Contains(local, " ") {
+		return false
+	}
+	return true
 }

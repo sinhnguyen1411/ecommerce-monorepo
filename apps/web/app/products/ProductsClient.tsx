@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Pagination from "@/components/common/Pagination";
 import ProductGrid from "@/components/product/ProductGrid";
@@ -127,7 +127,7 @@ export default function ProductsClient({
     return Array.from(values);
   }, [products]);
 
-  const buildParams = (overrides?: Partial<FilterState>) => {
+  const buildParams = useCallback((overrides?: Partial<FilterState>) => {
     const state: FilterState = {
       category: activeCategory,
       sort,
@@ -165,13 +165,13 @@ export default function ProductsClient({
       params.set("size", state.sizes.join(","));
     }
     return params;
-  };
+  }, [activeCategory, sort, query, priceMin, priceMax, activeVendors, activeColors, activeSizes]);
 
-  const updateRoute = (overrides?: Partial<FilterState>) => {
+  const updateRoute = useCallback((overrides?: Partial<FilterState>) => {
     const params = buildParams(overrides);
     const queryString = params.toString();
     router.replace(queryString ? `${basePath}?${queryString}` : basePath);
-  };
+  }, [basePath, buildParams, router]);
 
   const filtered = useMemo(() => {
     let list = [...products];
@@ -382,7 +382,8 @@ export default function ProductsClient({
     priceMax,
     activeColors,
     activeSizes,
-    categories
+    categories,
+    updateRoute
   ]);
 
   const clearFilters = () => {

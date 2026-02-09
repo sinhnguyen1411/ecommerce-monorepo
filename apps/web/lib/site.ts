@@ -5,7 +5,7 @@ export const siteConfig = {
   email: process.env.NEXT_PUBLIC_COMPANY_EMAIL || "cskh@nongduoctambo.vn",
   address:
     process.env.NEXT_PUBLIC_COMPANY_ADDRESS ||
-    "179, Hiệp Thành 2, Tam Bố, Di Linh, Lâm Đồng",
+    "179, Hiệp Thạnh 2, Tam Bố, Di Linh, Lâm Đồng",
   social: {
     facebook:
       process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK ||

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatCurrency } from "@/lib/format";
@@ -53,10 +54,13 @@ export default function CartDrawer() {
           <div className="mt-4 flex-1 space-y-4 overflow-y-auto">
             {items.length === 0 ? (
               <div className="border border-dashed border-forest/20 bg-white p-6 text-center text-sm text-ink/70">
-                <img
-                  src="/tam-bo/cart/no_image.jpg"
+                <Image
+                  src="https://images.pexels.com/photos/9816769/pexels-photo-9816769.jpeg?cs=srgb&dl=pexels-brianjiz-9816769.jpg&fm=jpg"
                   alt="empty"
+                  width={96}
+                  height={96}
                   className="mx-auto h-24 w-24 object-cover"
+                  sizes="96px"
                 />
                 <p className="mt-4">Giỏ hàng đang trống.</p>
               </div>

@@ -19,14 +19,13 @@ type Config struct {
 	OTPSecret             string
 	MinOrderAmount        float64
 	FreeShippingThreshold float64
+	StandardShippingFee   float64
+	ExpressShippingFee    float64
 	UploadDir             string
 	MigrateOnStart        bool
 	SeedOnStart           bool
 	PublicBaseURL         string
 	FrontendBaseURL       string
-	GoogleClientID        string
-	GoogleClientSecret    string
-	GoogleRedirectURL     string
 	UserTokenTTL          time.Duration
 	RefreshTokenTTL       time.Duration
 	VerificationTokenTTL  time.Duration
@@ -52,10 +51,30 @@ type Config struct {
 	SMTPPassword          string
 	SMTPFrom              string
 	SMTPFromName          string
-	SMSProvider           string
+	VietQRImageBaseURL    string
+	VietQRImageExt        string
+	VietQRBaseURL         string
+	VietQRClientID        string
+	VietQRAPIKey          string
 }
 
 func Load() Config {
+	smtpUser := getEnv("SMTP_USERNAME", getEnv("GMAIL_SMTP_USER", ""))
+	smtpPassword := getEnv("SMTP_PASSWORD", getEnv("GMAIL_SMTP_APP_PASSWORD", ""))
+	smtpHost := getEnv("SMTP_HOST", "")
+	smtpPort := getEnv("SMTP_PORT", "")
+	smtpFrom := getEnv("SMTP_FROM", "")
+	smtpFromName := getEnv("SMTP_FROM_NAME", "")
+	if smtpHost == "" && smtpUser != "" {
+		smtpHost = "smtp.gmail.com"
+	}
+	if smtpPort == "" && smtpUser != "" {
+		smtpPort = "587"
+	}
+	if smtpFrom == "" && smtpUser != "" {
+		smtpFrom = smtpUser
+	}
+
 	return Config{
 		AppEnv:                getEnv("APP_ENV", "local"),
 		Port:                  getEnv("PORT", "8080"),
@@ -68,14 +87,13 @@ func Load() Config {
 		OTPSecret:             getEnv("OTP_SECRET", getEnv("JWT_SECRET", "change-me")),
 		MinOrderAmount:        getFloat("MIN_ORDER_AMOUNT", 0),
 		FreeShippingThreshold: getFloat("FREE_SHIPPING_THRESHOLD", 0),
+		StandardShippingFee:   getFloat("SHIPPING_FEE_STANDARD", 30000),
+		ExpressShippingFee:    getFloat("SHIPPING_FEE_EXPRESS", 50000),
 		UploadDir:             getEnv("UPLOAD_DIR", "./uploads"),
 		MigrateOnStart:        getBool("MIGRATE_ON_START", true),
 		SeedOnStart:           getBool("SEED_ON_START", false),
 		PublicBaseURL:         strings.TrimRight(getEnv("PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
 		FrontendBaseURL:       strings.TrimRight(getEnv("FRONTEND_BASE_URL", "http://localhost:3000"), "/"),
-		GoogleClientID:        getEnv("GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret:    getEnv("GOOGLE_CLIENT_SECRET", ""),
-		GoogleRedirectURL:     getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/api/auth/google/callback"),
 		UserTokenTTL:          getDuration("USER_TOKEN_TTL", 15*time.Minute),
 		RefreshTokenTTL:       getDuration("REFRESH_TOKEN_TTL", 30*24*time.Hour),
 		VerificationTokenTTL:  getDuration("VERIFICATION_TOKEN_TTL", 10*time.Minute),
@@ -95,13 +113,17 @@ func Load() Config {
 		AllowedOrigins:        getList("ALLOWED_ORIGINS", "http://localhost:3000"),
 		CORSAllowCredentials:  getBool("CORS_ALLOW_CREDENTIALS", false),
 		TrustedProxies:        getList("TRUSTED_PROXIES", ""),
-		SMTPHost:              getEnv("SMTP_HOST", ""),
-		SMTPPort:              getEnv("SMTP_PORT", ""),
-		SMTPUsername:          getEnv("SMTP_USERNAME", ""),
-		SMTPPassword:          getEnv("SMTP_PASSWORD", ""),
-		SMTPFrom:              getEnv("SMTP_FROM", ""),
-		SMTPFromName:          getEnv("SMTP_FROM_NAME", ""),
-		SMSProvider:           getEnv("SMS_PROVIDER", "dev"),
+		SMTPHost:              smtpHost,
+		SMTPPort:              smtpPort,
+		SMTPUsername:          smtpUser,
+		SMTPPassword:          smtpPassword,
+		SMTPFrom:              smtpFrom,
+		SMTPFromName:          smtpFromName,
+		VietQRImageBaseURL:    strings.TrimRight(getEnv("VIETQR_IMAGE_BASE_URL", "https://img.vietqr.io"), "/"),
+		VietQRImageExt:        strings.TrimPrefix(getEnv("VIETQR_IMAGE_EXT", "png"), "."),
+		VietQRBaseURL:         strings.TrimRight(getEnv("VIETQR_BASE_URL", "https://api.vietqr.io"), "/"),
+		VietQRClientID:        getEnv("VIETQR_CLIENT_ID", ""),
+		VietQRAPIKey:          getEnv("VIETQR_API_KEY", ""),
 	}
 }
 

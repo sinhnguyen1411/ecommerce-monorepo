@@ -1,48 +1,43 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 import SectionTitle from "@/components/common/SectionTitle";
 import { Button } from "@/components/ui/button";
-import { getRefreshToken, getUserToken, setAuthTokens } from "@/lib/auth";
+import { getProfile } from "@/lib/account";
 import { login } from "@/lib/user-auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [origin, setOrigin] = useState("");
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
-
-  useEffect(() => {
-    if (getUserToken() || getRefreshToken()) {
-      router.replace("/account");
-    }
+    let active = true;
+    getProfile()
+      .then(() => {
+        if (active) {
+          router.replace("/account");
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [router]);
-
-  const loginUrl = useMemo(() => {
-    if (!origin) {
-      return "";
-    }
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const redirect = encodeURIComponent(`${origin}/account`);
-    return `${apiBase.replace(/\/$/, "")}/api/auth/google/login?redirect=${redirect}`;
-  }, [origin]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const result = await login({ identifier, password });
-      setAuthTokens(result.access_token, result.refresh_token);
+      await login({ email, password });
       router.push("/account");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
@@ -52,55 +47,60 @@ export default function LoginPage() {
   };
 
   return (
-    <div>
-      <section className="section-shell pb-10 pt-14">
-        <SectionTitle
-          eyebrow="Tài khoản"
-          title="Đăng nhập"
-          description="Đăng nhập bằng email hoặc số điện thoại và mật khẩu."
-        />
-      </section>
-
-      <section className="section-shell pb-16">
-        <div className="border border-forest/10 bg-white p-8">
-          {error ? <p className="mb-4 text-sm text-clay">{error}</p> : null}
-          <form className="grid gap-4" onSubmit={handleSubmit}>
-            <input
-              className="field"
-              value={identifier}
-              onChange={(event) => setIdentifier(event.target.value)}
-              placeholder="Email hoặc số điện thoại"
+    <div className="auth-shell">
+      <section className="section-shell pb-16 pt-14">
+        <div className="auth-grid auth-grid--single">
+          <div className="auth-card auth-card--compact auth-card--center">
+            <SectionTitle
+              eyebrow="Tài khoản"
+              title="Đăng nhập"
+              description="Đăng nhập bằng email và mật khẩu."
             />
-            <input
-              className="field"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Mật khẩu"
-            />
-            <Button type="submit" disabled={loading}>
-              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-            </Button>
-          </form>
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-ink/70">
-            <Link className="text-forest" href="/signup">
-              Tạo tài khoản
+            {error ? <p className="mb-4 text-sm text-clay">{error}</p> : null}
+            <form className="grid gap-4" onSubmit={handleSubmit}>
+              <input
+                className="field"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Email"
+              />
+              <div className="auth-password">
+                <input
+                  className="field"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Mật khẩu"
+                />
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <Button type="submit" disabled={loading} className="font-semibold">
+                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+              </Button>
+            </form>
+            <Link className="auth-link" href="/forgot-password">
+              {"Quên mật khẩu?"}
             </Link>
-            <span className="text-ink/40">|</span>
-            <Link className="text-forest" href="/forgot-password">
-              Quên mật khẩu
+            <div className="auth-divider" />
+            <Link href="/signup" className="button auth-secondary">
+              {"Tạo tài khoản mới"}
             </Link>
-          </div>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Button asChild disabled={!loginUrl}>
-              <a href={loginUrl || "#"}>Đăng nhập bằng Google</a>
-            </Button>
-            <Link href="/" className="button btnlight">
-              Về trang chủ
-            </Link>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-ink/70">
+              <Link href="/" className="text-forest">
+                {"Quay về trang chủ"}
+              </Link>
+            </div>
           </div>
         </div>
       </section>
     </div>
   );
 }
+
