@@ -14,7 +14,7 @@ Copy-Item infra\env\web.env.example infra\env\web.env
 
 2) Update these fields:
 - mysql.env: `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`
-- api.env: `JWT_SECRET`, `PUBLIC_BASE_URL`, `ALLOWED_ORIGINS`, `FRONTEND_BASE_URL`, `CORS_ALLOW_CREDENTIALS`
+- api.env: `JWT_SECRET`, `PUBLIC_BASE_URL`, `ALLOWED_ORIGINS`, `FRONTEND_BASE_URL`, `CORS_ALLOW_CREDENTIALS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URL`, `AUTH_GMAIL_ONLY`
 - web.env: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `API_INTERNAL_URL`
 
 Notes:
@@ -22,6 +22,9 @@ Notes:
 - `FRONTEND_BASE_URL` should match the public web domain for cookie auth and redirects.
 - `NEXT_PUBLIC_*` values are baked into the Next.js build. Rebuild the web image after changes.
 - In production, SMTP must be configured (`SMTP_*`) or the API will fail to start.
+
+## Further Reading
+- Google OAuth + Gmail OTP setup: `docs/AUTH_GOOGLE_OTP_SETUP.md`
 
 ## Start and stop
 

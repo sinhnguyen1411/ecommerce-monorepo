@@ -36,6 +36,9 @@ curl http://localhost:3000
 - Admin seed account (local): `admin@tambo.local` / `admin123`.
 - If SMTP is not configured, OTP emails are logged to the API console in non-production environments.
 
+## Further Reading
+- Google OAuth + Gmail OTP setup: `docs/AUTH_GOOGLE_OTP_SETUP.md`
+
 ## Reset data
 
 ```
@@ -82,6 +85,6 @@ docker compose logs -f web
 - Checkout: select shipping/payment, apply coupon (`WELCOME50`, `FRESH10`), place order.
 - Payment proof: upload file on thank-you page and confirm `/uploads`.
 - Blog: view list and detail pages.
-- Auth: register, login, forgot password flow.
+- Auth: login via Google or Gmail OTP.
 - Account: update profile, add address, view order history.
 - Admin: login, CRUD products/categories/posts/Q&A, update orders and payment settings.
