@@ -46,6 +46,9 @@ func main() {
 	}
 
 	router := gin.New()
+	if cfg.UploadMaxBytes > 0 {
+		router.MaxMultipartMemory = cfg.UploadMaxBytes
+	}
 	router.Use(gin.Logger(), gin.Recovery())
 
 	trustedProxies := cfg.TrustedProxies

@@ -1,4 +1,5 @@
 import { clearAuthTokens } from "./auth";
+import { ApiError, getRetryAfterSeconds } from "./api-error";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const trimmedBaseUrl = API_BASE_URL.replace(/\/$/, "");
@@ -27,7 +28,7 @@ async function refreshAccessToken() {
     cache: "no-store",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({})
+    body: JSON.stringify({}),
   });
 
   const payload = (await response.json()) as ApiEnvelope<{
@@ -46,7 +47,7 @@ async function refreshAccessToken() {
 export async function authRequest<T>(
   path: string,
   options?: RequestInit,
-  requestOptions?: RequestOptions
+  requestOptions?: RequestOptions,
 ) {
   const auth = requestOptions?.auth ?? false;
   const retry = requestOptions?.retry ?? true;
@@ -57,8 +58,8 @@ export async function authRequest<T>(
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(options?.headers || {})
-    }
+      ...(options?.headers || {}),
+    },
   });
 
   const payload = (await response.json()) as ApiEnvelope<T>;
@@ -74,5 +75,10 @@ export async function authRequest<T>(
   }
 
   const message = payload?.error?.message || "Request failed";
-  throw new Error(message);
+  throw new ApiError(message, {
+    code: payload?.error?.code,
+    status: response.status,
+    retryAfter: getRetryAfterSeconds(response),
+    retryAt: payload?.error?.retry_at,
+  });
 }

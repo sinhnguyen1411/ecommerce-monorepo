@@ -1,13 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 
 	"ecommerce-monorepo/apps/api/internal/config"
 )
@@ -16,6 +19,7 @@ type Server struct {
 	DB                   *sql.DB
 	Config               config.Config
 	EmailSender          EmailSender
+	Redis                *redis.Client
 	vietqrBanksMu        sync.Mutex
 	vietqrBanksCache     map[string]int
 	vietqrBanksExpiresAt time.Time
@@ -29,11 +33,26 @@ func New(db *sql.DB, cfg config.Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	var redisClient *redis.Client
+	if cfg.RedisEnabled {
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     cfg.RedisAddr,
+			Password: cfg.RedisPassword,
+			DB:       cfg.RedisDB,
+		})
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if err := redisClient.Ping(ctx).Err(); err != nil {
+			log.Printf("redis_unavailable err=%v", err)
+			redisClient = nil
+		}
+	}
 
 	return &Server{
 		DB:               db,
 		Config:           cfg,
 		EmailSender:      emailSender,
+		Redis:            redisClient,
 		vietqrBanksCache: make(map[string]int),
 	}, nil
 }
@@ -48,7 +67,15 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 	{
 		auth := api.Group("/auth")
 		auth.Use(s.authRateLimitMiddleware())
+		auth.Use(s.buyerWriteRateLimitMiddleware(map[string]struct{}{
+			"/api/auth/login":    {},
+			"/api/auth/register": {},
+		}))
 		{
+			auth.GET("/google/start", s.GoogleStart)
+			auth.GET("/google/callback", s.GoogleCallback)
+			auth.POST("/otp/request", s.RequestLoginOTP)
+			auth.POST("/otp/verify", s.VerifyLoginOTP)
 			auth.POST("/register", s.Register)
 			auth.POST("/login", s.Login)
 			auth.POST("/logout", s.Logout)
@@ -65,37 +92,43 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 			auth.PATCH("/me", s.requireRole("user"), s.UpdateMe)
 		}
 
-		api.GET("/account/profile", s.requireRole("user"), s.GetProfile)
-		api.PATCH("/account/profile", s.requireRole("user"), s.UpdateProfile)
-		api.GET("/account/addresses", s.requireRole("user"), s.ListAddresses)
-		api.POST("/account/addresses", s.requireRole("user"), s.CreateAddress)
-		api.PATCH("/account/addresses/:id", s.requireRole("user"), s.UpdateAddress)
-		api.DELETE("/account/addresses/:id", s.requireRole("user"), s.DeleteAddress)
-		api.GET("/account/orders", s.requireRole("user"), s.ListUserOrders)
+		account := api.Group("/account", s.requireRole("user"))
+		{
+			account.GET("/profile", s.GetProfile)
+			account.GET("/addresses", s.ListAddresses)
+			account.GET("/orders", s.ListUserOrders)
+		}
+		accountWrite := api.Group("/account", s.requireRole("user"), s.buyerWriteRateLimitMiddleware(nil))
+		{
+			accountWrite.PATCH("/profile", s.UpdateProfile)
+			accountWrite.POST("/addresses", s.CreateAddress)
+			accountWrite.PATCH("/addresses/:id", s.UpdateAddress)
+			accountWrite.DELETE("/addresses/:id", s.DeleteAddress)
+		}
 
-		api.GET("/categories", s.ListCategories)
-		api.GET("/products", s.ListProducts)
-		api.GET("/products/:slug", s.GetProduct)
-		api.GET("/posts", s.ListPosts)
-		api.GET("/posts/:slug", s.GetPost)
-		api.GET("/pages/:slug", s.GetPage)
-		api.GET("/qna", s.ListQnA)
-		api.GET("/locations", s.ListLocations)
-		api.GET("/geo/provinces", s.ListProvinces)
-		api.GET("/geo/districts", s.ListDistricts)
-		api.GET("/checkout/config", s.GetCheckoutConfig)
-		api.GET("/payment-settings", s.GetPaymentSettings)
-		api.GET("/promotions", s.ListPromotions)
+		api.GET("/categories", s.cacheGetMiddleware(s.Config.CacheListTTL), s.ListCategories)
+		api.GET("/products", s.cacheGetMiddleware(s.Config.CacheListTTL), s.ListProducts)
+		api.GET("/products/:slug", s.cacheGetMiddleware(s.Config.CacheDetailTTL), s.GetProduct)
+		api.GET("/posts", s.cacheGetMiddleware(s.Config.CacheListTTL), s.ListPosts)
+		api.GET("/posts/:slug", s.cacheGetMiddleware(s.Config.CacheDetailTTL), s.GetPost)
+		api.GET("/pages/:slug", s.cacheGetMiddleware(s.Config.CacheDetailTTL), s.GetPage)
+		api.GET("/qna", s.cacheGetMiddleware(s.Config.CacheListTTL), s.ListQnA)
+		api.GET("/locations", s.cacheGetMiddleware(s.Config.CacheListTTL), s.ListLocations)
+		api.GET("/geo/provinces", s.cacheGetMiddleware(s.Config.CacheStaticTTL), s.ListProvinces)
+		api.GET("/geo/districts", s.cacheGetMiddleware(s.Config.CacheStaticTTL), s.ListDistricts)
+		api.GET("/checkout/config", s.cacheGetMiddleware(s.Config.CacheStaticTTL), s.GetCheckoutConfig)
+		api.GET("/payment-settings", s.cacheGetMiddleware(s.Config.CacheStaticTTL), s.GetPaymentSettings)
+		api.GET("/promotions", s.cacheGetMiddleware(s.Config.CacheListTTL), s.ListPromotions)
 		api.POST("/promotions/validate", s.ValidatePromotion)
 		api.POST("/orders", s.CreateOrder)
 		api.GET("/orders/:id/summary", s.GetOrderSummary)
-		api.PATCH("/orders/:id/payment-method", s.UpdateOrderPaymentMethod)
+		api.PATCH("/orders/:id/payment-method", s.buyerWriteRateLimitMiddleware(nil), s.UpdateOrderPaymentMethod)
 		api.GET("/orders/:id/payment/qr", s.GetOrderPaymentQR)
 		api.POST("/orders/:id/payment-proof", s.UploadPaymentProof)
 
 		api.POST("/admin/login", s.AdminLogin)
-		api.POST("/admin/logout", s.AdminLogout)
-		admin := api.Group("/admin", s.requireRole("admin"))
+		api.POST("/admin/logout", s.adminWriteRateLimitMiddleware(), s.AdminLogout)
+		admin := api.Group("/admin", s.requireRole("admin"), s.adminWriteRateLimitMiddleware())
 		{
 			admin.GET("/me", s.AdminMe)
 			admin.GET("/products", s.AdminListProducts)
@@ -146,6 +179,11 @@ func respondOK(c *gin.Context, data any) {
 
 func respondError(c *gin.Context, status int, code, message string) {
 	c.JSON(status, APIResponse{Success: false, Error: &APIError{Code: code, Message: message}})
+}
+
+func respondErrorWithRetryAt(c *gin.Context, status int, code, message string, retryAt time.Time) {
+	value := retryAt.UTC().Format(time.RFC3339)
+	c.JSON(status, APIResponse{Success: false, Error: &APIError{Code: code, Message: message, RetryAt: &value}})
 }
 
 func (s *Server) buildAssetURL(raw string) string {

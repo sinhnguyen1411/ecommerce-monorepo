@@ -16,3 +16,9 @@ VALUES ('admin@tambo.local', '$2a$10$Dmph.exDlZGD0Mi4o7mZsOqsY1zBQlwO5.Ux6whYCeD
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
   role = VALUES(role);
+
+INSERT INTO admin_users (email, password_hash, name, role)
+VALUES ('admin2@tambo.local', '$2a$10$Dmph.exDlZGD0Mi4o7mZsOqsY1zBQlwO5.Ux6whYCeDF679zM35qa', 'Admin Ops', 'admin')
+ON DUPLICATE KEY UPDATE
+  name = VALUES(name),
+  role = VALUES(role);

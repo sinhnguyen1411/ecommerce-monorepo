@@ -15,6 +15,9 @@ func (s *Server) AdminUpload(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "missing_file", "Upload file is required")
 		return
 	}
+	if !s.enforceUploadSize(c, file.Size) {
+		return
+	}
 
 	extension := filepath.Ext(file.Filename)
 	filename := fmt.Sprintf("admin_%d%s", time.Now().UnixNano(), extension)

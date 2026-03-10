@@ -3,7 +3,9 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -23,8 +25,7 @@ type AdminProfile struct {
 
 func (s *Server) AdminLogin(c *gin.Context) {
 	var input AdminLoginInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid login payload")
+	if !s.bindJSONWithLimit(c, &input, "Invalid login payload") {
 		return
 	}
 
@@ -34,10 +35,22 @@ func (s *Server) AdminLogin(c *gin.Context) {
 		return
 	}
 
+	ipKey := rateLimitKey("admin_login:ip", c.ClientIP())
+	if !s.enforceRateLimit(c, ipKey, s.Config.LoginIPRateLimitMax, s.Config.LoginIPRateLimitWindow, "login_rate_limited", "Too many login attempts") {
+		return
+	}
+
+	emailKey := rateLimitKey("admin_login:email", hashIdentifier(email))
+	if !s.enforceRateLimit(c, emailKey, s.Config.LoginIDRateLimitMax, s.Config.LoginIDRateLimitWindow, "login_rate_limited", "Too many login attempts") {
+		return
+	}
+
 	var admin AdminProfile
 	var hash string
-	row := s.DB.QueryRow(`SELECT id, email, name, role, password_hash FROM admin_users WHERE email = ?`, email)
-	if err := row.Scan(&admin.ID, &admin.Email, &admin.Name, &admin.Role, &hash); err != nil {
+	var failedAttempts int
+	var lockedUntil sql.NullTime
+	row := s.DB.QueryRow(`SELECT id, email, name, role, password_hash, failed_login_attempts, locked_until FROM admin_users WHERE email = ?`, email)
+	if err := row.Scan(&admin.ID, &admin.Email, &admin.Name, &admin.Role, &hash, &failedAttempts, &lockedUntil); err != nil {
 		if err == sql.ErrNoRows {
 			respondError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials")
 			return
@@ -46,8 +59,40 @@ func (s *Server) AdminLogin(c *gin.Context) {
 		return
 	}
 
+	if lockedUntil.Valid && lockedUntil.Time.After(time.Now()) {
+		retryAfter := time.Until(lockedUntil.Time)
+		if retryAfter > 0 {
+			c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
+		}
+		respondErrorWithRetryAt(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked", lockedUntil.Time)
+		return
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(input.Password)); err != nil {
+		attempts := failedAttempts + 1
+		var newLockedUntil sql.NullTime
+		if s.Config.LoginMaxAttempts > 0 && attempts >= s.Config.LoginMaxAttempts {
+			lockTime := time.Now().Add(s.Config.LoginLockoutDuration)
+			newLockedUntil = sql.NullTime{Time: lockTime, Valid: true}
+			if retryAfter := time.Until(lockTime); retryAfter > 0 {
+				c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
+			}
+			_, _ = s.DB.Exec(`UPDATE admin_users SET failed_login_attempts = ?, locked_until = ? WHERE id = ?`, attempts, newLockedUntil, admin.ID)
+			respondErrorWithRetryAt(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked", lockTime)
+			return
+		}
+
+		_, _ = s.DB.Exec(`UPDATE admin_users SET failed_login_attempts = ?, locked_until = NULL WHERE id = ?`, attempts, admin.ID)
+		if s.Config.LoginWarnAttempts > 0 && attempts >= s.Config.LoginWarnAttempts {
+			respondError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials. Too many failed attempts may temporarily lock your account.")
+			return
+		}
 		respondError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials")
+		return
+	}
+
+	if _, err := s.DB.Exec(`UPDATE admin_users SET failed_login_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?`, time.Now(), admin.ID); err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update admin login state")
 		return
 	}
 

@@ -11,6 +11,7 @@ var (
 	emailRegex      = regexp.MustCompile(`^[a-z0-9.!#$%&'*+/=?^_` + "`" + `{|}~-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+$`)
 	ErrInvalidEmail = errors.New("invalid email")
 	ErrEmptyEmail   = errors.New("empty email")
+	ErrGmailOnly    = errors.New("gmail only")
 	maxEmailLength  = 254
 )
 
@@ -48,6 +49,18 @@ func NormalizeEmail(input string) (string, error) {
 		}
 	}
 
+	return normalized, nil
+}
+
+func RequireGmailEmail(input string) (string, error) {
+	normalized, err := NormalizeEmail(input)
+	if err != nil {
+		return "", err
+	}
+	parts := strings.SplitN(normalized, "@", 2)
+	if len(parts) != 2 || !isGmailDomain(parts[1]) {
+		return "", ErrGmailOnly
+	}
 	return normalized, nil
 }
 
