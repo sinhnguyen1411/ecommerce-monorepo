@@ -36,8 +36,15 @@ build
 # OS junk
 Thumbs.db
 Desktop.ini
+
+# AI/agent local tooling (never commit)
+AGENTS.md
 opencode.json
-.codex/skills/opencode-cli/scripts/opencode.ps1
-/.codex/skills/opencode-cli/agents
-/.codex/skills/opencode-cli
-/.opencode
+.codex/
+.opencode/
+
+# Safety for nested workspaces
+**/.codex/
+**/.opencode/
+**/opencode.json
+**/AGENTS.md
