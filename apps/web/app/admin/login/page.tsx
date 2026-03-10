@@ -6,24 +6,74 @@ import { useRouter } from "next/navigation";
 import { Loader2, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api-error";
 import { adminLogin } from "@/lib/admin";
+
+function formatRetryAt(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  const now = new Date();
+  const timeText = parsed.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const sameDay = parsed.toDateString() === now.toDateString();
+  if (sameDay) {
+    return `Hãy thử lại vào ${timeText}.`;
+  }
+  const dateText = parsed.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+  return `Hãy thử lại vào ${timeText} ngày ${dateText}.`;
+}
+
+function mapAdminLoginError(err: ApiError) {
+  if (err.code === "account_locked") {
+    return "Tài khoản quản trị đang bị khóa tạm thời.";
+  }
+  if (err.code === "login_rate_limited" || err.code === "rate_limited") {
+    return "Bạn đã thử đăng nhập quá nhiều lần.";
+  }
+  if (
+    err.code === "invalid_credentials" ||
+    err.message === "Invalid credentials"
+  ) {
+    return "Email hoặc mật khẩu không đúng.";
+  }
+  if (err.message.includes("Too many failed attempts")) {
+    return "Sai thông tin đăng nhập. Nhiều lần sai có thể khóa tài khoản tạm thời.";
+  }
+  return err.message;
+}
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [retryAt, setRetryAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    setRetryAt(null);
     setLoading(true);
     try {
       await adminLogin({ email, password });
       router.push("/admin");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Đăng nhập thất bại.");
+      if (err instanceof ApiError) {
+        setError(mapAdminLoginError(err));
+        if (err.retryAt) {
+          setRetryAt(err.retryAt);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : "Đăng nhập thất bại.");
+      }
     } finally {
       setLoading(false);
     }
@@ -47,12 +97,21 @@ export default function AdminLoginPage() {
             </div>
           </div>
           <p className="mt-3 text-base text-slate-500 md:text-sm">
-            Dành cho nhân viên quản trị nội bộ. Vui lòng sử dụng tài khoản được cấp.
+            Dành cho nhân viên quản trị nội bộ. Vui lòng sử dụng tài khoản được
+            cấp.
           </p>
 
           {error ? (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base text-red-700 md:text-sm">
-              {error}
+            <div
+              className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-base text-amber-900 md:text-sm"
+              aria-live="polite"
+            >
+              <div className="font-semibold">{error}</div>
+              {retryAt ? (
+                <p className="mt-1 text-xs text-amber-800">
+                  {formatRetryAt(retryAt)}
+                </p>
+              ) : null}
             </div>
           ) : null}
 

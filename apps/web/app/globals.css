@@ -1703,6 +1703,40 @@ a.button.btnlight:focus-visible {
   max-width: 720px;
 }
 
+.auth-provider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e2da;
+  background: #f5f4f0;
+  color: #1c1a16;
+  font-weight: 600;
+  padding: 12px 18px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.auth-provider:hover {
+  border-color: #d6d2c8;
+  box-shadow: 0 10px 20px rgba(31, 42, 30, 0.12);
+  transform: translateY(-1px);
+}
+
+.auth-provider__icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-provider__icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
 .auth-card--center .heading-page {
   text-align: center;
 }

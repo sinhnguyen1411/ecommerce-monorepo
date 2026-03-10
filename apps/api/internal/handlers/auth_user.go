@@ -20,6 +20,7 @@ const (
 
 	purposeReset             = "reset_password"
 	purposeEmailVerification = "verify_email"
+	purposeLogin             = "login_email"
 )
 
 type EmailRequestInput struct {
@@ -79,9 +80,17 @@ type RefreshSessionInfo struct {
 }
 
 func (s *Server) Register(c *gin.Context) {
+	if s.Config.AuthGmailOnly {
+		respondError(c, http.StatusForbidden, "gmail_only", "Please sign up with Google or Gmail OTP")
+		return
+	}
 	var input RegisterInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid registration payload")
+	if !s.bindJSONWithLimit(c, &input, "Invalid registration payload") {
+		return
+	}
+
+	ipKey := rateLimitKey("register:ip", c.ClientIP())
+	if !s.enforceRateLimit(c, ipKey, s.Config.RegisterRateLimitMax, s.Config.RegisterRateLimitWindow, "register_rate_limited", "Too many registration attempts") {
 		return
 	}
 
@@ -441,10 +450,121 @@ func (s *Server) VerifyEmailOTP(c *gin.Context) {
 	})
 }
 
-func (s *Server) Login(c *gin.Context) {
-	var input LoginInput
+func (s *Server) RequestLoginOTP(c *gin.Context) {
+	var input EmailRequestInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid login payload")
+		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid request payload")
+		return
+	}
+	email, err := auth.RequireGmailEmail(input.Email)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_email", "Please enter a valid Gmail address")
+		return
+	}
+
+	requestID, cooldown, err := s.sendOTP(c, email, purposeLogin)
+	if err != nil {
+		s.handleOTPSendError(c, err)
+		return
+	}
+
+	respondOK(c, gin.H{
+		"request_id":       requestID,
+		"cooldown_seconds": int(cooldown.Seconds()),
+	})
+}
+
+func (s *Server) VerifyLoginOTP(c *gin.Context) {
+	var input OTPVerifyInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid verification payload")
+		return
+	}
+	if input.RequestID == 0 || strings.TrimSpace(input.Code) == "" {
+		respondError(c, http.StatusBadRequest, "missing_fields", "Request ID and code are required")
+		return
+	}
+
+	record, err := s.getOTPRecord(input.RequestID)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_request", "Invalid verification request")
+		return
+	}
+	if record.Purpose != purposeLogin {
+		respondError(c, http.StatusBadRequest, "invalid_purpose", "Invalid OTP purpose")
+		return
+	}
+	if record.ConsumedAt != nil {
+		respondError(c, http.StatusBadRequest, "otp_used", "OTP already used")
+		return
+	}
+	if auth.OTPExpired(record.ExpiresAt) {
+		respondError(c, http.StatusBadRequest, "otp_expired", "OTP expired")
+		return
+	}
+	if auth.OTPAttemptsExceeded(record.AttemptsCount, s.Config.OTPMaxAttempts) {
+		respondError(c, http.StatusTooManyRequests, "otp_attempts", "Too many attempts")
+		return
+	}
+
+	code := strings.TrimSpace(input.Code)
+	if !auth.VerifyOTP(code, record.Destination, record.Purpose, s.Config.OTPSecret, record.CodeHash) {
+		_, _ = s.DB.Exec(`UPDATE otp_verifications SET attempts_count = attempts_count + 1 WHERE id = ?`, record.ID)
+		respondError(c, http.StatusBadRequest, "invalid_code", "Invalid verification code")
+		return
+	}
+
+	if _, err := s.DB.Exec(`UPDATE otp_verifications SET consumed_at = ?, attempts_count = attempts_count + 1 WHERE id = ?`, time.Now(), record.ID); err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to verify code")
+		return
+	}
+
+	email, err := auth.RequireGmailEmail(record.Destination)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_email", "Please use a Gmail account")
+		return
+	}
+
+	user, err := s.upsertOAuthUser(email, "", "", "")
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to finalize login")
+		return
+	}
+
+	if !s.ensureUserCanLogin(c, user) {
+		return
+	}
+
+	if err := s.markLoginSuccess(user.ID); err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update login state")
+		return
+	}
+
+	accessToken, refreshToken, err := s.issueTokens(c, user.ID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "token_error", "Failed to issue tokens")
+		return
+	}
+	s.setAuthCookies(c, accessToken, refreshToken)
+
+	s.logAudit(c, &user.ID, "login_success", map[string]any{
+		"provider": "email_otp",
+	})
+
+	respondOK(c, gin.H{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"user":          authUserResponse(user),
+	})
+}
+
+func (s *Server) Login(c *gin.Context) {
+	if s.Config.AuthGmailOnly {
+		respondError(c, http.StatusForbidden, "gmail_only", "Please sign in with Google or Gmail OTP")
+		return
+	}
+	var input LoginInput
+	if !s.bindJSONWithLimit(c, &input, "Invalid login payload") {
 		return
 	}
 
@@ -454,9 +574,19 @@ func (s *Server) Login(c *gin.Context) {
 		return
 	}
 
+	ipKey := rateLimitKey("login:ip", c.ClientIP())
+	if !s.enforceRateLimit(c, ipKey, s.Config.LoginIPRateLimitMax, s.Config.LoginIPRateLimitWindow, "login_rate_limited", "Too many login attempts") {
+		return
+	}
+
 	normalized, err := auth.NormalizeEmail(emailRaw)
 	if err != nil {
 		respondError(c, http.StatusBadRequest, "invalid_email", "Invalid email address")
+		return
+	}
+
+	emailKey := rateLimitKey("login:email", hashIdentifier(normalized))
+	if !s.enforceRateLimit(c, emailKey, s.Config.LoginIDRateLimitMax, s.Config.LoginIDRateLimitWindow, "login_rate_limited", "Too many login attempts") {
 		return
 	}
 
@@ -476,7 +606,11 @@ func (s *Server) Login(c *gin.Context) {
 	}
 
 	if user.LockedUntil.Valid && user.LockedUntil.Time.After(time.Now()) {
-		respondError(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked")
+		retryAfter := time.Until(user.LockedUntil.Time)
+		if retryAfter > 0 {
+			c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
+		}
+		respondErrorWithRetryAt(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked", user.LockedUntil.Time)
 		return
 	}
 
@@ -487,7 +621,22 @@ func (s *Server) Login(c *gin.Context) {
 
 	ok, err := auth.VerifyPassword(user.PasswordHash.String, input.Password)
 	if err != nil || !ok {
-		s.handleLoginFailure(c, user)
+		attempts, lockedUntil := s.handleLoginFailure(c, user)
+		if lockedUntil != nil {
+			retryAfter := time.Until(*lockedUntil)
+			if retryAfter > 0 {
+				c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
+			}
+			respondErrorWithRetryAt(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked", *lockedUntil)
+			return
+		}
+		if s.Config.LoginWarnAttempts > 0 && attempts >= s.Config.LoginWarnAttempts {
+			s.logAudit(c, &user.ID, "login_warning", map[string]any{
+				"attempts": attempts,
+			})
+			respondError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials. Too many failed attempts may temporarily lock your account.")
+			return
+		}
 		respondError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials")
 		return
 	}
@@ -822,17 +971,21 @@ func (s *Server) RevokeSession(c *gin.Context) {
 	respondOK(c, gin.H{"revoked": true})
 }
 
-func (s *Server) handleLoginFailure(c *gin.Context, user *userAuthRecord) {
+func (s *Server) handleLoginFailure(c *gin.Context, user *userAuthRecord) (int, *time.Time) {
 	attempts := user.FailedLoginAttempts + 1
 	var lockedUntil sql.NullTime
-	if attempts >= s.Config.LoginMaxAttempts {
-		lockedUntil = sql.NullTime{Time: time.Now().Add(s.Config.LoginLockoutDuration), Valid: true}
+	var lockedTime *time.Time
+	if s.Config.LoginMaxAttempts > 0 && attempts >= s.Config.LoginMaxAttempts {
+		lockTime := time.Now().Add(s.Config.LoginLockoutDuration)
+		lockedUntil = sql.NullTime{Time: lockTime, Valid: true}
+		lockedTime = &lockTime
 	}
 	_, _ = s.DB.Exec(`UPDATE users SET failed_login_attempts = ?, locked_until = ? WHERE id = ?`, attempts, lockedUntil, user.ID)
 
 	s.logAudit(c, &user.ID, "login_failed", map[string]any{
 		"attempts": attempts,
 	})
+	return attempts, lockedTime
 }
 
 func (s *Server) userExistsByEmail(email string) (bool, error) {

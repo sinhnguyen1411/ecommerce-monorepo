@@ -42,6 +42,23 @@ export function login(input: { email: string; password: string }) {
   });
 }
 
+export function requestLoginOTP(input: { email: string }) {
+  return authRequest<{ request_id: number; cooldown_seconds: number }>(
+    "/api/auth/otp/request",
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export function verifyLoginOTP(input: { request_id: number; code: string }) {
+  return authRequest<AuthTokens>("/api/auth/otp/verify", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export function sendEmailOTP() {
   return authRequest<{ sent: boolean; cooldown_seconds?: number; emailVerificationStatus?: string }>(
     "/api/auth/send-email-otp",

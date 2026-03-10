@@ -1,3 +1,5 @@
+import { ApiError, getRetryAfterSeconds } from "./api-error";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 function buildUrl(path: string) {
@@ -6,7 +8,7 @@ function buildUrl(path: string) {
 
 async function adminRequest<T>(path: string, options?: RequestInit) {
   const headers: Record<string, string> = {
-    ...(options?.headers as Record<string, string> | undefined)
+    ...(options?.headers as Record<string, string> | undefined),
   };
   if (!(options?.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
@@ -14,13 +16,18 @@ async function adminRequest<T>(path: string, options?: RequestInit) {
   const response = await fetch(buildUrl(path), {
     ...options,
     headers,
-    credentials: "include"
+    credentials: "include",
   });
 
   const payload = await response.json();
   if (!response.ok || !payload?.success) {
     const message = payload?.error?.message || "Request failed";
-    throw new Error(message);
+    throw new ApiError(message, {
+      code: payload?.error?.code,
+      status: response.status,
+      retryAfter: getRetryAfterSeconds(response),
+      retryAt: payload?.error?.retry_at,
+    });
   }
 
   return payload.data as T;
@@ -106,7 +113,12 @@ export type AdminOrder = {
   payment_proof_url: string;
   admin_note: string;
   created_at: string;
-  items: { product_id: number; name: string; quantity: number; unit_price: number }[];
+  items: {
+    product_id: number;
+    name: string;
+    quantity: number;
+    unit_price: number;
+  }[];
 };
 
 export type PaymentSettings = {
@@ -123,16 +135,19 @@ export type PaymentSettings = {
 };
 
 export function adminLogin(input: { email: string; password: string }) {
-  return adminRequest<{ token: string; admin: AdminProfile }>("/api/admin/login", {
-    method: "POST",
-    body: JSON.stringify(input)
-  });
+  return adminRequest<{ token: string; admin: AdminProfile }>(
+    "/api/admin/login",
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function adminLogout() {
   return adminRequest<{ logged_out: boolean }>("/api/admin/logout", {
     method: "POST",
-    body: JSON.stringify({})
+    body: JSON.stringify({}),
   });
 }
 
@@ -144,30 +159,38 @@ export function listAdminProducts() {
   return adminRequest<AdminProduct[]>("/api/admin/products");
 }
 
-export function createAdminProduct(input: Partial<AdminProduct> & { category_ids?: number[] }) {
+export function createAdminProduct(
+  input: Partial<AdminProduct> & { category_ids?: number[] },
+) {
   return adminRequest<AdminProduct>("/api/admin/products", {
     method: "POST",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
-export function updateAdminProduct(id: number, input: Partial<AdminProduct> & { category_ids?: number[] }) {
+export function updateAdminProduct(
+  id: number,
+  input: Partial<AdminProduct> & { category_ids?: number[] },
+) {
   return adminRequest<AdminProduct>(`/api/admin/products/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export function deleteAdminProduct(id: number) {
   return adminRequest<{ deleted: boolean }>(`/api/admin/products/${id}`, {
-    method: "DELETE"
+    method: "DELETE",
   });
 }
 
-export function addAdminProductImage(id: number, input: { url: string; sort_order: number }) {
+export function addAdminProductImage(
+  id: number,
+  input: { url: string; sort_order: number },
+) {
   return adminRequest<AdminProduct>(`/api/admin/products/${id}/images`, {
     method: "POST",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
@@ -178,20 +201,20 @@ export function listAdminCategories() {
 export function createAdminCategory(input: Partial<AdminCategory>) {
   return adminRequest<AdminCategory>("/api/admin/categories", {
     method: "POST",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export function updateAdminCategory(id: number, input: Partial<AdminCategory>) {
   return adminRequest<AdminCategory>(`/api/admin/categories/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export function deleteAdminCategory(id: number) {
   return adminRequest<{ deleted: boolean }>(`/api/admin/categories/${id}`, {
-    method: "DELETE"
+    method: "DELETE",
   });
 }
 
@@ -202,20 +225,20 @@ export function listAdminPosts() {
 export function createAdminPost(input: Partial<AdminPost>) {
   return adminRequest<AdminPost>("/api/admin/posts", {
     method: "POST",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export function updateAdminPost(id: number, input: Partial<AdminPost>) {
   return adminRequest<AdminPost>(`/api/admin/posts/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export function deleteAdminPost(id: number) {
   return adminRequest<{ deleted: boolean }>(`/api/admin/posts/${id}`, {
-    method: "DELETE"
+    method: "DELETE",
   });
 }
 
@@ -230,14 +253,14 @@ export function getAdminPage(id: number) {
 export function createAdminPage(input: Partial<AdminPage>) {
   return adminRequest<AdminPage>("/api/admin/pages", {
     method: "POST",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export function updateAdminPage(id: number, input: Partial<AdminPage>) {
   return adminRequest<AdminPage>(`/api/admin/pages/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
@@ -248,29 +271,35 @@ export function listAdminQnA() {
 export function createAdminQnA(input: Partial<AdminQnA>) {
   return adminRequest<AdminQnA>("/api/admin/qna", {
     method: "POST",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export function updateAdminQnA(id: number, input: Partial<AdminQnA>) {
   return adminRequest<AdminQnA>(`/api/admin/qna/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
 export function deleteAdminQnA(id: number) {
   return adminRequest<{ deleted: boolean }>(`/api/admin/qna/${id}`, {
-    method: "DELETE"
+    method: "DELETE",
   });
 }
 
-export function listAdminOrders(params?: { status?: string; payment_status?: string }) {
+export function listAdminOrders(params?: {
+  status?: string;
+  payment_status?: string;
+}) {
   const search = new URLSearchParams();
   if (params?.status) search.set("status", params.status);
-  if (params?.payment_status) search.set("payment_status", params.payment_status);
+  if (params?.payment_status)
+    search.set("payment_status", params.payment_status);
   const suffix = search.toString();
-  return adminRequest<AdminOrder[]>(suffix ? `/api/admin/orders?${suffix}` : "/api/admin/orders");
+  return adminRequest<AdminOrder[]>(
+    suffix ? `/api/admin/orders?${suffix}` : "/api/admin/orders",
+  );
 }
 
 export function updateAdminOrder(
@@ -285,11 +314,11 @@ export function updateAdminOrder(
     status?: string;
     payment_status?: string;
     admin_note?: string;
-  }
+  },
 ) {
   return adminRequest<AdminOrder>(`/api/admin/orders/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
@@ -300,7 +329,7 @@ export function getPaymentSettings() {
 export function updatePaymentSettings(input: PaymentSettings) {
   return adminRequest<PaymentSettings>("/api/admin/payment-settings", {
     method: "PUT",
-    body: JSON.stringify(input)
+    body: JSON.stringify(input),
   });
 }
 
@@ -311,7 +340,7 @@ export async function uploadAdminFile(file: File) {
   const response = await fetch(buildUrl("/api/admin/uploads"), {
     method: "POST",
     body: formData,
-    credentials: "include"
+    credentials: "include",
   });
 
   const payload = await response.json();

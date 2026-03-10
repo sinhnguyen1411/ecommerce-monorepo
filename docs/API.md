@@ -29,6 +29,10 @@ Response envelope:
 - `POST /api/orders/:id/payment-proof` (multipart field `file`)
 
 ## Auth
+- `GET /api/auth/google/start` (redirects to Google)
+- `GET /api/auth/google/callback` (Google OAuth callback)
+- `POST /api/auth/otp/request`
+- `POST /api/auth/otp/verify`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
@@ -88,3 +92,4 @@ Response envelope:
 ## Auth Transport Notes
 - Tokens can be provided via `Authorization: Bearer <token>`.
 - The API also sets HTTP-only cookies for access/refresh/admin tokens when using cookie auth.
+- When `AUTH_GMAIL_ONLY=true`, email/password register/login endpoints are disabled. Use Google or Gmail OTP login.

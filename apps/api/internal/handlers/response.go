@@ -7,6 +7,7 @@ type APIResponse struct {
 }
 
 type APIError struct {
-	Message string `json:"message"`
-	Code    string `json:"code"`
+	Message string  `json:"message"`
+	Code    string  `json:"code"`
+	RetryAt *string `json:"retry_at,omitempty"`
 }

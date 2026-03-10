@@ -61,8 +61,12 @@ type OrderPaymentMethodRequest struct {
 
 func (s *Server) CreateOrder(c *gin.Context) {
 	var input OrderRequest
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid order payload")
+	if !s.bindJSONWithLimit(c, &input, "Invalid order payload") {
+		return
+	}
+
+	ipKey := rateLimitKey("order:create:ip", c.ClientIP())
+	if !s.enforceRateLimit(c, ipKey, s.Config.OrderRateLimitMax, s.Config.OrderRateLimitWindow, "order_rate_limited", "Too many order requests") {
 		return
 	}
 
@@ -333,6 +337,11 @@ func generateOrderNumber(tx *sql.Tx) (string, error) {
 }
 
 func (s *Server) UploadPaymentProof(c *gin.Context) {
+	ipKey := rateLimitKey("payment-proof:ip", c.ClientIP())
+	if !s.enforceRateLimit(c, ipKey, s.Config.PaymentProofRateLimitMax, s.Config.PaymentProofRateLimitWindow, "payment_proof_rate_limited", "Too many upload attempts") {
+		return
+	}
+
 	idParam := c.Param("id")
 	orderID, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -343,6 +352,9 @@ func (s *Server) UploadPaymentProof(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		respondError(c, http.StatusBadRequest, "missing_file", "Payment proof file is required")
+		return
+	}
+	if !s.enforceUploadSize(c, file.Size) {
 		return
 	}
 

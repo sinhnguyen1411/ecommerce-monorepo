@@ -2,6 +2,13 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type userAuthRecord struct {
@@ -136,4 +143,74 @@ func emailVerificationStatus(verified bool) string {
 		return "VERIFIED"
 	}
 	return "UNVERIFIED"
+}
+
+func (s *Server) ensureUserCanLogin(c *gin.Context, user *userAuthRecord) bool {
+	if user.Status != "active" {
+		respondError(c, http.StatusForbidden, "account_locked", "Account is not active")
+		return false
+	}
+	if user.LockedUntil.Valid && user.LockedUntil.Time.After(time.Now()) {
+		retryAfter := time.Until(user.LockedUntil.Time)
+		if retryAfter > 0 {
+			c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
+		}
+		respondErrorWithRetryAt(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked", user.LockedUntil.Time)
+		return false
+	}
+	return true
+}
+
+func (s *Server) markLoginSuccess(userID int) error {
+	_, err := s.DB.Exec(`UPDATE users SET failed_login_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?`, time.Now(), userID)
+	return err
+}
+
+func (s *Server) upsertOAuthUser(email, fullName, avatarURL, googleID string) (*userAuthRecord, error) {
+	user, err := s.loadUserByEmail(email)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+
+		result, err := s.DB.Exec(`
+      INSERT INTO users (email, full_name, avatar_url, is_email_verified, status, google_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, email, nullIfEmpty(fullName), nullIfEmpty(avatarURL), true, "active", nullIfEmpty(googleID))
+		if err != nil {
+			return nil, err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return nil, err
+		}
+		return s.loadUserByID(int(id))
+	}
+
+	updates := []string{}
+	args := []any{}
+	if !user.IsEmailVerified {
+		updates = append(updates, "is_email_verified = ?")
+		args = append(args, true)
+	}
+	if fullName != "" && (!user.FullName.Valid || strings.TrimSpace(user.FullName.String) == "") {
+		updates = append(updates, "full_name = ?")
+		args = append(args, fullName)
+	}
+	if avatarURL != "" && (!user.AvatarURL.Valid || strings.TrimSpace(user.AvatarURL.String) == "") {
+		updates = append(updates, "avatar_url = ?")
+		args = append(args, avatarURL)
+	}
+	if googleID != "" {
+		updates = append(updates, "google_id = ?")
+		args = append(args, googleID)
+	}
+	if len(updates) > 0 {
+		args = append(args, user.ID)
+		query := "UPDATE users SET " + strings.Join(updates, ", ") + " WHERE id = ?"
+		if _, err := s.DB.Exec(query, args...); err != nil {
+			return nil, err
+		}
+	}
+	return s.loadUserByID(user.ID)
 }

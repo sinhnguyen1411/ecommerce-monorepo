@@ -34,12 +34,12 @@ type PromoValidateResponse struct {
 }
 
 type PromoListItem struct {
-	Code          string   `json:"code"`
-	Description   string   `json:"description"`
-	DiscountType  string   `json:"discount_type"`
-	DiscountValue float64  `json:"discount_value"`
-	MinSubtotal   float64  `json:"min_subtotal"`
-	MaxDiscount   *float64 `json:"max_discount,omitempty"`
+	Code          string     `json:"code"`
+	Description   string     `json:"description"`
+	DiscountType  string     `json:"discount_type"`
+	DiscountValue float64    `json:"discount_value"`
+	MinSubtotal   float64    `json:"min_subtotal"`
+	MaxDiscount   *float64   `json:"max_discount,omitempty"`
 	StartsAt      *time.Time `json:"starts_at,omitempty"`
 	EndsAt        *time.Time `json:"ends_at,omitempty"`
 }
@@ -55,8 +55,12 @@ func (err promoError) Error() string {
 
 func (s *Server) ValidatePromotion(c *gin.Context) {
 	var input PromoValidateRequest
-	if err := c.ShouldBindJSON(&input); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid promotion payload")
+	if !s.bindJSONWithLimit(c, &input, "Invalid promotion payload") {
+		return
+	}
+
+	ipKey := rateLimitKey("promo:validate:ip", c.ClientIP())
+	if !s.enforceRateLimit(c, ipKey, s.Config.PromoValidateRateLimitMax, s.Config.PromoValidateRateLimitWindow, "promo_rate_limited", "Too many promo validation requests") {
 		return
 	}
 
