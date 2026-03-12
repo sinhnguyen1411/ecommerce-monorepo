@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import SectionTitle from "@/components/common/SectionTitle";
 import { getProfile, listOrders, OrderSummary } from "@/lib/account";
 import { formatCurrency } from "@/lib/format";
+import { buildCompleteProfileHref, buildLoginHref } from "@/lib/onboarding";
 
 export default function OrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,9 +24,13 @@ export default function OrdersPage() {
       setError("");
       let authed = false;
       try {
-        await getProfile();
+        const profile = await getProfile();
         authed = true;
         if (cancelled) {
+          return;
+        }
+        if (profile.onboarding_required) {
+          router.replace(buildCompleteProfileHref("/account/orders", "/account/orders"));
           return;
         }
         setIsAuthed(true);
@@ -54,7 +61,7 @@ export default function OrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   if (isAuthed === null) {
     return (
@@ -73,7 +80,10 @@ export default function OrdersPage() {
           description="Vui lòng đăng nhập để theo dõi lịch sử mua hàng."
         />
         <div className="mt-6">
-          <Link className="btn-primary" href="/login">
+          <Link
+            className="btn-primary"
+            href={buildLoginHref("/account/orders", "/account/orders")}
+          >
             Đi đến trang đăng nhập
           </Link>
         </div>

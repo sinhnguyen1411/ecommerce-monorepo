@@ -1,16 +1,16 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Check, Copy, X } from "lucide-react";
 
-import { PROMO_POPUP_OPEN_EVENT, usePromoPopupSettings } from "@/lib/client-content";
+import { PROMO_POPUP_OPEN_EVENT } from "@/lib/client-content";
+import { PromoPopupSettings } from "@/lib/content";
 
 const SESSION_KEY = "promo_popup_seen_v1";
 
-export default function PromoPopup() {
-  const settings = usePromoPopupSettings();
+export default function PromoPopup({ settings }: { settings: PromoPopupSettings }) {
   const [open, setOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 

@@ -6,10 +6,13 @@ const root = path.resolve(process.cwd());
 const ignoreDirs = new Set([".next", "node_modules", "dist", "build", ".git"]);
 const includeExt = new Set([".ts", ".tsx", ".js", ".jsx", ".json", ".md"]);
 const scriptExt = new Set([".ts", ".tsx", ".js", ".jsx"]);
+const invisibleControlCharRegex = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 const mojibakeMarkers = [
   "Ã",
   "Ä",
+  "Å",
+  "Æ",
   "Ãƒ",
   "Ã‚",
   "Ã„",
@@ -17,6 +20,11 @@ const mojibakeMarkers = [
   "Ã†",
   "Ã¡Â»",
   "Ã¡Âº",
+  "á»",
+  "áº",
+  "Æ°",
+  "Ä‘",
+  "Å¸",
   "\uFFFD",
   "ï¿½"
 ];
@@ -54,6 +62,18 @@ async function walk(dir) {
 
 function checkFile(filePath, content) {
   const ext = path.extname(filePath);
+  const controlMatch = content.match(invisibleControlCharRegex);
+  if (controlMatch) {
+    const index = controlMatch.index || 0;
+    const before = content.slice(0, index);
+    const line = before.split("\n").length;
+    const charCode = controlMatch[0].charCodeAt(0).toString(16).toUpperCase();
+    issues.push({
+      filePath,
+      reason: `Contains invisible control character U+${charCode.padStart(4, "0")} at line ${line}.`
+    });
+    return;
+  }
 
   if (!scriptExt.has(ext)) {
     for (const marker of mojibakeMarkers) {

@@ -148,7 +148,10 @@ func (s *Server) GoogleCallback(c *gin.Context) {
 		"provider": "google",
 	})
 
-	c.Redirect(http.StatusFound, s.Config.FrontendBaseURL+redirectPath)
+	c.Redirect(
+		http.StatusFound,
+		buildPostAuthRedirectTarget(s.Config.FrontendBaseURL, redirectPath, requiresOnboarding(user)),
+	)
 }
 
 func (s *Server) exchangeGoogleCode(code string) (*googleTokenResponse, error) {
@@ -228,4 +231,18 @@ func normalizeFrontendRedirect(raw string) string {
 		return raw
 	}
 	return "/account"
+}
+
+func buildPostAuthRedirectTarget(baseURL, nextPath string, onboardingRequired bool) string {
+	target := normalizeFrontendRedirect(nextPath)
+	if onboardingRequired {
+		if target == "/account" {
+			target = "/account"
+		} else {
+			search := url.Values{}
+			search.Set("next", target)
+			target = "/account?" + search.Encode()
+		}
+	}
+	return strings.TrimRight(baseURL, "/") + target
 }

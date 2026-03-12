@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
+import AuthBrandStrip from "@/components/auth/AuthBrandStrip";
 import SectionTitle from "@/components/common/SectionTitle";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/lib/account";
 import { ApiError } from "@/lib/api-error";
-import { requestLoginOTP, verifyLoginOTP } from "@/lib/user-auth";
+import { normalizeNextPath, resolveAuthenticatedPath } from "@/lib/onboarding";
+import { login, requestLoginOTP, verifyLoginOTP } from "@/lib/user-auth";
 
-type Step = "email" | "otp";
+type OtpStep = "email" | "otp";
 
 function isGmail(email: string) {
   const normalized = email.trim().toLowerCase();
@@ -21,34 +23,50 @@ function isGmail(email: string) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("email");
+  const searchParams = useSearchParams();
+
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otpStep, setOtpStep] = useState<OtpStep>("email");
   const [otp, setOtp] = useState("");
   const [requestId, setRequestId] = useState<number | null>(null);
   const [cooldown, setCooldown] = useState(0);
-  const [error, setError] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
 
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080",
     []
   );
+  const nextPath = useMemo(
+    () => normalizeNextPath(searchParams.get("next"), "/account"),
+    [searchParams]
+  );
+  const signupHref = useMemo(() => {
+    return `/signup?next=${encodeURIComponent(nextPath)}`;
+  }, [nextPath]);
 
   useEffect(() => {
     let active = true;
     getProfile()
-      .then(() => {
+      .then((profile) => {
         if (active) {
-          router.replace("/account");
+          router.replace(
+            resolveAuthenticatedPath(profile.onboarding_required, nextPath, "/account")
+          );
         }
       })
       .catch(() => {});
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [nextPath, router]);
 
   useEffect(() => {
     if (cooldown <= 0) {
@@ -62,75 +80,225 @@ export default function LoginPage() {
     };
   }, [cooldown]);
 
+  const clearFormErrors = () => {
+    setEmailError("");
+    setPasswordError("");
+    setAuthError("");
+  };
+
   const handleGoogleLogin = () => {
-    window.location.href = `${apiBaseUrl}/api/auth/google/start?redirect=/account`;
+    const search = new URLSearchParams({ redirect: nextPath });
+    window.location.href = `${apiBaseUrl}/api/auth/google/start?${search.toString()}`;
+  };
+
+  const handlePasswordLogin = async (input?: { email: string; password: string }) => {
+    const trimmedEmail = (input?.email || email).trim();
+    const passwordValue = input?.password || password;
+    const nextErrors = {
+      email: trimmedEmail ? "" : "Vui lòng nhập email.",
+      password: passwordValue ? "" : "Vui lòng nhập mật khẩu."
+    };
+    setEmailError(nextErrors.email);
+    setPasswordError(nextErrors.password);
+    setAuthError("");
+    if (nextErrors.email || nextErrors.password) {
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const result = await login({ email: trimmedEmail, password: passwordValue });
+      router.replace(
+        resolveAuthenticatedPath(
+          Boolean(result.user?.onboarding_required),
+          nextPath,
+          "/account"
+        )
+      );
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setAuthError(err.message);
+      } else {
+        setAuthError("Đăng nhập thất bại. Vui lòng thử lại.");
+      }
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleToggleOtp = () => {
+    setOtpOpen((prev) => !prev);
+    setAuthError("");
   };
 
   const handleRequestOtp = async () => {
     const trimmed = email.trim();
-    setError("");
-    setOtpError("");
+    clearFormErrors();
     if (!isGmail(trimmed)) {
-      setError("Chỉ hỗ trợ đăng nhập bằng Gmail.");
+      setAuthError("OTP chỉ hỗ trợ Gmail.");
       return;
     }
-    setLoading(true);
+    setOtpLoading(true);
     try {
       const result = await requestLoginOTP({ email: trimmed });
       setRequestId(result.request_id);
       setCooldown(result.cooldown_seconds || 0);
-      setStep("otp");
+      setOtpStep("otp");
+      setOtpOpen(true);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message);
+        setAuthError(err.message);
       } else {
-        setError("Không thể gửi mã xác thực. Vui lòng thử lại.");
+        setAuthError("Không thể gửi OTP. Vui lòng thử lại.");
       }
     } finally {
-      setLoading(false);
+      setOtpLoading(false);
     }
   };
 
   const handleVerifyOtp = async () => {
     if (!requestId) {
-      setOtpError("Thiếu mã yêu cầu. Vui lòng thử lại.");
+      setAuthError("Thiếu request OTP. Vui lòng gửi lại mã.");
       return;
     }
-    setOtpError("");
-    setVerifying(true);
+    if (!otp.trim()) {
+      setAuthError("Vui lòng nhập mã OTP.");
+      return;
+    }
+    setAuthError("");
+    setOtpVerifying(true);
     try {
-      await verifyLoginOTP({ request_id: requestId, code: otp.trim() });
-      router.push("/account");
+      const result = await verifyLoginOTP({ request_id: requestId, code: otp.trim() });
+      router.replace(
+        resolveAuthenticatedPath(
+          Boolean(result.user?.onboarding_required),
+          nextPath,
+          "/account"
+        )
+      );
     } catch (err) {
       if (err instanceof ApiError) {
-        setOtpError(err.message);
+        setAuthError(err.message);
       } else {
-        setOtpError("Xác thực thất bại. Vui lòng thử lại.");
+        setAuthError("Xác thực OTP thất bại.");
       }
     } finally {
-      setVerifying(false);
+      setOtpVerifying(false);
     }
-  };
-
-  const handleBack = () => {
-    setStep("email");
-    setOtp("");
-    setOtpError("");
   };
 
   return (
-    <div className="auth-shell">
-      <section className="section-shell pb-16 pt-14">
+    <div className="auth-shell auth-shell--focused">
+      <section className="section-shell pb-16 pt-10 md:pt-14">
         <div className="auth-grid auth-grid--single">
-          <div className="auth-card auth-card--compact auth-card--center">
-            <SectionTitle
-              eyebrow="Tài khoản"
-              title="Đăng nhập"
-              description="Chọn tài khoản Google hoặc xác thực OTP Gmail."
-            />
+          <div className="auth-page-stack">
+            <AuthBrandStrip />
+            <div className="auth-card auth-card--compact auth-card--center">
+              <SectionTitle
+                eyebrow="Tài khoản"
+                title="Đăng nhập"
+                description="Đăng nhập nhanh bằng Email + Mật khẩu, Google hoặc OTP Gmail."
+              />
 
-            <div className="grid gap-3">
-              <button type="button" className="auth-provider" onClick={handleGoogleLogin}>
+              {authError ? (
+                <div
+                  className="auth-global-error"
+                  role="alert"
+                  aria-live="polite"
+                  data-testid="auth-global-error"
+                >
+                  {authError}
+                </div>
+              ) : null}
+
+              <form
+                className="grid gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const formData = new FormData(event.currentTarget);
+                  void handlePasswordLogin({
+                    email: String(formData.get("email") || ""),
+                    password: String(formData.get("password") || "")
+                  });
+                }}
+              >
+                <div>
+                  <label htmlFor="login-email" className="mb-1 block text-sm font-medium">
+                    Email
+                  </label>
+                  <input
+                    id="login-email"
+                    name="email"
+                    data-testid="login-email"
+                    type="email"
+                    className="field"
+                    value={email}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      setEmailError("");
+                      setAuthError("");
+                    }}
+                    placeholder="you@gmail.com"
+                  />
+                  {emailError ? <p className="auth-field-error">{emailError}</p> : null}
+                </div>
+                <div>
+                  <label htmlFor="login-password" className="mb-1 block text-sm font-medium">
+                    Mật khẩu
+                  </label>
+                  <input
+                    id="login-password"
+                    name="password"
+                    data-testid="login-password"
+                    type="password"
+                    className="field"
+                    value={password}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      setPasswordError("");
+                      setAuthError("");
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === "NumpadEnter") {
+                        event.preventDefault();
+                        void handlePasswordLogin();
+                      }
+                    }}
+                    onKeyUp={(event) => {
+                      if (event.key === "Enter" || event.key === "NumpadEnter") {
+                        event.preventDefault();
+                        void handlePasswordLogin({
+                          email,
+                          password: event.currentTarget.value
+                        });
+                      }
+                    }}
+                    placeholder="Nhập mật khẩu"
+                  />
+                  {passwordError ? <p className="auth-field-error">{passwordError}</p> : null}
+                </div>
+                <Button
+                  type="submit"
+                  data-testid="login-password-submit"
+                  disabled={passwordLoading}
+                >
+                  {passwordLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+                </Button>
+              </form>
+
+              <p className="auth-trust-note">
+                Phiên đăng nhập được bảo vệ bằng rate-limit, OTP cooldown và cookie bảo mật.
+              </p>
+
+              <div className="auth-divider auth-divider--with-text">
+                <span>Hoặc tiếp tục với</span>
+              </div>
+
+              <button
+                type="button"
+                className="auth-provider"
+                onClick={handleGoogleLogin}
+              >
                 <span className="auth-provider__icon" aria-hidden="true">
                   <svg viewBox="0 0 533.5 544.3" role="img" aria-label="Google">
                     <path fill="#4285F4" d="M533.5 278.4c0-17.4-1.4-34.1-4.1-50.4H272v95.3h146.9c-6.3 34-25 62.8-53.3 82v68h86.1c50.3-46.3 81.8-114.5 81.8-194.9z"/>
@@ -141,70 +309,122 @@ export default function LoginPage() {
                 </span>
                 <span>Tiếp tục với Google</span>
               </button>
-            </div>
 
-            <div className="auth-divider" />
+              <div className="auth-divider" />
 
-            {step === "email" ? (
-              <div className="grid gap-3">
-                {error ? (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    {error}
-                  </div>
-                ) : null}
-                <input
-                  className="field"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Nhập địa chỉ Gmail"
-                />
-                <Button type="button" disabled={loading} onClick={handleRequestOtp}>
-                  {loading ? "Đang gửi..." : "Tiếp tục"}
-                </Button>
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                <div className="text-sm text-ink/70">
-                  {"Nhập mã xác thực đã gửi tới "}
-                  <span className="font-semibold text-ink">{email.trim()}</span>
-                </div>
-                {otpError ? (
-                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                    {otpError}
-                  </div>
-                ) : null}
-                <input
-                  className="field"
-                  value={otp}
-                  onChange={(event) => setOtp(event.target.value)}
-                  placeholder="Nhập mã xác thực"
-                />
-                <Button type="button" disabled={verifying} onClick={handleVerifyOtp}>
-                  {verifying ? "Đang xác thực..." : "Xác thực & đăng nhập"}
-                </Button>
-                <div className="text-xs text-ink/60">
-                  {cooldown > 0 ? (
-                    <>Gửi lại sau {cooldown}s</>
-                  ) : (
-                    <button
-                      type="button"
-                      className="text-forest underline"
-                      onClick={handleRequestOtp}
-                    >
-                      Gửi lại mã
-                    </button>
-                  )}
-                </div>
-                <button type="button" className="auth-link" onClick={handleBack}>
-                  Quay lại
+              <div className="auth-method">
+                <button
+                  type="button"
+                  className="auth-method-toggle"
+                  onClick={handleToggleOtp}
+                  data-testid="login-otp-toggle"
+                  aria-expanded={otpOpen}
+                >
+                  Đăng nhập bằng OTP Gmail
                 </button>
-              </div>
-            )}
 
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-ink/70">
-              <Link href="/" className="text-forest">
-                {"Quay về trang chủ"}
-              </Link>
+                {otpOpen ? (
+                  <div className="mt-3 grid gap-3">
+                    {otpStep === "email" ? (
+                      <>
+                        <div>
+                          <label htmlFor="otp-email" className="mb-1 block text-sm font-medium">
+                            Gmail
+                          </label>
+                          <input
+                            id="otp-email"
+                            data-testid="login-otp-email"
+                            type="email"
+                            className="field"
+                            value={email}
+                            onChange={(event) => {
+                              setEmail(event.target.value);
+                              setAuthError("");
+                            }}
+                            placeholder="you@gmail.com"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          data-testid="login-otp-request"
+                          disabled={otpLoading}
+                          onClick={handleRequestOtp}
+                        >
+                          {otpLoading ? "Đang gửi..." : "Gửi OTP"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm text-ink/70">
+                          Nhập OTP đã gửi tới{" "}
+                          <span className="font-semibold text-ink">{email.trim()}</span>
+                        </div>
+                        <div>
+                          <label htmlFor="otp-code" className="mb-1 block text-sm font-medium">
+                            Mã OTP
+                          </label>
+                          <input
+                            id="otp-code"
+                            data-testid="login-otp-code"
+                            className="field"
+                            value={otp}
+                            onChange={(event) => setOtp(event.target.value)}
+                            placeholder="Nhập mã OTP"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          data-testid="login-otp-verify"
+                          disabled={otpVerifying}
+                          onClick={handleVerifyOtp}
+                        >
+                          {otpVerifying ? "Đang xác thực..." : "Xác thực OTP"}
+                        </Button>
+                        <div className="text-xs text-ink/60">
+                          {cooldown > 0 ? (
+                            <>Gửi lại sau {cooldown}s</>
+                          ) : (
+                            <button
+                              type="button"
+                              className="cursor-pointer text-forest underline"
+                              onClick={handleRequestOtp}
+                            >
+                              Gửi lại mã
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="auth-link"
+                          onClick={() => {
+                            setOtpStep("email");
+                            setOtp("");
+                            setAuthError("");
+                          }}
+                        >
+                          Quay lại nhập Gmail
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <p className="auth-method-note">
+                    Dùng Gmail để nhận OTP và đăng nhập không cần mật khẩu.
+                  </p>
+                )}
+              </div>
+
+              <div className="auth-footer-links">
+                <Link href={signupHref} className="text-forest">
+                  Tạo tài khoản
+                </Link>
+                <Link href="/forgot-password" className="text-forest">
+                  Quên mật khẩu
+                </Link>
+                <Link href="/" className="text-forest">
+                  Quay về trang chủ
+                </Link>
+              </div>
             </div>
           </div>
         </div>

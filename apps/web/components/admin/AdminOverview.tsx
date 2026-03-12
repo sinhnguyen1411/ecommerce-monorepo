@@ -106,7 +106,7 @@ export default function AdminOverview({
     { id: "products", label: "Thêm sản phẩm", helper: "Tạo sản phẩm mới" },
     { id: "posts", label: "Tạo bài viết", helper: "Cập nhật tin tức" },
     { id: "orders", label: "Xử lý đơn hàng", helper: "Xem danh sách mới" },
-    { id: "banners", label: "Cập nhật banner", helper: "Quản lý slider" }
+    { id: "home", label: "Cập nhật trang chủ", helper: "Quản lý tất cả nội dung" }
   ];
 
   return (

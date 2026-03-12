@@ -8,6 +8,8 @@ import Header from "@/components/layout/Header";
 import Topbar from "@/components/layout/Topbar";
 import SocialFloatingButtons from "@/components/common/SocialFloatingButtons";
 import { Sonner } from "@/components/ui/sonner";
+import { getPage } from "@/lib/api";
+import { resolveHomePageContent } from "@/lib/content";
 
 const displayFont = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
@@ -32,15 +34,21 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+  const homePage = await getPage("home").catch(() => null);
+  const homeContent = resolveHomePageContent(homePage?.content);
+
   return (
     <html lang="vi">
       <body className={`${displayFont.variable} ${bodyFont.variable} text-ink`}>
-        <Topbar />
+        <Topbar
+          promoSettings={homeContent.promoPopup}
+          notificationSettings={homeContent.notifications}
+        />
         <Header />
         <div className="min-h-screen pb-16">{children}</div>
         <Footer />

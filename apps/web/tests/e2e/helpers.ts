@@ -61,6 +61,7 @@ type AdminApiOverrides = {
   posts?: typeof posts;
   qna?: typeof qna;
   orders?: typeof orders;
+  pages?: typeof pages;
   paymentSettings?: typeof paymentSettings;
   failPaths?: string[];
 };
@@ -184,18 +185,65 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
     bank_qr_template: "compact"
   };
 
+  const pages = [
+    {
+      id: 11,
+      title: "Giới thiệu",
+      slug: "about-us",
+      content: "{}",
+      updated_at: "2024-06-01T08:00:00Z"
+    },
+    {
+      id: 12,
+      title: "Trang chủ",
+      slug: "home",
+      content: JSON.stringify({
+        banners: demoBanners,
+        promoPopup: {
+          title: "Ưu đãi hôm nay",
+          subtitle: "Xem lại ưu đãi và mã giảm giá",
+          imageSrc:
+            "https://images.unsplash.com/photo-1457530378978-8bac673b8062?auto=format&fit=crop&w=800&q=80",
+          imageAlt: "Ưu đãi",
+          programs: [],
+          coupons: [],
+          ctaLabel: "Xem chi tiết",
+          ctaHref: "/collections/all",
+          isActive: true,
+          delaySeconds: 2
+        },
+        notifications: {
+          items: [
+            {
+              id: "notify-test-1",
+              title: "Thông báo thử nghiệm",
+              description: "Nội dung test",
+              href: "/collections/all",
+              isActive: true
+            }
+          ]
+        }
+      }),
+      updated_at: "2024-06-01T08:00:00Z"
+    }
+  ];
+
   const {
     products: productData = products,
     categories: categoryData = categories,
     posts: postData = posts,
     qna: qnaData = qna,
     orders: orderData = orders,
+    pages: pageData = pages,
     paymentSettings: paymentData = paymentSettings,
     failPaths = []
   } = overrides;
+  const mutableOrders = structuredClone(orderData);
+  const mutablePages = structuredClone(pageData);
 
   await page.route("**/api/admin/**", async (route) => {
     const url = new URL(route.request().url());
+    const method = route.request().method();
     if (failPaths.includes(url.pathname)) {
       await route.fulfill({
         status: 500,
@@ -219,8 +267,52 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
       data = postData;
     } else if (url.pathname.endsWith("/api/admin/qna")) {
       data = qnaData;
+    } else if (url.pathname.endsWith("/api/admin/pages") && method === "GET") {
+      data = mutablePages;
+    } else if (url.pathname.endsWith("/api/admin/pages") && method === "POST") {
+      const payload = (route.request().postDataJSON() || {}) as Record<string, unknown>;
+      const nextId =
+        mutablePages.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+      const created = {
+        id: nextId,
+        title: String(payload.title || "Trang chủ"),
+        slug: String(payload.slug || "home"),
+        content: String(payload.content || "{}"),
+        updated_at: new Date().toISOString()
+      };
+      mutablePages.unshift(created);
+      data = created;
+    } else if (/\/api\/admin\/pages\/\d+$/.test(url.pathname) && method === "PATCH") {
+      const pageId = Number(url.pathname.split("/").pop());
+      const payload = (route.request().postDataJSON() || {}) as Record<string, unknown>;
+      const index = mutablePages.findIndex((item) => Number(item.id) === pageId);
+      if (index >= 0) {
+        mutablePages[index] = {
+          ...mutablePages[index],
+          title:
+            typeof payload.title === "string" ? payload.title : mutablePages[index].title,
+          slug: typeof payload.slug === "string" ? payload.slug : mutablePages[index].slug,
+          content:
+            typeof payload.content === "string"
+              ? payload.content
+              : mutablePages[index].content,
+          updated_at: new Date().toISOString()
+        };
+      }
+      data = index >= 0 ? mutablePages[index] : {};
     } else if (url.pathname.endsWith("/api/admin/orders")) {
-      data = orderData;
+      data = mutableOrders;
+    } else if (/\/api\/admin\/orders\/\d+$/.test(url.pathname) && method === "PATCH") {
+      const orderId = Number(url.pathname.split("/").pop());
+      const payload = (route.request().postDataJSON() || {}) as Record<string, unknown>;
+      const index = mutableOrders.findIndex((item) => item.id === orderId);
+      if (index >= 0) {
+        mutableOrders[index] = {
+          ...mutableOrders[index],
+          ...payload
+        };
+      }
+      data = index >= 0 ? mutableOrders[index] : {};
     } else if (url.pathname.endsWith("/api/admin/payment-settings")) {
       data = paymentData;
     }

@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Facebook, MessageCircle, MessageSquare } from "lucide-react";
 
+import { isAuthOnlyPath } from "@/lib/auth-route";
 import { useContactSettings } from "@/lib/client-content";
 import { siteConfig } from "@/lib/site";
 
 export default function Footer() {
+  const pathname = usePathname();
   const settings = useContactSettings();
+  if (isAuthOnlyPath(pathname)) {
+    return null;
+  }
 
   return (
     <footer className="footer-main">

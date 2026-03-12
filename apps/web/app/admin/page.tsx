@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -10,10 +10,13 @@ import {
   ChevronDown,
   ChevronUp,
   HelpCircle,
+  Home,
+  GripVertical,
   Image as ImageIcon,
   Layers,
   LayoutDashboard,
   Loader2,
+  Trash2,
   Newspaper,
   Package,
   Phone,
@@ -81,6 +84,7 @@ import type {
   AboutSlide,
   ContactSettings,
   HomeBanner,
+  HomePageContent,
   NotificationItem,
   NotificationSettings,
   PromoCoupon,
@@ -89,26 +93,24 @@ import type {
 } from "@/lib/content";
 import {
   cloneAboutContent,
+  cloneHomePageContent,
   defaultAboutContent,
   defaultContactSettings,
-  defaultHomeBanners,
-  defaultNotificationSettings,
-  defaultPromoPopupSettings,
-  resolveAboutContent
+  defaultHomePageContent,
+  resolveAboutContent,
+  resolveHomePageContent
 } from "@/lib/content";
 import {
+  HOME_BANNERS_STORAGE_KEY,
+  NOTIFICATION_SETTINGS_STORAGE_KEY,
+  PROMO_POPUP_STORAGE_KEY,
   loadContactSettings,
-  loadHomeBanners,
-  loadNotificationSettings,
-  loadPromoPopupSettings,
   saveContactSettings,
-  saveHomeBanners,
-  saveNotificationSettings,
-  savePromoPopupSettings
 } from "@/lib/client-content";
 
 const sectionLabels: Record<string, string> = {
   overview: "Tổng quan",
+  home: "Trang chủ",
   products: "Sản phẩm",
   categories: "Danh mục",
   posts: "Tin tức",
@@ -116,12 +118,102 @@ const sectionLabels: Record<string, string> = {
   qna: "Hỏi đáp",
   orders: "Đơn hàng",
   payments: "Thanh toán",
-  contact: "Liên hệ",
-  banners: "Banner trang chủ",
-  popup: "Popup khuyến mãi",
-  notifications: "Thông báo"
+  contact: "Liên hệ"
 };
 
+type HomeGroupKey =
+  | "banners"
+  | "intro"
+  | "spotlights"
+  | "features"
+  | "aboutTeaser"
+  | "promoPopup"
+  | "notifications";
+
+const LEGACY_HOME_BANNERS_V1_KEY = "admin_home_banners_v1";
+const MIN_SPOTLIGHT_BLOCKS = 1;
+
+type HomeSpotlightItem = HomePageContent["spotlights"][number];
+type SpotlightMoveDirection = -1 | 1;
+
+const createHomeSpotlightId = () =>
+  `home-spotlight-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const cloneLastSpotlightBlock = (
+  spotlights: HomePageContent["spotlights"]
+): HomeSpotlightItem => {
+  const fallback =
+    defaultHomePageContent.spotlights[defaultHomePageContent.spotlights.length - 1] ||
+    defaultHomePageContent.spotlights[0] || {
+      id: "home-spotlight-default",
+      title: "",
+      description: "",
+      bullets: [],
+      ctaLabel: "Xem chi tiết",
+      ctaHref: "/collections/all",
+      imageSrc: "",
+      imageAlt: ""
+    };
+  const base = spotlights[spotlights.length - 1] || fallback;
+  const baseTitle = base.title.trim();
+
+  return {
+    ...base,
+    id: createHomeSpotlightId(),
+    title: baseTitle ? `${baseTitle} (Bản sao)` : "Block mới (Bản sao)",
+    bullets: [...base.bullets]
+  };
+};
+
+const reorderList = <T,>(items: T[], fromIndex: number, toIndex: number): T[] => {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length
+  ) {
+    return items;
+  }
+  const next = [...items];
+  const [moved] = next.splice(fromIndex, 1);
+  if (!moved) {
+    return items;
+  }
+  next.splice(toIndex, 0, moved);
+  return next;
+};
+
+const createHomeDirtyMap = (): Record<HomeGroupKey, boolean> => ({
+  banners: false,
+  intro: false,
+  spotlights: false,
+  features: false,
+  aboutTeaser: false,
+  promoPopup: false,
+  notifications: false
+});
+
+const createHomeSavedAtMap = (
+  savedAt: string | null = null
+): Record<HomeGroupKey, string | null> => ({
+  banners: savedAt,
+  intro: savedAt,
+  spotlights: savedAt,
+  features: savedAt,
+  aboutTeaser: savedAt,
+  promoPopup: savedAt,
+  notifications: savedAt
+});
+
+const parseStorageJson = <T,>(raw: string | null): T | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+};
 export default function AdminDashboardPage() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
@@ -136,33 +228,100 @@ export default function AdminDashboardPage() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
-  const [banners, setBanners] = useState<HomeBanner[]>(defaultHomeBanners);
+  const [homePageId, setHomePageId] = useState<number | null>(null);
+  const [homeSnapshot, setHomeSnapshot] = useState<HomePageContent>(
+    cloneHomePageContent(defaultHomePageContent)
+  );
+  const [homeDraft, setHomeDraft] = useState<HomePageContent>(
+    cloneHomePageContent(defaultHomePageContent)
+  );
+  const [homeDirtyMap, setHomeDirtyMap] = useState<Record<HomeGroupKey, boolean>>(
+    createHomeDirtyMap()
+  );
+  const [homeSavedAtMap, setHomeSavedAtMap] = useState<Record<HomeGroupKey, string | null>>(
+    createHomeSavedAtMap()
+  );
   const [contactDraft, setContactDraft] = useState<ContactSettings>(defaultContactSettings);
-  const [promoPopupDraft, setPromoPopupDraft] = useState<PromoPopupSettings>(
-    defaultPromoPopupSettings
-  );
-  const [notificationDraft, setNotificationDraft] = useState<NotificationSettings>(
-    defaultNotificationSettings
-  );
   const [aboutPageId, setAboutPageId] = useState<number | null>(null);
   const [aboutDraft, setAboutDraft] = useState<AboutPageContent>(cloneAboutContent(defaultAboutContent));
   const [aboutDirty, setAboutDirty] = useState(false);
   const [aboutSavedAt, setAboutSavedAt] = useState<string | null>(null);
-  const [bannerDirty, setBannerDirty] = useState(false);
-  const [promoPopupDirty, setPromoPopupDirty] = useState(false);
-  const [promoPopupSavedAt, setPromoPopupSavedAt] = useState<string | null>(null);
-  const [bannerSavedAt, setBannerSavedAt] = useState<string | null>(null);
   const [contactDirty, setContactDirty] = useState(false);
   const [contactSavedAt, setContactSavedAt] = useState<string | null>(null);
-  const [notificationDirty, setNotificationDirty] = useState(false);
-  const [notificationSavedAt, setNotificationSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
-    setBanners(loadHomeBanners());
     setContactDraft(loadContactSettings());
-    setPromoPopupDraft(loadPromoPopupSettings());
-    setNotificationDraft(loadNotificationSettings());
   }, []);
+
+  const readLegacyHomeContent = (): HomePageContent => {
+    if (typeof window === "undefined") {
+      return cloneHomePageContent(defaultHomePageContent);
+    }
+
+    const legacyBanners =
+      parseStorageJson<HomeBanner[]>(window.localStorage.getItem(HOME_BANNERS_STORAGE_KEY)) ||
+      parseStorageJson<HomeBanner[]>(
+        window.localStorage.getItem(LEGACY_HOME_BANNERS_V1_KEY)
+      );
+    const legacyPopup = parseStorageJson<PromoPopupSettings>(
+      window.localStorage.getItem(PROMO_POPUP_STORAGE_KEY)
+    );
+    const legacyNotifications = parseStorageJson<NotificationSettings>(
+      window.localStorage.getItem(NOTIFICATION_SETTINGS_STORAGE_KEY)
+    );
+
+    const merged: Partial<HomePageContent> = {
+      ...defaultHomePageContent,
+      ...(Array.isArray(legacyBanners) ? { banners: legacyBanners } : {}),
+      ...(legacyPopup ? { promoPopup: legacyPopup } : {}),
+      ...(legacyNotifications ? { notifications: legacyNotifications } : {})
+    };
+
+    return resolveHomePageContent(JSON.stringify(merged));
+  };
+
+  const mergeHomeGroup = (
+    base: HomePageContent,
+    source: HomePageContent,
+    group: HomeGroupKey
+  ): HomePageContent => {
+    switch (group) {
+      case "banners":
+        return { ...base, banners: source.banners.map((item) => ({ ...item })) };
+      case "intro":
+        return { ...base, intro: { ...source.intro } };
+      case "spotlights":
+        return {
+          ...base,
+          spotlights: source.spotlights.map((item) => ({
+            ...item,
+            bullets: [...item.bullets]
+          }))
+        };
+      case "features":
+        return { ...base, features: source.features.map((item) => ({ ...item })) };
+      case "aboutTeaser":
+        return { ...base, aboutTeaser: { ...source.aboutTeaser } };
+      case "promoPopup":
+        return {
+          ...base,
+          promoPopup: {
+            ...source.promoPopup,
+            programs: source.promoPopup.programs.map((item) => ({ ...item })),
+            coupons: source.promoPopup.coupons.map((item) => ({ ...item }))
+          }
+        };
+      case "notifications":
+        return {
+          ...base,
+          notifications: {
+            items: source.notifications.items.map((item) => ({ ...item }))
+          }
+        };
+      default:
+        return base;
+    }
+  };
 
   const loadAll = async () => {
     setError("");
@@ -191,6 +350,7 @@ export default function AdminDashboardPage() {
       setQnA(qnaData);
       setOrders(orderData);
       setSettings(paymentData);
+
       const aboutPage = pageData.find((item) => item.slug === "about-us");
       setAboutPageId(aboutPage?.id ?? null);
       if (!aboutDirty) {
@@ -199,8 +359,28 @@ export default function AdminDashboardPage() {
         setAboutDirty(false);
         setAboutSavedAt(aboutPage?.updated_at || null);
       }
+
+      const hasUnsavedHomeChanges = Object.values(homeDirtyMap).some(Boolean);
+      let homePage = pageData.find((item) => item.slug === "home");
+      if (!homePage) {
+        const migrated = readLegacyHomeContent();
+        homePage = await createAdminPage({
+          title: "Trang chủ",
+          slug: "home",
+          content: JSON.stringify(migrated)
+        });
+      }
+
+      setHomePageId(homePage.id);
+      if (!hasUnsavedHomeChanges) {
+        const resolvedHome = resolveHomePageContent(homePage.content);
+        setHomeSnapshot(cloneHomePageContent(resolvedHome));
+        setHomeDraft(cloneHomePageContent(resolvedHome));
+        setHomeDirtyMap(createHomeDirtyMap());
+        setHomeSavedAtMap(createHomeSavedAtMap(homePage.updated_at || null));
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể tải dữ liệu quản trị.");
+      setError(err instanceof Error ? err.message : "Khng th ti d li!u qun tr9.");
     } finally {
       setLoading(false);
     }
@@ -240,7 +420,7 @@ export default function AdminDashboardPage() {
       const result = await uploadAdminFile(file);
       setUploadUrl(result.url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể tải lên tệp.");
+      setError(err instanceof Error ? err.message : "Khng th ti ln t!p.");
     }
   };
 
@@ -254,21 +434,150 @@ export default function AdminDashboardPage() {
       await adminLogout();
       setIsAuthed(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể đăng xuất.");
+      setError(err instanceof Error ? err.message : "Khng th ng xut.");
     } finally {
       setLoggingOut(false);
     }
   };
 
-  const handleBannerChange = (next: HomeBanner[]) => {
-    setBanners(next);
-    setBannerDirty(true);
+  const updateHomeGroup = (
+    group: HomeGroupKey,
+    updater: (prev: HomePageContent) => HomePageContent
+  ) => {
+    setHomeDraft((prev) => updater(prev));
+    setHomeDirtyMap((prev) => ({ ...prev, [group]: true }));
   };
 
-  const handleBannerSave = () => {
-    saveHomeBanners(banners);
-    setBannerDirty(false);
-    setBannerSavedAt(new Date().toLocaleString("vi-VN"));
+  const saveHomeGroup = async (group: HomeGroupKey) => {
+    setError("");
+    try {
+      const merged = mergeHomeGroup(homeSnapshot, homeDraft, group);
+      const payload = {
+        title: "Trang chủ",
+        slug: "home",
+        content: JSON.stringify(merged)
+      };
+      const saved = homePageId
+        ? await updateAdminPage(homePageId, payload)
+        : await createAdminPage(payload);
+      const resolved = resolveHomePageContent(saved.content);
+      setHomePageId(saved.id);
+      setHomeSnapshot(cloneHomePageContent(resolved));
+      setHomeDraft((prev) => mergeHomeGroup(prev, resolved, group));
+      setHomeDirtyMap((prev) => ({ ...prev, [group]: false }));
+      setHomeSavedAtMap((prev) => ({
+        ...prev,
+        [group]: saved.updated_at || new Date().toLocaleString("vi-VN")
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Khng th lu n'i dung trang ch.");
+    }
+  };
+
+  const handleHomeBannersChange = (next: HomeBanner[]) => {
+    updateHomeGroup("banners", (prev) => ({
+      ...prev,
+      banners: next.map((item) => ({ ...item }))
+    }));
+  };
+
+  const handleHomeIntroChange = (patch: Partial<HomePageContent["intro"]>) => {
+    updateHomeGroup("intro", (prev) => ({
+      ...prev,
+      intro: { ...prev.intro, ...patch }
+    }));
+  };
+
+  const handleHomeSpotlightChange = (
+    index: number,
+    patch: Partial<HomePageContent["spotlights"][number]>
+  ) => {
+    updateHomeGroup("spotlights", (prev) => ({
+      ...prev,
+      spotlights: prev.spotlights.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...patch } : item
+      )
+    }));
+  };
+
+  const handleHomeSpotlightBulletsChange = (index: number, value: string) => {
+    const bullets = value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    handleHomeSpotlightChange(index, { bullets });
+  };
+
+  const handleHomeSpotlightAdd = () => {
+    setError("");
+    updateHomeGroup("spotlights", (prev) => ({
+      ...prev,
+      spotlights: [...prev.spotlights, cloneLastSpotlightBlock(prev.spotlights)]
+    }));
+  };
+
+  const handleHomeSpotlightReorder = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) {
+      return;
+    }
+    setError("");
+    updateHomeGroup("spotlights", (prev) => ({
+      ...prev,
+      spotlights: reorderList(prev.spotlights, fromIndex, toIndex)
+    }));
+  };
+
+  const handleHomeSpotlightMove = (index: number, direction: SpotlightMoveDirection) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= homeDraft.spotlights.length) {
+      return;
+    }
+    handleHomeSpotlightReorder(index, targetIndex);
+  };
+
+  const handleHomeSpotlightDelete = (index: number) => {
+    if (homeDraft.spotlights.length <= MIN_SPOTLIGHT_BLOCKS) {
+      setError("Banner sản phẩm cần tối thiểu 1 block.");
+      return;
+    }
+
+    const target = homeDraft.spotlights[index];
+    if (!target) {
+      return;
+    }
+
+    const label = target.title.trim() || `Block ${index + 1}`;
+    const confirmed = window.confirm(`Xóa block "${label}"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setError("");
+    updateHomeGroup("spotlights", (prev) => ({
+      ...prev,
+      spotlights: prev.spotlights.filter((_, itemIndex) => itemIndex !== index)
+    }));
+  };
+
+  const handleHomeFeatureChange = (
+    index: number,
+    patch: Partial<HomePageContent["features"][number]>
+  ) => {
+    updateHomeGroup("features", (prev) => ({
+      ...prev,
+      features: prev.features.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...patch } : item
+      )
+    }));
+  };
+
+  const handleHomeAboutTeaserChange = (
+    patch: Partial<HomePageContent["aboutTeaser"]>
+  ) => {
+    updateHomeGroup("aboutTeaser", (prev) => ({
+      ...prev,
+      aboutTeaser: { ...prev.aboutTeaser, ...patch }
+    }));
   };
 
   const handleContactChange = (patch: Partial<ContactSettings>) => {
@@ -283,14 +592,10 @@ export default function AdminDashboardPage() {
   };
 
   const handlePromoPopupChange = (patch: Partial<PromoPopupSettings>) => {
-    setPromoPopupDraft((prev) => ({ ...prev, ...patch }));
-    setPromoPopupDirty(true);
-  };
-
-  const handlePromoPopupSave = () => {
-    savePromoPopupSettings(promoPopupDraft);
-    setPromoPopupDirty(false);
-    setPromoPopupSavedAt(new Date().toLocaleString("vi-VN"));
+    updateHomeGroup("promoPopup", (prev) => ({
+      ...prev,
+      promoPopup: { ...prev.promoPopup, ...patch }
+    }));
   };
 
   const handleAboutChange = (next: AboutPageContent) => {
@@ -301,11 +606,11 @@ export default function AdminDashboardPage() {
   const handleAboutSave = async () => {
     setError("");
     if (!aboutDraft.hero.title.trim()) {
-      setError("Vui lòng nhập tiêu đề trang giới thiệu.");
+      setError("Vui lng nhp tiu  trang gi:i thi!u.");
       return;
     }
     if (!aboutDraft.slides.length) {
-      setError("Trang giới thiệu cần ít nhất một slide nội dung.");
+      setError("Trang gi:i thi!u cn t nht m't slide n'i dung.");
       return;
     }
 
@@ -322,19 +627,17 @@ export default function AdminDashboardPage() {
       setAboutDirty(false);
       setAboutSavedAt(new Date().toLocaleString("vi-VN"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể lưu trang giới thiệu.");
+      setError(err instanceof Error ? err.message : "Khng th lu trang gi:i thi!u.");
     }
   };
 
   const handleNotificationChange = (next: NotificationSettings) => {
-    setNotificationDraft(next);
-    setNotificationDirty(true);
-  };
-
-  const handleNotificationSave = () => {
-    saveNotificationSettings(notificationDraft);
-    setNotificationDirty(false);
-    setNotificationSavedAt(new Date().toLocaleString("vi-VN"));
+    updateHomeGroup("notifications", (prev) => ({
+      ...prev,
+      notifications: {
+        items: next.items.map((item) => ({ ...item }))
+      }
+    }));
   };
 
   const pendingOrders = useMemo(
@@ -361,6 +664,7 @@ export default function AdminDashboardPage() {
   const navItems = useMemo<AdminNavItem[]>(
     () => [
       { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
+      { id: "home", label: "Trang chủ", icon: Home },
       { id: "products", label: "Sản phẩm", icon: Package },
       { id: "categories", label: "Danh mục", icon: Layers },
       { id: "posts", label: "Tin tức", icon: Newspaper },
@@ -368,39 +672,36 @@ export default function AdminDashboardPage() {
       { id: "qna", label: "Hỏi đáp", icon: HelpCircle },
       { id: "orders", label: "Đơn hàng", icon: ShoppingCart },
       { id: "payments", label: "Thanh toán", icon: CreditCard },
-      { id: "contact", label: "Liên hệ", icon: Phone },
-      { id: "banners", label: "Banner trang chủ", icon: ImageIcon },
-      { id: "popup", label: "Popup khuyến mãi", icon: Megaphone },
-      { id: "notifications", label: "Thông báo", icon: Bell }
+      { id: "contact", label: "Liên hệ", icon: Phone }
     ],
     []
   );
 
   const navMeta = useMemo(
     () => ({
+      home:
+        homeDraft.banners.length +
+        homeDraft.spotlights.length +
+        homeDraft.features.length,
       products: products.length,
       categories: categories.length,
       posts: posts.length,
       about: aboutPageId ? 1 : 0,
       qna: qna.length,
       orders: pendingOrders,
-      payments: pendingPayments,
-      banners: banners.length,
-      popup: promoPopupDraft.coupons.length + promoPopupDraft.programs.length,
-      notifications: notificationDraft.items.length
+      payments: pendingPayments
     }),
     [
+      homeDraft.banners.length,
+      homeDraft.spotlights.length,
+      homeDraft.features.length,
       products.length,
       categories.length,
       posts.length,
       aboutPageId,
       qna.length,
       pendingOrders,
-      pendingPayments,
-      banners.length,
-      promoPopupDraft.coupons.length,
-      promoPopupDraft.programs.length,
-      notificationDraft.items.length
+      pendingPayments
     ]
   );
 
@@ -410,7 +711,7 @@ export default function AdminDashboardPage() {
         <div className="flex min-h-screen items-center justify-center px-6 py-10">
           <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-base text-slate-600 shadow-sm">
             <Loader2 className="h-5 w-5 animate-spin text-[var(--color-primary)]" />
-            Đang kiểm tra quyền quản trị...
+            ang kim tra quyn qun tr9...
           </div>
         </div>
       </div>
@@ -426,16 +727,16 @@ export default function AdminDashboardPage() {
               Admin
             </p>
             <h1 className="mt-2 text-2xl font-semibold text-slate-900">
-              Cần đăng nhập
+              Cn ng nhp
             </h1>
             <p className="mt-3 text-base text-slate-600 md:text-sm">
-              Vui lòng đăng nhập để quản lý nội dung.
+              Vui lng ng nhp  qun l ni dung.
             </p>
             <Button
               asChild
               className="mt-6 h-11 w-full bg-[var(--color-cta)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
             >
-              <Link href="/admin/login">Đăng nhập quản trị</Link>
+              <Link href="/admin/login">ng nhp qun tr9</Link>
             </Button>
           </div>
         </div>
@@ -463,7 +764,7 @@ export default function AdminDashboardPage() {
       {loading ? (
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-600 md:text-sm">
           <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary)]" />
-          Đang tải dữ liệu quản trị...
+          ang ti d li!u qun tr9...
         </div>
       ) : null}
 
@@ -478,11 +779,33 @@ export default function AdminDashboardPage() {
           pendingOrders={pendingOrders}
           pendingPayments={pendingPayments}
           totalRevenue={totalRevenue}
-          banners={banners}
+          banners={homeDraft.banners}
           contactSettings={contactDraft}
           uploadUrl={uploadUrl}
           onUpload={handleUpload}
           onNavigate={setActiveSection}
+        />
+      )}
+
+      {activeSection === "home" && (
+        <AdminHomeSection
+          content={homeDraft}
+          dirtyMap={homeDirtyMap}
+          savedAtMap={homeSavedAtMap}
+          onBannersChange={handleHomeBannersChange}
+          onIntroChange={handleHomeIntroChange}
+          onSpotlightChange={handleHomeSpotlightChange}
+          onSpotlightBulletsChange={handleHomeSpotlightBulletsChange}
+          onSpotlightAdd={handleHomeSpotlightAdd}
+          onSpotlightDelete={handleHomeSpotlightDelete}
+          onSpotlightMove={handleHomeSpotlightMove}
+          onSpotlightReorder={handleHomeSpotlightReorder}
+          onFeatureChange={handleHomeFeatureChange}
+          onAboutTeaserChange={handleHomeAboutTeaserChange}
+          onPopupChange={handlePromoPopupChange}
+          onNotificationChange={handleNotificationChange}
+          onSaveGroup={saveHomeGroup}
+          setError={setError}
         />
       )}
 
@@ -540,37 +863,549 @@ export default function AdminDashboardPage() {
         />
       )}
 
-      {activeSection === "banners" && (
+    </AdminShell>
+  );
+}
+
+function AdminHomeSection({
+  content,
+  dirtyMap,
+  savedAtMap,
+  onBannersChange,
+  onIntroChange,
+  onSpotlightChange,
+  onSpotlightBulletsChange,
+  onSpotlightAdd,
+  onSpotlightDelete,
+  onSpotlightMove,
+  onSpotlightReorder,
+  onFeatureChange,
+  onAboutTeaserChange,
+  onPopupChange,
+  onNotificationChange,
+  onSaveGroup,
+  setError
+}: {
+  content: HomePageContent;
+  dirtyMap: Record<HomeGroupKey, boolean>;
+  savedAtMap: Record<HomeGroupKey, string | null>;
+  onBannersChange: (next: HomeBanner[]) => void;
+  onIntroChange: (patch: Partial<HomePageContent["intro"]>) => void;
+  onSpotlightChange: (
+    index: number,
+    patch: Partial<HomePageContent["spotlights"][number]>
+  ) => void;
+  onSpotlightBulletsChange: (index: number, value: string) => void;
+  onSpotlightAdd: () => void;
+  onSpotlightDelete: (index: number) => void;
+  onSpotlightMove: (index: number, direction: SpotlightMoveDirection) => void;
+  onSpotlightReorder: (fromIndex: number, toIndex: number) => void;
+  onFeatureChange: (
+    index: number,
+    patch: Partial<HomePageContent["features"][number]>
+  ) => void;
+  onAboutTeaserChange: (patch: Partial<HomePageContent["aboutTeaser"]>) => void;
+  onPopupChange: (patch: Partial<PromoPopupSettings>) => void;
+  onNotificationChange: (next: NotificationSettings) => void;
+  onSaveGroup: (group: HomeGroupKey) => void | Promise<void>;
+  setError: (value: string) => void;
+}) {
+  const tabs: { id: HomeGroupKey; label: string; icon: typeof Home }[] = [
+    { id: "banners", label: "Banner", icon: ImageIcon },
+    { id: "intro", label: "Định hướng", icon: Home },
+    { id: "spotlights", label: "Banner sản phẩm", icon: Layers },
+    { id: "features", label: "Ưu điểm", icon: Bell },
+    { id: "aboutTeaser", label: "About-us", icon: BookOpen },
+    { id: "promoPopup", label: "Popup", icon: Megaphone },
+    { id: "notifications", label: "Thông báo", icon: Bell }
+  ];
+  const [activeTab, setActiveTab] = useState<HomeGroupKey>("banners");
+  const [draggingSpotlightIndex, setDraggingSpotlightIndex] = useState<number | null>(
+    null
+  );
+  const [dragOverSpotlightIndex, setDragOverSpotlightIndex] = useState<number | null>(
+    null
+  );
+
+  const clearSpotlightDragState = () => {
+    setDraggingSpotlightIndex(null);
+    setDragOverSpotlightIndex(null);
+  };
+
+  const handleSpotlightDragStart = (
+    event: DragEvent<HTMLButtonElement>,
+    index: number
+  ) => {
+    setDraggingSpotlightIndex(index);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleSpotlightDragOver = (event: DragEvent<HTMLDivElement>, index: number) => {
+    if (draggingSpotlightIndex === null || draggingSpotlightIndex === index) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    if (dragOverSpotlightIndex !== index) {
+      setDragOverSpotlightIndex(index);
+    }
+  };
+
+  const handleSpotlightDrop = (event: DragEvent<HTMLDivElement>, index: number) => {
+    event.preventDefault();
+    const fromIndex =
+      draggingSpotlightIndex ?? Number.parseInt(event.dataTransfer.getData("text/plain"), 10);
+    if (Number.isInteger(fromIndex) && fromIndex >= 0 && fromIndex !== index) {
+      onSpotlightReorder(fromIndex, index);
+    }
+    clearSpotlightDragState();
+  };
+
+  const renderSaveActions = (group: HomeGroupKey, label: string) => (
+    <div className="flex flex-wrap items-center gap-2">
+      {savedAtMap[group] ? (
+        <span className="text-base text-slate-500 md:text-sm">Đã lưu: {savedAtMap[group]}</span>
+      ) : null}
+      <Button
+        onClick={() => void onSaveGroup(group)}
+        disabled={!dirtyMap[group]}
+        className="bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+      >
+        {label}
+      </Button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <AdminSectionHeader
+          title="Trang chủ"
+          description="Quản lý toàn bộ nội dung hiển thị ở homepage trong một nơi."
+        />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-base font-semibold transition md:text-sm cursor-pointer ${
+                  active
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                    : "border-slate-200 text-slate-600 hover:border-[var(--color-primary)]/40"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+                {dirtyMap[tab.id] ? <span className="text-amber-600">*</span> : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {activeTab === "banners" ? (
         <AdminBannersSection
-          banners={banners}
-          onChange={handleBannerChange}
-          onSave={handleBannerSave}
-          isDirty={bannerDirty}
-          savedAt={bannerSavedAt}
+          banners={content.banners}
+          onChange={onBannersChange}
+          onSave={() => void onSaveGroup("banners")}
+          isDirty={dirtyMap.banners}
+          savedAt={savedAtMap.banners}
           setError={setError}
         />
-      )}
+      ) : null}
 
-      {activeSection === "popup" && (
+      {activeTab === "intro" ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader
+            title="Định hướng phát triển"
+            description="Khối giới thiệu lớn ngay sau slider ở trang chủ."
+            actions={renderSaveActions("intro", "Lưu định hướng")}
+          />
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <AdminField label="Nhãn đầu mục">
+              <input
+                className={inputClass}
+                value={content.intro.eyebrow}
+                onChange={(event) => onIntroChange({ eyebrow: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Tên thương hiệu">
+              <input
+                className={inputClass}
+                value={content.intro.title}
+                onChange={(event) => onIntroChange({ title: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Tiêu đề chính" helper="Dòng headline nổi bật.">
+              <input
+                className={inputClass}
+                value={content.intro.headline}
+                onChange={(event) => onIntroChange({ headline: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="CTA label">
+              <input
+                className={inputClass}
+                value={content.intro.ctaLabel}
+                onChange={(event) => onIntroChange({ ctaLabel: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Mô tả" helper="Nội dung dài của khối định hướng.">
+              <textarea
+                className={textareaClass}
+                rows={8}
+                value={content.intro.description}
+                onChange={(event) => onIntroChange({ description: event.target.value })}
+              />
+            </AdminField>
+            <div className="grid gap-4">
+              <AdminField label="CTA link">
+                <input
+                  className={inputClass}
+                  value={content.intro.ctaHref}
+                  onChange={(event) => onIntroChange({ ctaHref: event.target.value })}
+                />
+              </AdminField>
+              <AdminField label="Ảnh chính">
+                <input
+                  className={inputClass}
+                  value={content.intro.imageSrc}
+                  onChange={(event) => onIntroChange({ imageSrc: event.target.value })}
+                />
+              </AdminField>
+              <AdminField label="Alt ảnh">
+                <input
+                  className={inputClass}
+                  value={content.intro.imageAlt}
+                  onChange={(event) => onIntroChange({ imageAlt: event.target.value })}
+                />
+              </AdminField>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === "spotlights" ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader
+            title="Banner sản phẩm"
+            description={`${content.spotlights.length} block sản phẩm trên homepage.`}
+            actions={
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={onSpotlightAdd}
+                  data-testid="admin-spotlight-add"
+                  className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+                >
+                  Thêm block
+                </Button>
+                {savedAtMap.spotlights ? (
+                  <span className="text-base text-slate-500 md:text-sm">
+                    Đã lưu: {savedAtMap.spotlights}
+                  </span>
+                ) : null}
+                <Button
+                  onClick={() => void onSaveGroup("spotlights")}
+                  disabled={!dirtyMap.spotlights}
+                  data-testid="admin-spotlight-save"
+                  className="bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+                >
+                  Lưu banner sản phẩm
+                </Button>
+              </div>
+            }
+          />
+          <div className="mt-5 space-y-6" data-testid="admin-spotlights-list">
+            {content.spotlights.map((spotlight, index) => (
+              <div
+                key={spotlight.id}
+                data-testid="admin-spotlight-card"
+                className={`rounded-xl border p-4 transition-colors ${
+                  dragOverSpotlightIndex === index
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
+                    : "border-slate-200"
+                } ${draggingSpotlightIndex === index ? "opacity-70" : ""}`}
+                onDragOver={(event) => handleSpotlightDragOver(event, index)}
+                onDrop={(event) => handleSpotlightDrop(event, index)}
+                onDragLeave={() => {
+                  if (dragOverSpotlightIndex === index) {
+                    setDragOverSpotlightIndex(null);
+                  }
+                }}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold text-slate-900 md:text-sm">
+                      Block {index + 1}
+                    </p>
+                    {content.spotlights.length <= MIN_SPOTLIGHT_BLOCKS ? (
+                      <p className="text-sm text-slate-500">Tối thiểu 1 block.</p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={(event) => handleSpotlightDragStart(event, index)}
+                      onDragEnd={clearSpotlightDragState}
+                      data-testid={`admin-spotlight-drag-${index}`}
+                      aria-label={`Kéo thả block ${index + 1}`}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] cursor-grab active:cursor-grabbing"
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSpotlightMove(index, -1)}
+                      disabled={index === 0}
+                      data-testid={`admin-spotlight-move-up-${index}`}
+                      className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                      Lên
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSpotlightMove(index, 1)}
+                      disabled={index === content.spotlights.length - 1}
+                      data-testid={`admin-spotlight-move-down-${index}`}
+                      className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                      Xuống
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onSpotlightDelete(index)}
+                      disabled={content.spotlights.length <= MIN_SPOTLIGHT_BLOCKS}
+                      data-testid={`admin-spotlight-delete-${index}`}
+                      className="normal-case tracking-normal text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-base md:text-sm cursor-pointer"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Xóa
+                    </Button>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <AdminField label="Tiêu đề">
+                    <input
+                      className={inputClass}
+                      value={spotlight.title}
+                      onChange={(event) =>
+                        onSpotlightChange(index, { title: event.target.value })
+                      }
+                    />
+                  </AdminField>
+                  <AdminField label="CTA label">
+                    <input
+                      className={inputClass}
+                      value={spotlight.ctaLabel}
+                      onChange={(event) =>
+                        onSpotlightChange(index, { ctaLabel: event.target.value })
+                      }
+                    />
+                  </AdminField>
+                  <AdminField label="Mô tả">
+                    <textarea
+                      className={textareaClass}
+                      rows={5}
+                      value={spotlight.description}
+                      onChange={(event) =>
+                        onSpotlightChange(index, { description: event.target.value })
+                      }
+                    />
+                  </AdminField>
+                  <div className="grid gap-4">
+                    <AdminField label="CTA link">
+                      <input
+                        className={inputClass}
+                        value={spotlight.ctaHref}
+                        onChange={(event) =>
+                          onSpotlightChange(index, { ctaHref: event.target.value })
+                        }
+                      />
+                    </AdminField>
+                    <AdminField label="Ảnh">
+                      <input
+                        className={inputClass}
+                        value={spotlight.imageSrc}
+                        onChange={(event) =>
+                          onSpotlightChange(index, { imageSrc: event.target.value })
+                        }
+                      />
+                    </AdminField>
+                    <AdminField label="Alt ảnh">
+                      <input
+                        className={inputClass}
+                        value={spotlight.imageAlt}
+                        onChange={(event) =>
+                          onSpotlightChange(index, { imageAlt: event.target.value })
+                        }
+                      />
+                    </AdminField>
+                  </div>
+                  <div className="lg:col-span-2">
+                    <AdminField label="Bullets" helper="Mỗi dòng là một bullet.">
+                      <textarea
+                        className={textareaClass}
+                        rows={4}
+                        value={spotlight.bullets.join("\n")}
+                        onChange={(event) =>
+                          onSpotlightBulletsChange(index, event.target.value)
+                        }
+                      />
+                    </AdminField>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === "features" ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader
+            title="Ưu điểm"
+            description="3 khối ưu điểm trang chủ (icon giữ cố định, chỉ sửa text)."
+            actions={renderSaveActions("features", "Lưu ưu điểm")}
+          />
+          <div className="mt-5 space-y-4">
+            {content.features.map((feature, index) => (
+              <div
+                key={feature.id}
+                className="rounded-xl border border-slate-200 p-4 grid gap-3"
+              >
+                <p className="text-base font-semibold text-slate-900 md:text-sm">
+                  Ưu điểm {index + 1}
+                </p>
+                <AdminField label="Tiêu đề">
+                  <input
+                    className={inputClass}
+                    value={feature.title}
+                    onChange={(event) =>
+                      onFeatureChange(index, { title: event.target.value })
+                    }
+                  />
+                </AdminField>
+                <AdminField label="Mô tả">
+                  <textarea
+                    className={textareaClass}
+                    value={feature.description}
+                    onChange={(event) =>
+                      onFeatureChange(index, { description: event.target.value })
+                    }
+                  />
+                </AdminField>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === "aboutTeaser" ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <AdminSectionHeader
+            title="About-us block"
+            description="Khối giới thiệu cuối trang chủ."
+            actions={renderSaveActions("aboutTeaser", "Lưu about-us")}
+          />
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <AdminField label="Eyebrow">
+              <input
+                className={inputClass}
+                value={content.aboutTeaser.eyebrow}
+                onChange={(event) => onAboutTeaserChange({ eyebrow: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Tiêu đề">
+              <input
+                className={inputClass}
+                value={content.aboutTeaser.title}
+                onChange={(event) => onAboutTeaserChange({ title: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="Subtitle" helper="Mô tả ngắn dưới tiêu đề.">
+              <textarea
+                className={textareaClass}
+                value={content.aboutTeaser.subtitle}
+                onChange={(event) => onAboutTeaserChange({ subtitle: event.target.value })}
+              />
+            </AdminField>
+            <div className="grid gap-4">
+              <AdminField label="CTA chính">
+                <input
+                  className={inputClass}
+                  value={content.aboutTeaser.primaryCtaLabel}
+                  onChange={(event) =>
+                    onAboutTeaserChange({ primaryCtaLabel: event.target.value })
+                  }
+                />
+              </AdminField>
+              <AdminField label="Link CTA chính">
+                <input
+                  className={inputClass}
+                  value={content.aboutTeaser.primaryCtaHref}
+                  onChange={(event) =>
+                    onAboutTeaserChange({ primaryCtaHref: event.target.value })
+                  }
+                />
+              </AdminField>
+              <AdminField label="CTA phụ">
+                <input
+                  className={inputClass}
+                  value={content.aboutTeaser.secondaryCtaLabel}
+                  onChange={(event) =>
+                    onAboutTeaserChange({ secondaryCtaLabel: event.target.value })
+                  }
+                />
+              </AdminField>
+              <AdminField label="Link CTA phụ">
+                <input
+                  className={inputClass}
+                  value={content.aboutTeaser.secondaryCtaHref}
+                  onChange={(event) =>
+                    onAboutTeaserChange({ secondaryCtaHref: event.target.value })
+                  }
+                />
+              </AdminField>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {activeTab === "promoPopup" ? (
         <AdminPromoPopupSection
-          value={promoPopupDraft}
-          onChange={handlePromoPopupChange}
-          onSave={handlePromoPopupSave}
-          isDirty={promoPopupDirty}
-          savedAt={promoPopupSavedAt}
+          value={content.promoPopup}
+          onChange={onPopupChange}
+          onSave={() => void onSaveGroup("promoPopup")}
+          isDirty={dirtyMap.promoPopup}
+          savedAt={savedAtMap.promoPopup}
         />
-      )}
+      ) : null}
 
-      {activeSection === "notifications" && (
+      {activeTab === "notifications" ? (
         <AdminNotificationsSection
-          value={notificationDraft}
-          onChange={handleNotificationChange}
-          onSave={handleNotificationSave}
-          isDirty={notificationDirty}
-          savedAt={notificationSavedAt}
+          value={content.notifications}
+          onChange={onNotificationChange}
+          onSave={() => void onSaveGroup("notifications")}
+          isDirty={dirtyMap.notifications}
+          savedAt={savedAtMap.notifications}
         />
-      )}
-    </AdminShell>
+      ) : null}
+    </div>
   );
 }
 
@@ -664,6 +1499,11 @@ function AdminProductsSection({
   };
 
   const handleSelectProduct = (product: AdminProduct) => {
+    const validExistingImages =
+      product.images
+        ?.map((image) => image.url?.trim())
+        .filter((url): url is string => Boolean(url)) || [];
+
     setEditingId(product.id);
     setForm({
       name: product.name,
@@ -677,7 +1517,7 @@ function AdminProductsSection({
       description: product.description || ""
     });
     setSelectedCategories(product.categories?.map((cat) => cat.id) || []);
-    setExistingImages(product.images?.map((image) => image.url) || []);
+    setExistingImages(validExistingImages);
     setNewImages([]);
     setImageUrlInput("");
     setDialogOpen(true);
@@ -703,11 +1543,11 @@ function AdminProductsSection({
       return;
     }
     if (!url.startsWith("http")) {
-      setError("Vui lòng nhập URL hợp lệ.");
+      setError("Vui lng nhp URL hp l!.");
       return;
     }
     if (!canAddMore) {
-      setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
+      setError("Ti a 10 nh cho mi sn phm.");
       return;
     }
     if (existingImages.includes(url) || newImages.includes(url)) {
@@ -725,7 +1565,7 @@ function AdminProductsSection({
     }
 
     if (totalImages + files.length > 10) {
-      setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
+      setError("Ti a 10 nh cho mi sn phm.");
       event.target.value = "";
       return;
     }
@@ -735,7 +1575,7 @@ function AdminProductsSection({
       const uploaded = await Promise.all(files.map((file) => uploadAdminFile(file)));
       setNewImages((prev) => [...prev, ...uploaded.map((item) => item.url)]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể tải ảnh lên.");
+      setError(err instanceof Error ? err.message : "Không thỒ tải ảnh lên.");
     } finally {
       setUploading(false);
       event.target.value = "";
@@ -756,7 +1596,7 @@ function AdminProductsSection({
       await deleteAdminProduct(product.id);
       onReload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể xóa sản phẩm.");
+      setError(err instanceof Error ? err.message : "Không thỒ xóa sản phẩm.");
     }
   };
 
@@ -768,7 +1608,7 @@ function AdminProductsSection({
       return;
     }
     if (total > 10) {
-      setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
+      setError("Ti a 10 nh cho mi sn phm.");
       return;
     }
     if (!form.name.trim()) {
@@ -782,7 +1622,7 @@ function AdminProductsSection({
 
     const priceValue = Number(form.price || 0);
     if (!priceValue || Number.isNaN(priceValue)) {
-      setError("Vui lòng nhập giá bán hợp lệ.");
+      setError("Vui lng nhp gi bn hp l!.");
       return;
     }
 
@@ -814,7 +1654,7 @@ function AdminProductsSection({
       resetForm();
       onReload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể lưu sản phẩm.");
+      setError(err instanceof Error ? err.message : "Không thỒ lưu sản phẩm.");
     }
   };
 
@@ -828,10 +1668,11 @@ function AdminProductsSection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title="Quản lý sản phẩm"
-          description="Theo dõi tồn kho, cập nhật giá và hình ảnh sản phẩm."
+          description="Theo di tn kho, cp nht gi v hnh nh sn phm."
           actions={
             <Button
               onClick={openCreateDialog}
+              data-testid="admin-product-create"
               className="bg-[var(--color-cta)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
             >
               Thêm sản phẩm
@@ -961,6 +1802,7 @@ function AdminProductsSection({
                         variant="outline"
                         size="sm"
                         onClick={() => handleSelectProduct(product)}
+                        data-testid={`admin-product-edit-${product.id}`}
                         className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
                       >
                         Chỉnh sửa
@@ -979,7 +1821,7 @@ function AdminProductsSection({
               })
             ) : (
               <div className="px-4 py-8 text-center text-base text-slate-500 md:text-sm">
-                Chưa có sản phẩm phù hợp bộ lọc.
+                Cha c sn phm ph hp b lc.
               </div>
             )}
           </div>
@@ -994,7 +1836,7 @@ function AdminProductsSection({
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
-        <AdminDialogContent className="max-w-5xl relative">
+        <AdminDialogContent className="max-w-5xl">
           <div
             ref={dialogScrollRef}
             className="max-h-[calc(100vh-6rem)] overflow-y-auto pr-12"
@@ -1004,8 +1846,8 @@ function AdminProductsSection({
               {editingId ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
             </DialogTitle>
             <DialogDescription>
-              Tối thiểu 3 ảnh và tối đa 10 ảnh cho mỗi sản phẩm. Có thể thêm ảnh bằng
-              URL hoặc tải trực tiếp.
+              Ti thiu 3 nh v ti a 10 nh cho mi sn phm. C th thm nh bng
+              URL hoc ti trc tip.
             </DialogDescription>
           </DialogHeader>
 
@@ -1017,7 +1859,7 @@ function AdminProductsSection({
                   description="Tên, slug và mô tả ngắn cho sản phẩm."
                 />
                 <div className="mt-4 grid gap-4">
-                  <AdminField label="Tên sản phẩm" helper="Hiển thị trên trang chi tiết.">
+                  <AdminField label="Tên sản phẩm" helper="Hin th9 trn trang chi tit.">
                     <input
                       className={inputClass}
                       value={form.name}
@@ -1046,10 +1888,10 @@ function AdminProductsSection({
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <AdminSectionHeader
                   title="Giá & trạng thái"
-                  description="Kiểm soát giá bán và hiển thị."
+                  description="Kim sot gi bn v hin th9."
                 />
                 <div className="mt-4 grid gap-4">
-                  <AdminField label="Giá bán" helper="Nhập giá bán hiện tại.">
+                  <AdminField label="Giá bán" helper="Nhp gi bn hi!n ti.">
                     <input
                       type="number"
                       className={inputClass}
@@ -1059,7 +1901,7 @@ function AdminProductsSection({
                   </AdminField>
                   <AdminField
                     label="Giá niêm yết"
-                    helper="Bỏ trống nếu không có giá gốc."
+                    helper="B trng nu khng c gi gc."
                   >
                     <input
                       type="number"
@@ -1088,7 +1930,7 @@ function AdminProductsSection({
                     </AdminField>
                     <AdminField
                       label="Sản phẩm nổi bật"
-                      helper="Đánh dấu để hiển thị nổi bật."
+                      helper="nh du  hin th9 n'i bật."
                     >
                       <div className="flex items-center gap-2">
                         <input
@@ -1111,7 +1953,7 @@ function AdminProductsSection({
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <AdminSectionHeader
                   title="Phân loại & sắp xếp"
-                  description="Thẻ và thứ tự hiển thị trên danh sách."
+                  description="Th v th t hin th9 trn danh sch."
                 />
                 <div className="mt-4 grid gap-4">
                   <AdminField
@@ -1169,7 +2011,7 @@ function AdminProductsSection({
                     })
                   ) : (
                     <p className="text-base text-slate-500 md:text-sm">
-                      Chưa có danh mục để chọn.
+                      Cha c danh mc  chn.
                     </p>
                   )}
                 </div>
@@ -1178,7 +2020,7 @@ function AdminProductsSection({
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <AdminSectionHeader
                   title="Hình ảnh sản phẩm"
-                  description="Tối thiểu 3 ảnh và tối đa 10 ảnh."
+                  description="Ti thiu 3 nh v ti a 10 nh."
                 />
                 <div className="mt-4 grid gap-4">
                   <div className="grid gap-2">
@@ -1203,7 +2045,7 @@ function AdminProductsSection({
                       </Button>
                     </div>
                     <p className="text-base text-slate-500 md:text-xs">
-                      Dùng URL bắt đầu bằng http(s). Còn trống {remainingSlots} ảnh.
+                      Dng URL bt u bng http(s). Cn trng {remainingSlots} ảnh.
                     </p>
                   </div>
 
@@ -1239,7 +2081,7 @@ function AdminProductsSection({
                           className="object-cover"
                         />
                         <span className="absolute left-2 top-2 rounded-full bg-slate-900/70 px-2 py-1 text-xs text-white">
-                          Hiện có
+                          Hi!n c
                         </span>
                       </div>
                     ))}
@@ -1298,7 +2140,7 @@ function AdminProductsSection({
           <div className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col gap-2">
             <button
               type="button"
-              aria-label="Cuộn lên đầu"
+              aria-label="Cu'n lên u"
               onClick={() =>
                 dialogScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
               }
@@ -1398,7 +2240,7 @@ function AdminCategoriesSection({
       resetForm();
       onReload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể lưu danh mục.");
+      setError(err instanceof Error ? err.message : "Không thỒ lưu danh mục.");
     }
   };
 
@@ -1422,7 +2264,7 @@ function AdminCategoriesSection({
       await deleteAdminCategory(category.id);
       onReload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể xóa danh mục.");
+      setError(err instanceof Error ? err.message : "Không thỒ xóa danh mục.");
     }
   };
 
@@ -1431,7 +2273,7 @@ function AdminCategoriesSection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title="Danh mục sản phẩm"
-          description="Quản lý danh mục để lọc và sắp xếp sản phẩm."
+          description="Qun l danh mc  lc v sp xp sn phm."
         />
         <div className="mt-4 grid gap-4">
           <AdminField label="Tìm kiếm" helper="Theo tên hoặc slug danh mục.">
@@ -1491,7 +2333,7 @@ function AdminCategoriesSection({
             ))
           ) : (
             <p className="py-6 text-center text-base text-slate-500 md:text-sm">
-              Chưa có danh mục phù hợp bộ lọc.
+              Cha c danh mc ph hp b lc.
             </p>
           )}
         </div>
@@ -1507,10 +2349,10 @@ function AdminCategoriesSection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title={editingId ? "Cập nhật danh mục" : "Tạo danh mục"}
-          description="Cập nhật thông tin hiển thị cho danh mục."
+          description="Cp nht thng tin hin th9 cho danh mc."
         />
         <div className="mt-4 grid gap-4">
-          <AdminField label="Tên danh mục" helper="Hiển thị trên menu và sản phẩm.">
+          <AdminField label="Tên danh mục" helper="Hin th9 trn menu v sn phm.">
             <input
               className={inputClass}
               value={form.name}
@@ -1526,7 +2368,7 @@ function AdminCategoriesSection({
           </AdminField>
           <AdminField
             label="Mô tả"
-            helper="Giới thiệu ngắn gọn giúp khách dễ lựa chọn."
+            helper="Gi:i thi!u ngn gn gip khch d& la chn."
           >
             <textarea
               className={textareaClass}
@@ -1616,7 +2458,7 @@ function AdminPostsSection({
   const handleSubmit = async () => {
     setError("");
     if (!form.title.trim()) {
-      setError("Vui lòng nhập tiêu đề bài viết.");
+      setError("Vui lng nhp tiu  bi vit.");
       return;
     }
     if (!form.slug.trim()) {
@@ -1646,12 +2488,12 @@ function AdminPostsSection({
       setEditingId(null);
       onReload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể lưu bài viết.");
+      setError(err instanceof Error ? err.message : "Không thỒ lưu bài viết.");
     }
   };
 
   const statusOptions = [
-    { value: "published", label: "Đang hiển thị" },
+    { value: "published", label: "ang hin th9" },
     { value: "hidden", label: "Đang ẩn" }
   ];
 
@@ -1664,10 +2506,10 @@ function AdminPostsSection({
         />
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <AdminField label="Tìm kiếm" helper="Theo tiêu đề hoặc slug.">
+          <AdminField label="Tìm kiếm" helper="Theo tiu  hoc slug.">
             <input
               className={inputClass}
-              placeholder="Tìm theo tiêu đề hoặc slug"
+              placeholder="Tm theo tiu  hoc slug"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -1709,7 +2551,7 @@ function AdminPostsSection({
                     </p>
                     {post.published_at ? (
                       <p className="text-base text-slate-400 md:text-sm">
-                        Ngày đăng: {post.published_at}
+                        Ngy ng: {post.published_at}
                       </p>
                     ) : null}
                   </div>
@@ -1745,7 +2587,7 @@ function AdminPostsSection({
                             setError(
                               err instanceof Error
                                 ? err.message
-                                : "Không thể xóa bài viết."
+                                : "Không thỒ xóa bài viết."
                             )
                           )
                       }
@@ -1759,7 +2601,7 @@ function AdminPostsSection({
             })
           ) : (
             <p className="py-6 text-center text-base text-slate-500 md:text-sm">
-              Chưa có bài viết phù hợp bộ lọc.
+              Cha c bi vit ph hp b lc.
             </p>
           )}
         </div>
@@ -1775,10 +2617,10 @@ function AdminPostsSection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title={editingId ? "Cập nhật bài viết" : "Tạo bài viết"}
-          description="Quản lý nội dung tin tức và kiến thức."
+          description="Qun l n'i dung tin tức và kiến thức."
         />
         <div className="mt-4 grid gap-4">
-          <AdminField label="Tiêu đề" helper="Tiêu đề hiển thị trên trang bài viết.">
+          <AdminField label="Tiu " helper="Tiu  hin th9 trn trang bi vit.">
             <input
               className={inputClass}
               value={form.title}
@@ -1794,7 +2636,7 @@ function AdminPostsSection({
           </AdminField>
           <AdminField
             label="URL ảnh bìa"
-            helper="Dùng ảnh bìa tỷ lệ ngang (1200x630)."
+            helper="Dng nh ba t l! ngang (1200x630)."
           >
             <input
               className={inputClass}
@@ -1831,8 +2673,8 @@ function AdminPostsSection({
             />
           </AdminField>
           <AdminField
-            label="Ngày đăng"
-            helper="Định dạng YYYY-MM-DD HH:MM:SS (tuỳ chọn)."
+            label="Ngy ng"
+            helper="9nh dng YYYY-MM-DD HH:MM:SS (tu chn)."
           >
             <input
               className={inputClass}
@@ -1844,7 +2686,7 @@ function AdminPostsSection({
           </AdminField>
           <AdminField
             label="Trích dẫn"
-            helper="Đoạn mô tả ngắn hiển thị ở danh sách."
+            helper="on m t ngn hin th9 x danh sch."
           >
             <textarea
               className={textareaClass}
@@ -1949,12 +2791,12 @@ function AdminQnASection({
       setEditingId(null);
       onReload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể lưu hỏi đáp.");
+      setError(err instanceof Error ? err.message : "Khng th lu hi p.");
     }
   };
 
   const statusOptions = [
-    { value: "published", label: "Đang hiển thị" },
+    { value: "published", label: "ang hin th9" },
     { value: "hidden", label: "Đang ẩn" }
   ];
 
@@ -1962,8 +2804,8 @@ function AdminQnASection({
     <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
-          title="Hỏi đáp"
-          description="Quản lý câu hỏi thường gặp và nội dung hỗ trợ."
+          title="Hi p"
+          description="Qun l cu hi thng gp v n'i dung h tr."
         />
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -2035,7 +2877,7 @@ function AdminQnASection({
                             setError(
                               err instanceof Error
                                 ? err.message
-                                : "Không thể xóa hỏi đáp."
+                                : "Khng th xa hi p."
                             )
                           )
                       }
@@ -2049,14 +2891,14 @@ function AdminQnASection({
             })
           ) : (
             <p className="py-6 text-center text-base text-slate-500 md:text-sm">
-              Chưa có hỏi đáp phù hợp bộ lọc.
+              Cha c hi p ph hp b lc.
             </p>
           )}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <span className="text-base text-slate-500 md:text-sm">
-            Tổng {filteredItems.length} hỏi đáp
+            Tổng {filteredItems.length} hi p
           </span>
           <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
@@ -2064,8 +2906,8 @@ function AdminQnASection({
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
-          title={editingId ? "Cập nhật hỏi đáp" : "Tạo hỏi đáp"}
-          description="Soạn nội dung trả lời cho khách hàng."
+          title={editingId ? "Cp nht hi p" : "To hi p"}
+          description="Son n'i dung trả lời cho khách hàng."
         />
         <div className="mt-4 grid gap-4">
           <AdminField label="Câu hỏi" helper="Nhập câu hỏi thường gặp.">
@@ -2108,7 +2950,7 @@ function AdminQnASection({
               onClick={handleSubmit}
               className="bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
             >
-              {editingId ? "Lưu hỏi đáp" : "Tạo hỏi đáp"}
+              {editingId ? "Lu hi p" : "To hi p"}
             </Button>
             {editingId ? (
               <Button
@@ -2239,7 +3081,7 @@ function AdminOrdersSection({
       });
       onReload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể cập nhật đơn hàng.");
+      setError(err instanceof Error ? err.message : "Khng th cp nht đơn hàng.");
     }
   };
 
@@ -2247,19 +3089,19 @@ function AdminOrdersSection({
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
-          title="Quản lý đơn hàng"
+          title="Qun l đơn hàng"
           description="Theo dõi trạng thái giao hàng và thanh toán."
         />
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          <AdminField label="Tìm kiếm" helper="Theo mã đơn, tên, điện thoại.">
+          <AdminField label="Tìm kiếm" helper="Theo m n, tn, i!n thoi.">
             <input
               className={inputClass}
-              placeholder="Tìm theo mã đơn hoặc khách hàng"
+              placeholder="Tm theo m n hoc khch hng"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
           </AdminField>
-          <AdminField label="Trạng thái đơn">
+          <AdminField label="Trng thi n">
             <select
               className={selectClass}
               value={statusFilter}
@@ -2346,14 +3188,14 @@ function AdminOrdersSection({
                       onChange={(event) => updateEdit(order.id, { email: event.target.value })}
                     />
                   </AdminField>
-                  <AdminField label="Số điện thoại">
+                  <AdminField label="S i!n thoi">
                     <input
                       className={inputClass}
                       value={edit.phone}
                       onChange={(event) => updateEdit(order.id, { phone: event.target.value })}
                     />
                   </AdminField>
-                  <AdminField label="Địa chỉ">
+                  <AdminField label="9a ch0">
                     <input
                       className={inputClass}
                       value={edit.address}
@@ -2371,14 +3213,14 @@ function AdminOrdersSection({
                       }
                     />
                   </AdminField>
-                  <AdminField label="Ghi chú đơn hàng">
+                  <AdminField label="Ghi ch đơn hàng">
                     <textarea
                       className={textareaClass}
                       value={edit.note}
                       onChange={(event) => updateEdit(order.id, { note: event.target.value })}
                     />
                   </AdminField>
-                  <AdminField label="Trạng thái đơn">
+                  <AdminField label="Trng thi n">
                     <select
                       className={selectClass}
                       value={edit.status}
@@ -2412,7 +3254,7 @@ function AdminOrdersSection({
               ) : null}
 
               <div className="mt-4">
-                <AdminField label="Ghi chú nội bộ" helper="Chỉ hiển thị cho quản trị viên.">
+                <AdminField label="Ghi ch n'i b'" helper="Ch0 hin th9 cho qun tr9 vin.">
                   <textarea
                     className={textareaClass}
                     value={edit?.admin_note || ""}
@@ -2428,7 +3270,7 @@ function AdminOrdersSection({
                     onClick={() => handleUpdate(order)}
                     className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
                   >
-                    Lưu đơn hàng
+                    Lu đơn hàng
                   </Button>
                   {order.payment_proof_url ? (
                     <a
@@ -2445,7 +3287,7 @@ function AdminOrdersSection({
 
               {order.items?.length ? (
                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-600 md:text-sm">
-                  <p className="font-semibold text-slate-700">Sản phẩm trong đơn</p>
+                  <p className="font-semibold text-slate-700">Sn phm trong n</p>
                   <div className="mt-2 space-y-2">
                     {order.items.map((item) => (
                       <div key={`${order.id}-${item.product_id}`} className="flex justify-between">
@@ -2463,7 +3305,7 @@ function AdminOrdersSection({
         })
       ) : (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-base text-slate-500 md:text-sm">
-          Chưa có đơn hàng phù hợp bộ lọc.
+          Cha c đơn hàng ph hp b lc.
         </div>
       )}
 
@@ -2515,7 +3357,7 @@ function AdminPaymentsSection({
       const updated = await updatePaymentSettings(form);
       onSave(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể cập nhật thanh toán.");
+      setError(err instanceof Error ? err.message : "Không thỒ cập nhật thanh toán.");
     }
   };
 
@@ -2523,7 +3365,7 @@ function AdminPaymentsSection({
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <AdminSectionHeader
         title="Cấu hình thanh toán"
-        description="Thiết lập các phương thức thanh toán và thông tin chuyển khoản."
+        description="Thiết lập các phương thức thanh toán và thông tin chuyỒn khoản."
       />
       <div className="mt-5 grid gap-4">
         <div className="grid gap-3">
@@ -2545,7 +3387,7 @@ function AdminPaymentsSection({
               }
               className="h-4 w-4 accent-[var(--color-primary)] cursor-pointer"
             />
-            Chuyển khoản ngân hàng
+            ChuyỒn khoản ngân hàng
           </label>
           <label className="flex items-center gap-2 text-base font-semibold text-slate-700 md:text-sm cursor-pointer">
             <input
@@ -2558,14 +3400,14 @@ function AdminPaymentsSection({
           </label>
         </div>
 
-        <AdminField label="Ngân hàng" helper="Tên ngân hàng nhận chuyển khoản.">
+        <AdminField label="Ngân hàng" helper="Tên ngân hàng nhận chuyỒn khoản.">
           <input
             className={inputClass}
             value={form.bank_name}
             onChange={(event) => setForm({ ...form, bank_name: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Số tài khoản" helper="Số tài khoản ngân hàng.">
+        <AdminField label="S ti khon" helper="S ti khon ngđơn hàng.">
           <input
             className={inputClass}
             value={form.bank_account}
@@ -2579,7 +3421,7 @@ function AdminPaymentsSection({
             onChange={(event) => setForm({ ...form, bank_holder: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Mã ngân hàng" helper="Mã ngân hàng theo VietQR (tuỳ chọn).">
+        <AdminField label="Mã ngân hàng" helper="Mã ngân hàng theo VietQR (tùy chọn).">
           <input
             className={inputClass}
             value={form.bank_id}
@@ -2588,7 +3430,7 @@ function AdminPaymentsSection({
         </AdminField>
         <AdminField
           label="Quick Link VietQR"
-          helper="Dán link VietQR để tự động hiển thị mã QR thanh toán."
+          helper="Dn link VietQR  t 'ng hiỒn th9 m QR thanh ton."
         >
           <input
             className={inputClass}
@@ -2727,7 +3569,7 @@ function AdminAboutSection({
   const handleSlideSubmit = () => {
     setError("");
     if (!slideForm.title.trim()) {
-      setError("Vui lòng nhập tiêu đề slide.");
+      setError("Vui lng nhp tiu  slide.");
       return;
     }
     if (!slideForm.image.trim()) {
@@ -2748,7 +3590,7 @@ function AdminAboutSection({
       bullets,
       image: slideForm.image.trim(),
       imageAlt: slideForm.imageAlt.trim() || slideForm.title.trim(),
-      ctaLabel: slideForm.ctaLabel.trim() || "Liên hệ tư vấn",
+      ctaLabel: slideForm.ctaLabel.trim() || "Lin h! t vn",
       ctaHref: slideForm.ctaHref.trim() || "/pages/lien-he"
     };
 
@@ -2769,7 +3611,7 @@ function AdminAboutSection({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <AdminSectionHeader
             title="Trang giới thiệu"
-            description="Cập nhật nội dung hiển thị trên trang giới thiệu. Hỗ trợ ảnh và CTA theo từng slide."
+            description="Cp nht n'i dung hiỒn th9 trn trang gi:i thi!u. H tr nh v CTA theo tng slide."
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 {savedAt ? (
@@ -2787,28 +3629,28 @@ function AdminAboutSection({
           />
 
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            <AdminField label="Eyebrow" helper="Ví dụ: Giới thiệu">
+            <AdminField label="Eyebrow" helper="V d: Gi:i thi!u">
               <input
                 className={inputClass}
                 value={value.hero.eyebrow}
                 onChange={(event) => updateHero({ eyebrow: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Tiêu đề chính" helper="Tiêu đề lớn hiển thị ở phần đầu trang.">
+            <AdminField label="Tiu  chnh" helper="Tiu  l:n hin th9 x phn u trang.">
               <input
                 className={inputClass}
                 value={value.hero.title}
                 onChange={(event) => updateHero({ title: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Mô tả" helper="Đoạn giới thiệu ngắn bên dưới tiêu đề.">
+            <AdminField label="Mô tả" helper="on gi:i thi!u ngn bn d:i tiu .">
               <textarea
                 className={textareaClass}
                 value={value.hero.lead}
                 onChange={(event) => updateHero({ lead: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Ảnh hero" helper="Kích thước gợi ý 1400x900px.">
+            <AdminField label="Ảnh hero" helper="Kch th:c gi  1400x900px.">
               <input
                 className={inputClass}
                 value={value.hero.image}
@@ -2822,7 +3664,7 @@ function AdminAboutSection({
                 onChange={(event) => updateHero({ imageAlt: event.target.value })}
               />
             </AdminField>
-            <AdminField label="CTA chính" helper="Nút liên hệ nổi bật.">
+            <AdminField label="CTA chính" helper="Nt lin h! n'i bật.">
               <input
                 className={inputClass}
                 value={value.hero.ctaLabel}
@@ -2836,7 +3678,7 @@ function AdminAboutSection({
                 onChange={(event) => updateHero({ ctaHref: event.target.value })}
               />
             </AdminField>
-            <AdminField label="CTA phụ" helper="Nút phụ ở phần hero.">
+            <AdminField label="CTA phụ" helper="Nt ph x phn hero.">
               <input
                 className={inputClass}
                 value={value.hero.secondaryLabel}
@@ -2850,7 +3692,7 @@ function AdminAboutSection({
                 onChange={(event) => updateHero({ secondaryHref: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Pill highlights" helper="Mỗi dòng là một nhãn nổi bật.">
+            <AdminField label="Pill highlights" helper="Mi dng l m't nhãn n'i bt.">
               <textarea
                 className={textareaClass}
                 value={heroPillsValue}
@@ -2876,7 +3718,7 @@ function AdminAboutSection({
                 />
                 <input
                   className={inputClass}
-                  placeholder="Mô tả chỉ số"
+                  placeholder="M t ch0 s"
                   value={stat.label}
                   onChange={(event) => handleStatChange(index, { label: event.target.value })}
                 />
@@ -2895,7 +3737,7 @@ function AdminAboutSection({
               onClick={addStat}
               className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
             >
-              Thêm chỉ số
+              Thm ch0 s
             </Button>
           </div>
         </div>
@@ -2903,7 +3745,7 @@ function AdminAboutSection({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <AdminSectionHeader
             title="Nội dung chi tiết"
-            description="Có thể dùng HTML (p, h3, ul, li). Nội dung này hiển thị như một slide dài."
+            description="C th dng HTML (p, h3, ul, li). Nội dung này hiỒn th9 nh m't slide di."
           />
           <div className="mt-4">
             <textarea
@@ -2916,16 +3758,16 @@ function AdminAboutSection({
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <AdminSectionHeader title="CTA cuối trang" description="Khối kêu gọi liên hệ cuối trang giới thiệu." />
+          <AdminSectionHeader title="CTA cuối trang" description="Khi ku gi lin h! cui trang gi:i thi!u." />
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <AdminField label="Tiêu đề" helper="Dùng tiêu đề kêu gọi hành động.">
+            <AdminField label="Tiu " helper="Dng tiu  ku gi hnh 'ng.">
               <input
                 className={inputClass}
                 value={value.contact.title}
                 onChange={(event) => handleContactChange({ title: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Nội dung" helper="Mô tả ngắn bên dưới tiêu đề.">
+            <AdminField label="Nội dung" helper="M t ngn bn d:i tiu .">
               <textarea
                 className={textareaClass}
                 value={value.contact.description}
@@ -2954,7 +3796,7 @@ function AdminAboutSection({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <AdminSectionHeader
             title="Danh sách slide"
-            description="Các slide giới thiệu hiển thị theo chiều dọc trên trang."
+            description="Cc slide gi:i thi!u hin th9 theo chiu dc trn trang."
           />
           <div className="mt-4 space-y-4">
             {value.slides.length ? (
@@ -2976,7 +3818,7 @@ function AdminAboutSection({
                   <div className="flex-1 space-y-1">
                     <p className="text-base font-semibold text-slate-900 md:text-sm">{slide.title}</p>
                     <p className="text-base text-slate-500 md:text-sm">
-                      {slide.tag} • CTA: {slide.ctaLabel}
+                      {slide.tag}  CTA: {slide.ctaLabel}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -3001,7 +3843,7 @@ function AdminAboutSection({
               ))
             ) : (
               <p className="text-base text-slate-500 md:text-sm">
-                Chưa có slide nào. Hãy tạo slide đầu tiên.
+                Cha c slide no. Hy to slide u tin.
               </p>
             )}
           </div>
@@ -3010,17 +3852,17 @@ function AdminAboutSection({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <AdminSectionHeader
             title={editingId ? "Cập nhật slide" : "Tạo slide mới"}
-            description="Mỗi slide gồm hình ảnh, mô tả và nút liên hệ."
+            description="Mi slide gm hnh nh, m t v nt lin h!."
           />
           <div className="mt-4 grid gap-4">
-            <AdminField label="Tag" helper="Ví dụ: Chặng 01 (có thể để trống).">
+            <AdminField label="Tag" helper="V d: Chng 01 (c th  trng).">
               <input
                 className={inputClass}
                 value={slideForm.tag}
                 onChange={(event) => setSlideForm({ ...slideForm, tag: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Tiêu đề" helper="Tiêu đề chính của slide.">
+            <AdminField label="Tiu " helper="Tiu  chnh ca slide.">
               <input
                 className={inputClass}
                 value={slideForm.title}
@@ -3034,7 +3876,7 @@ function AdminAboutSection({
                 onChange={(event) => setSlideForm({ ...slideForm, description: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Danh sách bullet" helper="Mỗi dòng là một bullet.">
+            <AdminField label="Danh sách bullet" helper="Mi dng l m't bullet.">
               <textarea
                 className={textareaClass}
                 value={slideForm.bullets}
@@ -3055,7 +3897,7 @@ function AdminAboutSection({
                 onChange={(event) => setSlideForm({ ...slideForm, imageAlt: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Nút CTA" helper="Ví dụ: Liên hệ tư vấn.">
+            <AdminField label="Nút CTA" helper="V d: Lin h! t vn.">
               <input
                 className={inputClass}
                 value={slideForm.ctaLabel}
@@ -3109,8 +3951,8 @@ function AdminContactSection({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <AdminSectionHeader
-        title="Thông tin liên hệ"
-        description="Cập nhật thông tin hiển thị ở trang liên hệ, topbar và footer."
+        title="Thng tin lin h!"
+        description="Cp nht thng tin hin th9 x trang lin h!, topbar v footer."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {savedAt ? (
@@ -3130,35 +3972,35 @@ function AdminContactSection({
       />
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <AdminField label="Số điện thoại" helper="Hiển thị ở topbar và footer.">
+        <AdminField label="S i!n thoi" helper="Hin th9 x topbar v footer.">
           <input
             className={inputClass}
             value={value.phone}
             onChange={(event) => onChange({ phone: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Số fax" helper="Tuỳ chọn, hiển thị ở trang liên hệ.">
+        <AdminField label="Số fax" helper="Tu chn, hin th9 x trang lin h!.">
           <input
             className={inputClass}
             value={value.fax}
             onChange={(event) => onChange({ fax: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Email" helper="Địa chỉ email nhận liên hệ.">
+        <AdminField label="Email" helper="9a ch0 email nhn lin h!.">
           <input
             className={inputClass}
             value={value.email}
             onChange={(event) => onChange({ email: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Giờ làm việc" helper="Ví dụ: 8:00 - 17:00 mỗi ngày.">
+        <AdminField label="Gi lm vi!c" helper="V d: 8:00 - 17:00 mi ngy.">
           <input
             className={inputClass}
             value={value.businessHours}
             onChange={(event) => onChange({ businessHours: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Địa chỉ" helper="Địa chỉ cửa hàng hoặc văn phòng.">
+        <AdminField label="9a ch0" helper="9a ch0 ca hng hoc vn phng.">
           <textarea
             className={textareaClass}
             value={value.address}
@@ -3166,8 +4008,8 @@ function AdminContactSection({
           />
         </AdminField>
         <AdminField
-          label="URL bản đồ"
-          helper="Dán URL embed Google Maps để hiển thị bản đồ."
+          label="URL bn "
+          helper="Dn URL embed Google Maps  hin th9 bn ."
         >
           <textarea
             className={textareaClass}
@@ -3241,7 +4083,7 @@ function AdminPromoPopupSection({
 
   const addProgram = () => {
     onChange({
-      programs: [...value.programs, { title: "Ưu đãi mới", description: "" }]
+      programs: [...value.programs, { title: "u i m:i", description: "" }]
     });
   };
 
@@ -3251,7 +4093,7 @@ function AdminPromoPopupSection({
 
   const addCoupon = () => {
     onChange({
-      coupons: [...value.coupons, { label: "Mã ưu đãi", code: "", description: "" }]
+      coupons: [...value.coupons, { label: "M u i", code: "", description: "" }]
     });
   };
 
@@ -3263,7 +4105,7 @@ function AdminPromoPopupSection({
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <AdminSectionHeader
         title="Popup khuyến mãi"
-        description="Thiết lập nội dung popup khuyến mãi hiển thị ở trang chủ."
+        description="Thit lp n'i dung popup khuyến mãi hiỒn th9 x trang ch."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {savedAt ? (
@@ -3293,7 +4135,7 @@ function AdminPromoPopupSection({
             <option value="false">Đang tắt</option>
           </select>
         </AdminField>
-        <AdminField label="Độ trễ (giây)" helper="Popup sẽ hiển thị sau số giây này.">
+        <AdminField label="' tr& (giy)" helper="Popup s hin th9 sau s giy ny.">
           <input
             className={inputClass}
             type="number"
@@ -3302,21 +4144,21 @@ function AdminPromoPopupSection({
             onChange={(event) => onChange({ delaySeconds: Number(event.target.value) || 0 })}
           />
         </AdminField>
-        <AdminField label="Tiêu đề" helper="Tiêu đề nổi bật của popup.">
+        <AdminField label="Tiu " helper="Tiu  n'i bật của popup.">
           <input
             className={inputClass}
             value={value.title}
             onChange={(event) => onChange({ title: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Phụ đề" helper="Dòng mô tả ngắn bên dưới tiêu đề.">
+        <AdminField label="Ph " helper="Dng m t ngn bn d:i tiu .">
           <input
             className={inputClass}
             value={value.subtitle}
             onChange={(event) => onChange({ subtitle: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Ảnh popup" helper="URL ảnh hiển thị ở phần trên của popup.">
+        <AdminField label="Ảnh popup" helper="URL nh hin th9 x phn trn ca popup.">
           <input
             className={inputClass}
             value={value.imageSrc}
@@ -3330,7 +4172,7 @@ function AdminPromoPopupSection({
             onChange={(event) => onChange({ imageAlt: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Nút CTA" helper="Nhãn nút liên hệ trong popup.">
+        <AdminField label="Nút CTA" helper="Nhn nt lin h! trong popup.">
           <input
             className={inputClass}
             value={value.ctaLabel}
@@ -3350,20 +4192,20 @@ function AdminPromoPopupSection({
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold text-slate-900 md:text-sm">
-              Chương trình ưu đãi
+              Chng trnh u i
             </h3>
             <Button
               onClick={addProgram}
               className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
             >
-              Thêm ưu đãi
+              Thm u i
             </Button>
           </div>
           <div className="mt-4 space-y-4">
             {value.programs.map((item, index) => (
               <div key={`program-${index}`} className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">Ưu đãi #{index + 1}</span>
+                  <span className="text-sm font-semibold">u i #{index + 1}</span>
                   <Button
                     onClick={() => removeProgram(index)}
                     className="h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 normal-case tracking-normal text-sm cursor-pointer"
@@ -3417,7 +4259,7 @@ function AdminPromoPopupSection({
                     className={inputClass}
                     value={item.label}
                     onChange={(event) => handleCouponChange(index, { label: event.target.value })}
-                    placeholder="Tên ưu đãi"
+                    placeholder="Tn u i"
                   />
                   <input
                     className={inputClass}
@@ -3463,7 +4305,7 @@ function AdminNotificationsSection({
   const addItem = () => {
     const nextItem: NotificationItem = {
       id: `notify-${Date.now()}`,
-      title: "Thông báo mới",
+      title: "Thng bo m:i",
       description: "",
       href: "/",
       isActive: true
@@ -3514,7 +4356,7 @@ function AdminNotificationsSection({
         <div className="mt-4 space-y-4">
           {value.items.length === 0 ? (
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-              Chưa có thông báo tuỳ chỉnh.
+              Cha c thng bo tu ch0nh.
             </div>
           ) : (
             value.items.map((item, index) => (
@@ -3529,7 +4371,7 @@ function AdminNotificationsSection({
                   </Button>
                 </div>
                 <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                  <AdminField label="Tiêu đề">
+                  <AdminField label="Tiu ">
                     <input
                       className={inputClass}
                       value={item.title}
@@ -3641,7 +4483,7 @@ function AdminBannersSection({
   const handleSubmit = () => {
     setError("");
     if (!form.title.trim()) {
-      setError("Vui lòng nhập tiêu đề banner.");
+      setError("Vui lng nhp tiu  banner.");
       return;
     }
     if (!form.desktopSrc.trim()) {
@@ -3653,7 +4495,7 @@ function AdminBannersSection({
       return;
     }
     if (!form.ctaHref.trim()) {
-      setError("Vui lòng nhập đường dẫn CTA.");
+      setError("Vui lng nhp ng dn CTA.");
       return;
     }
 
@@ -3685,7 +4527,7 @@ function AdminBannersSection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title="Banner trang chủ"
-          description="Quản lý nội dung slider hiển thị ở trang chủ."
+          description="Qun l n'i dung slider hiỒn th9 x trang ch."
           actions={
             <div className="flex flex-wrap items-center gap-2">
               {savedAt ? (
@@ -3698,7 +4540,7 @@ function AdminBannersSection({
                 disabled={!isDirty}
                 className="bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
               >
-                Lưu thay đổi
+                Lu thay i
               </Button>
             </div>
           }
@@ -3744,7 +4586,7 @@ function AdminBannersSection({
                           : "bg-rose-50 text-rose-600"
                       }`}
                     >
-                      {banner.isActive ? "Đang hiển thị" : "Đang ẩn"}
+                      {banner.isActive ? "ang hin th9" : "Đang ẩn"}
                     </span>
                   </div>
                 </div>
@@ -3770,7 +4612,7 @@ function AdminBannersSection({
             ))
           ) : (
             <p className="text-base text-slate-500 md:text-sm">
-              Chưa có banner nào. Hãy tạo banner đầu tiên.
+              Cha c banner no. Hy to banner u tin.
             </p>
           )}
         </div>
@@ -3779,10 +4621,10 @@ function AdminBannersSection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title={editingId ? "Cập nhật banner" : "Tạo banner"}
-          description="Nhập đầy đủ thông tin để hiển thị trên slider."
+          description="Nhp y  thng tin  hin th9 trn slider."
         />
         <div className="mt-4 grid gap-4">
-          <AdminField label="Tiêu đề" helper="Tiêu đề chính của banner.">
+          <AdminField label="Tiu " helper="Tiu  chnh ca banner.">
             <input
               className={inputClass}
               value={form.title}
@@ -3791,7 +4633,7 @@ function AdminBannersSection({
           </AdminField>
           <AdminField
             label="Nhãn banner"
-            helper="Ví dụ: Banner nổi bật, Ưu đãi tuần này."
+            helper="V d: Banner n'i bật, u i tun ny."
           >
             <input
               className={inputClass}
@@ -3799,7 +4641,7 @@ function AdminBannersSection({
               onChange={(event) => setForm({ ...form, badge: event.target.value })}
             />
           </AdminField>
-          <AdminField label="Mô tả" helper="Mô tả ngắn, tối đa 2 dòng.">
+          <AdminField label="Mô tả" helper="M t ngn, ti a 2 dng.">
             <textarea
               className={textareaClass}
               value={form.description}
@@ -3820,21 +4662,21 @@ function AdminBannersSection({
               onChange={(event) => setForm({ ...form, ctaHref: event.target.value })}
             />
           </AdminField>
-          <AdminField label="Ảnh desktop" helper="Kích thước gợi ý 1600x720px.">
+          <AdminField label="Ảnh desktop" helper="Kch th:c gi  1600x720px.">
             <input
               className={inputClass}
               value={form.desktopSrc}
               onChange={(event) => setForm({ ...form, desktopSrc: event.target.value })}
             />
           </AdminField>
-          <AdminField label="Ảnh mobile" helper="Nếu bỏ trống sẽ dùng ảnh desktop.">
+          <AdminField label="Ảnh mobile" helper="Nu b trng s dng nh desktop.">
             <input
               className={inputClass}
               value={form.mobileSrc}
               onChange={(event) => setForm({ ...form, mobileSrc: event.target.value })}
             />
           </AdminField>
-          <AdminField label="Alt text" helper="Mô tả cho ảnh để hỗ trợ SEO.">
+          <AdminField label="Alt text" helper="M t cho nh  h tr SEO.">
             <input
               className={inputClass}
               value={form.alt}

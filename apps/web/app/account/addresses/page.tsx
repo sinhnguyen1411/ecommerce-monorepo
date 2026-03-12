@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import SectionTitle from "@/components/common/SectionTitle";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,12 @@ import {
   Address,
   createAddress,
   deleteAddress,
+  getProfile,
   listAddresses,
   updateAddress
 } from "@/lib/account";
 import { GeoDistrict, GeoProvince, getGeoDistricts, getGeoProvinces } from "@/lib/api";
+import { buildCompleteProfileHref, buildLoginHref } from "@/lib/onboarding";
 
 const emptyForm: Omit<Address, "id"> = {
   full_name: "",
@@ -85,6 +88,7 @@ const normalizeVNPhone = (input: string) => {
 };
 
 export default function AddressesPage() {
+  const router = useRouter();
   const [items, setItems] = useState<Address[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -95,10 +99,15 @@ export default function AddressesPage() {
   const [districts, setDistricts] = useState<GeoDistrict[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
+      const profile = await getProfile();
+      if (profile.onboarding_required) {
+        router.replace(buildCompleteProfileHref("/account/addresses", "/account/addresses"));
+        return;
+      }
       const data = await listAddresses();
       setItems(data);
       setIsAuthed(true);
@@ -108,11 +117,11 @@ export default function AddressesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   useEffect(() => {
     if (!isAuthed) {
@@ -269,7 +278,10 @@ export default function AddressesPage() {
           description="Vui lòng đăng nhập bằng Google."
         />
         <div className="mt-6">
-          <Link className="btn-primary" href="/login">
+          <Link
+            className="btn-primary"
+            href={buildLoginHref("/account/addresses", "/account/addresses")}
+          >
             Đi đến trang đăng nhập
           </Link>
         </div>

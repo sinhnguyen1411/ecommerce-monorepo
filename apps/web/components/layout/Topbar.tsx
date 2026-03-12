@@ -1,25 +1,67 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { PROMO_POPUP_OPEN_EVENT, useContactSettings, useNotificationSettings, usePromoPopupSettings } from "@/lib/client-content";
+import { isAuthOnlyPath } from "@/lib/auth-route";
+import { PROMO_POPUP_OPEN_EVENT, useContactSettings } from "@/lib/client-content";
+import {
+  NotificationSettings,
+  PromoPopupSettings,
+  defaultNotificationSettings,
+  defaultPromoPopupSettings
+} from "@/lib/content";
 
-export default function Topbar() {
+type TopbarProps = {
+  promoSettings?: PromoPopupSettings;
+  notificationSettings?: NotificationSettings;
+};
+
+export default function Topbar({
+  promoSettings = defaultPromoPopupSettings,
+  notificationSettings = defaultNotificationSettings
+}: TopbarProps) {
+  const pathname = usePathname();
+  type TopbarNotification =
+    | {
+        id: string;
+        title: string;
+        description: string;
+        type: "popup";
+      }
+    | {
+        id: string;
+        title: string;
+        description: string;
+        href: string;
+        type: "link";
+      };
+
   const settings = useContactSettings();
-  const promoSettings = usePromoPopupSettings();
-  const notificationSettings = useNotificationSettings();
+  if (isAuthOnlyPath(pathname)) {
+    return null;
+  }
+
   const phoneDigits = settings.phone.replace(/[^0-9]/g, "");
-  const promoNotification = promoSettings.isActive
+  const promoNotification: TopbarNotification | null = promoSettings.isActive
     ? {
         id: "promo-popup",
         title: promoSettings.title || "Ưu đãi hôm nay",
         description: promoSettings.subtitle || "Xem lại ưu đãi và mã giảm giá",
-        type: "popup" as const
+        type: "popup"
       }
     : null;
-  const customNotifications = notificationSettings.items.filter((item) => item.isActive);
-  const notifications = promoNotification
+  const customNotifications: TopbarNotification[] = notificationSettings.items
+    .filter((item) => item.isActive)
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      href: item.href,
+      type: "link"
+    }));
+  const notifications: TopbarNotification[] = promoNotification
     ? [promoNotification, ...customNotifications]
     : customNotifications;
   const notificationCount = notifications.length;
@@ -87,7 +129,7 @@ export default function Topbar() {
                         </div>
                       ) : (
                         notifications.map((item) => {
-                          if ("type" in item && item.type === "popup") {
+                          if (item.type === "popup") {
                             return (
                               <DropdownMenuItem
                                 key={item.id}

@@ -18,6 +18,7 @@ import {
   validatePromoCode
 } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { buildCompleteProfileHref } from "@/lib/onboarding";
 import { siteConfig } from "@/lib/site";
 import { getCartSubtotal, useCartStore } from "@/store/cart";
 
@@ -205,19 +206,26 @@ export default function CheckoutPage() {
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([getProfile().catch(() => null), listAddresses().catch(() => [])])
-      .then(([profile, addressList]) => {
+    getProfile()
+      .then(async (profile) => {
         if (cancelled) {
           return;
         }
-        if (!profile) {
-          setIsLoggedIn(false);
-          setAddresses([]);
-          setSelectedAddressId("");
+        if (profile.onboarding_required) {
+          router.replace(buildCompleteProfileHref("/checkout", "/checkout"));
           return;
         }
 
         setIsLoggedIn(true);
+        if (profile.email) {
+          setEmail((prev) => (prev ? prev : profile.email));
+        }
+
+        const addressList = await listAddresses().catch(() => []);
+        if (cancelled) {
+          return;
+        }
+
         setAddresses(addressList);
         const defaultAddress = addressList.find((item) => item.is_default) || addressList[0];
         if (defaultAddress) {
@@ -227,9 +235,6 @@ export default function CheckoutPage() {
           setAddressLine(defaultAddress.address_line || "");
           setProvince(defaultAddress.province || "");
           setDistrict(defaultAddress.district || "");
-        }
-        if (profile?.email) {
-          setEmail((prev) => (prev ? prev : profile.email));
         }
       })
       .catch(() => {
@@ -243,7 +248,7 @@ export default function CheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!province || provinces.length === 0) {

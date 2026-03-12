@@ -17,8 +17,11 @@ type UserProfile struct {
 	Name                    string  `json:"name"`
 	AvatarURL               *string `json:"avatar_url,omitempty"`
 	Phone                   *string `json:"phone,omitempty"`
+	Birthdate               *string `json:"birthdate,omitempty"`
 	IsEmailVerified         bool    `json:"is_email_verified"`
 	EmailVerificationStatus string  `json:"emailVerificationStatus"`
+	HasPassword             bool    `json:"has_password"`
+	OnboardingRequired      bool    `json:"onboarding_required"`
 }
 
 type ProfileUpdateInput struct {
@@ -68,32 +71,28 @@ type OrderSummary struct {
 
 func (s *Server) GetProfile(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
-	row := s.DB.QueryRow(`SELECT id, email, full_name, avatar_url, phone_national, phone_e164, is_email_verified FROM users WHERE id = ?`, userID)
-	var profile UserProfile
-	var email sql.NullString
-	var name sql.NullString
-	var avatar sql.NullString
-	var phoneNational sql.NullString
-	var phoneE164 sql.NullString
-	if err := row.Scan(&profile.ID, &email, &name, &avatar, &phoneNational, &phoneE164, &profile.IsEmailVerified); err != nil {
+	user, err := s.loadUserByID(userID)
+	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load profile")
 		return
 	}
-	if email.Valid {
-		profile.Email = email.String
+
+	profile := UserProfile{
+		ID:                      user.ID,
+		AvatarURL:               nullStringPtr(user.AvatarURL),
+		Phone:                   preferredPhone(user),
+		Birthdate:               datePtr(user.Birthdate),
+		IsEmailVerified:         user.IsEmailVerified,
+		EmailVerificationStatus: emailVerificationStatus(user.IsEmailVerified),
+		HasPassword:             hasPassword(user),
+		OnboardingRequired:      requiresOnboarding(user),
 	}
-	if name.Valid {
-		profile.Name = name.String
+	if user.Email.Valid {
+		profile.Email = user.Email.String
 	}
-	if avatar.Valid {
-		profile.AvatarURL = &avatar.String
+	if user.FullName.Valid {
+		profile.Name = user.FullName.String
 	}
-	if phoneNational.Valid {
-		profile.Phone = &phoneNational.String
-	} else if phoneE164.Valid {
-		profile.Phone = &phoneE164.String
-	}
-	profile.EmailVerificationStatus = emailVerificationStatus(profile.IsEmailVerified)
 
 	respondOK(c, profile)
 }

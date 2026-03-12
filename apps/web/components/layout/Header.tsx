@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { ShoppingBag, User } from "lucide-react";
 
@@ -12,6 +14,8 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { clearAuthTokens } from "@/lib/auth";
+import { getProfile } from "@/lib/account";
+import { isAuthOnlyPath } from "@/lib/auth-route";
 import { siteConfig } from "@/lib/site";
 import { logout } from "@/lib/user-auth";
 import { getCartCount, useCartStore } from "@/store/cart";
@@ -29,9 +33,30 @@ const navLinks = [
 ];
 
 export default function Header() {
+  const pathname = usePathname();
   const items = useCartStore((state) => state.items);
   const open = useCartStore((state) => state.open);
   const count = getCartCount(items);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getProfile()
+      .then(() => {
+        if (active) {
+          setIsAuthenticated(true);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setIsAuthenticated(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -42,6 +67,10 @@ export default function Header() {
       window.location.reload();
     }
   };
+
+  if (isAuthOnlyPath(pathname)) {
+    return null;
+  }
 
   return (
     <header className="mainHeader--height">
@@ -88,20 +117,29 @@ export default function Header() {
                     <div className="px-2 py-2 text-xs text-ink/60">
                       {"T\u00E0i kho\u1EA3n c\u1EE7a b\u1EA1n"}
                     </div>
-                    <DropdownMenuItem asChild>
-                      <Link href="/login">{"\u0110\u0103ng nh\u1EADp"}</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/signup">{"\u0110\u0103ng k\u00FD"}</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/account">{"T\u00E0i kho\u1EA3n c\u1EE7a t\u00F4i"}</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={handleLogout}>{"\u0110\u0103ng xu\u1EA5t"}</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/forgot-password">{"Qu\u00EAn m\u1EADt kh\u1EA9u"}</Link>
-                    </DropdownMenuItem>
+                    {isAuthenticated ? (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/account">{"T\u00E0i kho\u1EA3n c\u1EE7a t\u00F4i"}</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={handleLogout}>
+                          {"\u0110\u0103ng xu\u1EA5t"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href="/forgot-password">{"Qu\u00EAn m\u1EADt kh\u1EA9u"}</Link>
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/login">{"\u0110\u0103ng nh\u1EADp"}</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/signup">{"T\u1EA1o t\u00E0i kho\u1EA3n"}</Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <button

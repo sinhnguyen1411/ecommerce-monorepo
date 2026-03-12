@@ -100,6 +100,7 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 		}
 		accountWrite := api.Group("/account", s.requireRole("user"), s.buyerWriteRateLimitMiddleware(nil))
 		{
+			accountWrite.POST("/onboarding/complete", s.CompleteOnboarding)
 			accountWrite.PATCH("/profile", s.UpdateProfile)
 			accountWrite.POST("/addresses", s.CreateAddress)
 			accountWrite.PATCH("/addresses/:id", s.UpdateAddress)

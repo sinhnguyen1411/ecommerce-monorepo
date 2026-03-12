@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
-import { loadHomeBanners } from "@/lib/client-content";
 import type { HomeBanner } from "@/lib/content";
 
 type HomeSliderProps = {
@@ -14,41 +13,15 @@ type HomeSliderProps = {
 export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProps) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [active, setActive] = useState(0);
-  const [resolvedSlides, setResolvedSlides] = useState<HomeBanner[]>(slides);
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragScrollLeft = useRef(0);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const syncSlides = () => {
-      const nextSlides = loadHomeBanners();
-      setResolvedSlides(nextSlides.length ? nextSlides : slides);
-    };
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        syncSlides();
-      }
-    };
-
-    syncSlides();
-    window.addEventListener("storage", syncSlides);
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      window.removeEventListener("storage", syncSlides);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [slides]);
-
   const activeSlides = useMemo(() => {
-    const source = resolvedSlides.length ? resolvedSlides : slides;
-    return [...source]
+    return [...slides]
       .filter((slide) => slide.isActive !== false)
       .sort((a, b) => a.order - b.order);
-  }, [resolvedSlides, slides]);
+  }, [slides]);
 
   useEffect(() => {
     if (!activeSlides.length) {

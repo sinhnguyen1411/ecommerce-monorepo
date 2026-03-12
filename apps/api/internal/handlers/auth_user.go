@@ -80,151 +80,7 @@ type RefreshSessionInfo struct {
 }
 
 func (s *Server) Register(c *gin.Context) {
-	if s.Config.AuthGmailOnly {
-		respondError(c, http.StatusForbidden, "gmail_only", "Please sign up with Google or Gmail OTP")
-		return
-	}
-	var input RegisterInput
-	if !s.bindJSONWithLimit(c, &input, "Invalid registration payload") {
-		return
-	}
-
-	ipKey := rateLimitKey("register:ip", c.ClientIP())
-	if !s.enforceRateLimit(c, ipKey, s.Config.RegisterRateLimitMax, s.Config.RegisterRateLimitWindow, "register_rate_limited", "Too many registration attempts") {
-		return
-	}
-
-	email, err := auth.NormalizeEmail(input.Email)
-	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_email", "Invalid email address")
-		return
-	}
-
-	name := strings.TrimSpace(input.Name)
-	address := strings.TrimSpace(input.Address)
-	if name == "" || address == "" {
-		respondError(c, http.StatusBadRequest, "missing_fields", "Name and address are required")
-		return
-	}
-
-	if strings.TrimSpace(input.Password) == "" || strings.TrimSpace(input.PasswordConfirm) == "" {
-		respondError(c, http.StatusBadRequest, "missing_fields", "Password and confirmation are required")
-		return
-	}
-	if input.Password != input.PasswordConfirm {
-		respondError(c, http.StatusBadRequest, "password_mismatch", "Passwords do not match")
-		return
-	}
-	if err := auth.ValidatePassword(input.Password, s.Config.PasswordMinLength); err != nil {
-		respondError(c, http.StatusBadRequest, "weak_password", "Password does not meet requirements")
-		return
-	}
-
-	dob := strings.TrimSpace(input.DOB)
-	if dob == "" {
-		respondError(c, http.StatusBadRequest, "invalid_dob", "DOB must be YYYY-MM-DD")
-		return
-	}
-	birthdate, err := time.Parse("2006-01-02", dob)
-	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid_dob", "DOB must be YYYY-MM-DD")
-		return
-	}
-	if !isAtLeastAge(birthdate, 13) {
-		respondError(c, http.StatusBadRequest, "underage", "User must be at least 13 years old")
-		return
-	}
-
-	phone := strings.TrimSpace(input.Phone)
-	var phoneE164 any = nil
-	var phoneNational any = nil
-	if phone != "" {
-		normalized, national, err := auth.NormalizeVNPhone(phone)
-		if err != nil {
-			respondError(c, http.StatusBadRequest, "invalid_phone", "Invalid phone number")
-			return
-		}
-		phoneE164 = normalized
-		phoneNational = national
-	}
-
-	if exists, err := s.userExistsByEmail(email); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to validate email")
-		return
-	} else if exists {
-		respondError(c, http.StatusConflict, "already_exists", "Account already exists")
-		return
-	}
-
-	passwordHash, err := auth.HashPassword(input.Password, auth.DefaultPasswordParams)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "hash_error", "Failed to secure password")
-		return
-	}
-
-	tx, err := s.DB.Begin()
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create account")
-		return
-	}
-	defer tx.Rollback()
-
-	result, err := tx.Exec(`
-    INSERT INTO users (email, phone_e164, phone_national, is_email_verified, is_phone_verified,
-      password_hash, full_name, address, birthdate, status)
-    VALUES (?, ?, ?, FALSE, FALSE, ?, ?, ?, ?, 'active')
-  `, email, phoneE164, phoneNational, passwordHash, name, address, birthdate)
-	if err != nil {
-		if isDuplicateErr(err) {
-			respondError(c, http.StatusConflict, "already_exists", "Account already exists")
-			return
-		}
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create account")
-		return
-	}
-
-	userID64, err := result.LastInsertId()
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create account")
-		return
-	}
-	userID := int(userID64)
-
-	if address != "" && phoneNational != nil {
-		if _, err := tx.Exec(`
-      INSERT INTO user_addresses (user_id, full_name, phone, address_line, is_default)
-      VALUES (?, ?, ?, ?, TRUE)
-    `, userID, name, phoneNational, address); err != nil {
-			respondError(c, http.StatusInternalServerError, "db_error", "Failed to save address")
-			return
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to finalize account")
-		return
-	}
-
-	accessToken, refreshToken, err := s.issueTokens(c, userID)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "token_error", "Failed to issue tokens")
-		return
-	}
-	s.setAuthCookies(c, accessToken, refreshToken)
-
-	user, err := s.loadUserByID(userID)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load profile")
-		return
-	}
-
-	s.logAudit(c, &userID, "register", nil)
-
-	respondOK(c, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"user":          authUserResponse(user),
-	})
+	respondError(c, http.StatusForbidden, "gmail_only", "Please sign up with Google or Gmail OTP")
 }
 
 func (s *Server) SendEmailOTP(c *gin.Context) {
@@ -559,38 +415,46 @@ func (s *Server) VerifyLoginOTP(c *gin.Context) {
 }
 
 func (s *Server) Login(c *gin.Context) {
-	if s.Config.AuthGmailOnly {
-		respondError(c, http.StatusForbidden, "gmail_only", "Please sign in with Google or Gmail OTP")
-		return
-	}
 	var input LoginInput
 	if !s.bindJSONWithLimit(c, &input, "Invalid login payload") {
 		return
 	}
 
-	emailRaw := strings.TrimSpace(input.Email)
-	if emailRaw == "" || input.Password == "" {
-		respondError(c, http.StatusBadRequest, "missing_fields", "Email and password are required")
-		return
-	}
-
-	ipKey := rateLimitKey("login:ip", c.ClientIP())
-	if !s.enforceRateLimit(c, ipKey, s.Config.LoginIPRateLimitMax, s.Config.LoginIPRateLimitWindow, "login_rate_limited", "Too many login attempts") {
-		return
-	}
-
-	normalized, err := auth.NormalizeEmail(emailRaw)
+	email, err := auth.NormalizeEmail(input.Email)
 	if err != nil {
 		respondError(c, http.StatusBadRequest, "invalid_email", "Invalid email address")
 		return
 	}
-
-	emailKey := rateLimitKey("login:email", hashIdentifier(normalized))
-	if !s.enforceRateLimit(c, emailKey, s.Config.LoginIDRateLimitMax, s.Config.LoginIDRateLimitWindow, "login_rate_limited", "Too many login attempts") {
+	if input.Password == "" {
+		respondError(c, http.StatusBadRequest, "missing_fields", "Email and password are required")
 		return
 	}
 
-	user, err := s.loadUserByEmail(normalized)
+	ipKey := rateLimitKey("buyer_login:ip", c.ClientIP())
+	if !s.enforceRateLimit(
+		c,
+		ipKey,
+		s.Config.LoginIPRateLimitMax,
+		s.Config.LoginIPRateLimitWindow,
+		"login_rate_limited",
+		"Too many login attempts",
+	) {
+		return
+	}
+
+	emailKey := rateLimitKey("buyer_login:email", hashIdentifier(email))
+	if !s.enforceRateLimit(
+		c,
+		emailKey,
+		s.Config.LoginIDRateLimitMax,
+		s.Config.LoginIDRateLimitWindow,
+		"login_rate_limited",
+		"Too many login attempts",
+	) {
+		return
+	}
+
+	user, err := s.loadUserByEmail(email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials")
@@ -600,40 +464,20 @@ func (s *Server) Login(c *gin.Context) {
 		return
 	}
 
-	if user.Status != "active" {
-		respondError(c, http.StatusForbidden, "account_locked", "Account is not active")
+	if !s.ensureUserCanLogin(c, user) {
 		return
 	}
 
-	if user.LockedUntil.Valid && user.LockedUntil.Time.After(time.Now()) {
-		retryAfter := time.Until(user.LockedUntil.Time)
-		if retryAfter > 0 {
-			c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
-		}
-		respondErrorWithRetryAt(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked", user.LockedUntil.Time)
-		return
-	}
-
-	if !user.PasswordHash.Valid {
-		respondError(c, http.StatusUnauthorized, "password_not_set", "Password is not set for this account")
-		return
-	}
-
-	ok, err := auth.VerifyPassword(user.PasswordHash.String, input.Password)
-	if err != nil || !ok {
-		attempts, lockedUntil := s.handleLoginFailure(c, user)
-		if lockedUntil != nil {
-			retryAfter := time.Until(*lockedUntil)
-			if retryAfter > 0 {
+	if !hasPassword(user) {
+		attempts, lockedTime := s.handleLoginFailure(c, user)
+		if lockedTime != nil {
+			if retryAfter := time.Until(*lockedTime); retryAfter > 0 {
 				c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
 			}
-			respondErrorWithRetryAt(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked", *lockedUntil)
+			respondErrorWithRetryAt(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked", *lockedTime)
 			return
 		}
 		if s.Config.LoginWarnAttempts > 0 && attempts >= s.Config.LoginWarnAttempts {
-			s.logAudit(c, &user.ID, "login_warning", map[string]any{
-				"attempts": attempts,
-			})
 			respondError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials. Too many failed attempts may temporarily lock your account.")
 			return
 		}
@@ -641,7 +485,25 @@ func (s *Server) Login(c *gin.Context) {
 		return
 	}
 
-	if _, err := s.DB.Exec(`UPDATE users SET failed_login_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?`, time.Now(), user.ID); err != nil {
+	ok, err := auth.VerifyPassword(user.PasswordHash.String, input.Password)
+	if err != nil || !ok {
+		attempts, lockedTime := s.handleLoginFailure(c, user)
+		if lockedTime != nil {
+			if retryAfter := time.Until(*lockedTime); retryAfter > 0 {
+				c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
+			}
+			respondErrorWithRetryAt(c, http.StatusTooManyRequests, "account_locked", "Account is temporarily locked", *lockedTime)
+			return
+		}
+		if s.Config.LoginWarnAttempts > 0 && attempts >= s.Config.LoginWarnAttempts {
+			respondError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials. Too many failed attempts may temporarily lock your account.")
+			return
+		}
+		respondError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials")
+		return
+	}
+
+	if err := s.markLoginSuccess(user.ID); err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update login state")
 		return
 	}
@@ -653,7 +515,9 @@ func (s *Server) Login(c *gin.Context) {
 	}
 	s.setAuthCookies(c, accessToken, refreshToken)
 
-	s.logAudit(c, &user.ID, "login_success", nil)
+	s.logAudit(c, &user.ID, "login_success", map[string]any{
+		"provider": "password",
+	})
 
 	respondOK(c, gin.H{
 		"access_token":  accessToken,

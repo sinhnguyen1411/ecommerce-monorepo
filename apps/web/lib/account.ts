@@ -6,8 +6,11 @@ export type UserProfile = {
   name: string;
   avatar_url?: string;
   phone?: string;
+  birthdate?: string;
   is_email_verified?: boolean;
   emailVerificationStatus?: string;
+  has_password: boolean;
+  onboarding_required: boolean;
 };
 
 export type Address = {
@@ -50,6 +53,26 @@ export function updateProfile(input: { name: string; phone: string }) {
     "/api/account/profile",
     {
       method: "PATCH",
+      body: JSON.stringify(input)
+    },
+    { auth: true }
+  );
+}
+
+export function completeOnboarding(input: {
+  full_name: string;
+  phone: string;
+  birthdate: string;
+  address_line: string;
+  province: string;
+  district: string;
+  password: string;
+  password_confirm: string;
+}) {
+  return authRequest<UserProfile>(
+    "/api/account/onboarding/complete",
+    {
+      method: "POST",
       body: JSON.stringify(input)
     },
     { auth: true }

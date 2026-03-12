@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 
+import AuthBrandStrip from "@/components/auth/AuthBrandStrip";
 import SectionTitle from "@/components/common/SectionTitle";
 import { Button } from "@/components/ui/button";
 import { getRefreshToken, getUserToken } from "@/lib/auth";
@@ -44,7 +45,7 @@ export default function ForgotPasswordPage() {
     return () => window.clearInterval(timer);
   }, [cooldown]);
 
-  const handleRequest = async (event?: React.FormEvent<HTMLFormElement>) => {
+  const handleRequest = async (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
     setError("");
     setNotice("");
@@ -66,7 +67,7 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const handleVerify = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleVerify = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setNotice("");
@@ -88,7 +89,7 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const handleReset = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleReset = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setNotice("");
@@ -107,90 +108,121 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div>
-      <section className="section-shell pb-10 pt-14">
-        <SectionTitle
-          eyebrow="Tài khoản"
-          title="Quên mật khẩu"
-          description="Xác minh email và đặt lại mật khẩu."
-        />
-      </section>
-
-      <section className="section-shell pb-16">
-        <div className="border border-forest/10 bg-white p-8">
-          {notice ? <p className="mb-4 text-sm text-ink/70">{notice}</p> : null}
-          {error ? <p className="mb-4 text-sm text-clay">{error}</p> : null}
-
-          {step === "request" ? (
-            <form className="grid gap-4" onSubmit={handleRequest}>
-              <input
-                className="field"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="Email"
+    <div className="auth-shell auth-shell--focused">
+      <section className="section-shell pb-16 pt-10 md:pt-14">
+        <div className="auth-grid auth-grid--single">
+          <div className="auth-page-stack">
+            <AuthBrandStrip />
+            <div className="auth-card auth-card--compact auth-card--center">
+              <SectionTitle
+                eyebrow="Tài khoản"
+                title="Quên mật khẩu"
+                description="Xác minh email và đặt lại mật khẩu trong 3 bước."
               />
-              <Button type="submit" disabled={loading}>
-                {loading ? "Đang gửi..." : "Gửi OTP"}
-              </Button>
-            </form>
-          ) : null}
 
-          {step === "verify" ? (
-            <form className="grid gap-4" onSubmit={handleVerify}>
-              <input
-                className="field"
-                value={otpCode}
-                onChange={(event) => setOtpCode(event.target.value)}
-                placeholder="Mã OTP"
-              />
-              <div className="flex flex-wrap items-center gap-3">
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Đang xác minh..." : "Xác minh OTP"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={loading || cooldown > 0}
-                  onClick={() => handleRequest()}
+              {notice ? <p className="auth-global-notice">{notice}</p> : null}
+              {error ? (
+                <div
+                  className="auth-global-error"
+                  role="alert"
+                  aria-live="polite"
+                  data-testid="auth-global-error"
                 >
-                  {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại"}
-                </Button>
+                  {error}
+                </div>
+              ) : null}
+
+              {step === "request" ? (
+                <form className="grid gap-3" onSubmit={handleRequest}>
+                  <div>
+                    <label htmlFor="forgot-email" className="mb-1 block text-sm font-medium">
+                      Email
+                    </label>
+                    <input
+                      id="forgot-email"
+                      className="field"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="you@gmail.com"
+                    />
+                  </div>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Đang gửi..." : "Gửi OTP"}
+                  </Button>
+                </form>
+              ) : null}
+
+              {step === "verify" ? (
+                <form className="grid gap-3" onSubmit={handleVerify}>
+                  <div>
+                    <label htmlFor="forgot-otp" className="mb-1 block text-sm font-medium">
+                      Mã OTP
+                    </label>
+                    <input
+                      id="forgot-otp"
+                      className="field"
+                      value={otpCode}
+                      onChange={(event) => setOtpCode(event.target.value)}
+                      placeholder="Nhập mã OTP"
+                    />
+                  </div>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Đang xác minh..." : "Xác minh OTP"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={loading || cooldown > 0}
+                    onClick={() => handleRequest()}
+                  >
+                    {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại"}
+                  </Button>
+                </form>
+              ) : null}
+
+              {step === "reset" ? (
+                <form className="grid gap-3" onSubmit={handleReset}>
+                  <div>
+                    <label htmlFor="forgot-password" className="mb-1 block text-sm font-medium">
+                      Mật khẩu mới
+                    </label>
+                    <input
+                      id="forgot-password"
+                      className="field"
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      placeholder="Nhập mật khẩu mới"
+                    />
+                  </div>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
+                  </Button>
+                </form>
+              ) : null}
+
+              {step === "done" ? (
+                <div className="grid gap-3 text-sm">
+                  <p>Đặt lại mật khẩu thành công.</p>
+                  <Link className="text-forest" href="/login">
+                    Quay lại đăng nhập
+                  </Link>
+                </div>
+              ) : null}
+
+              <div className="auth-footer-links">
+                <Link className="text-forest" href="/login">
+                  Nhớ mật khẩu rồi? Đăng nhập
+                </Link>
+                <Link className="text-forest" href="/">
+                  Quay về trang chủ
+                </Link>
               </div>
-            </form>
-          ) : null}
-
-          {step === "reset" ? (
-            <form className="grid gap-4" onSubmit={handleReset}>
-              <input
-                className="field"
-                type="password"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                placeholder="Mật khẩu mới"
-              />
-              <Button type="submit" disabled={loading}>
-                {loading ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
-              </Button>
-            </form>
-          ) : null}
-
-          {step === "done" ? (
-            <div className="grid gap-3 text-sm">
-              <p>Đặt lại mật khẩu thành công.</p>
-              <Link className="text-forest" href="/login">
-                Quay lại đăng nhập
-              </Link>
             </div>
-          ) : null}
-
-          <div className="mt-6 text-xs text-ink/70">
-            Nhớ mật khẩu rồi?{" "}
-            <Link className="text-forest" href="/login">
-              Đăng nhập
-            </Link>
           </div>
         </div>
       </section>
     </div>
   );
 }
+

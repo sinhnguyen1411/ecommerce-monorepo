@@ -26,6 +26,7 @@ type userAuthRecord struct {
 	PasswordHash        sql.NullString
 	FailedLoginAttempts int
 	LockedUntil         sql.NullTime
+	OnboardingCompleted sql.NullTime
 }
 
 type AuthUserResponse struct {
@@ -39,13 +40,16 @@ type AuthUserResponse struct {
 	IsEmailVerified         bool    `json:"is_email_verified"`
 	IsPhoneVerified         bool    `json:"is_phone_verified"`
 	EmailVerificationStatus string  `json:"emailVerificationStatus"`
+	HasPassword             bool    `json:"has_password"`
+	OnboardingRequired      bool    `json:"onboarding_required"`
 	Status                  string  `json:"status"`
 }
 
 func (s *Server) loadUserByID(userID int) (*userAuthRecord, error) {
 	row := s.DB.QueryRow(`
     SELECT id, email, phone_e164, phone_national, full_name, avatar_url, address, birthdate,
-           is_email_verified, is_phone_verified, status, password_hash, failed_login_attempts, locked_until
+           is_email_verified, is_phone_verified, status, password_hash, failed_login_attempts, locked_until,
+           onboarding_completed_at
     FROM users
     WHERE id = ?
   `, userID)
@@ -55,7 +59,8 @@ func (s *Server) loadUserByID(userID int) (*userAuthRecord, error) {
 func (s *Server) loadUserByEmail(email string) (*userAuthRecord, error) {
 	row := s.DB.QueryRow(`
     SELECT id, email, phone_e164, phone_national, full_name, avatar_url, address, birthdate,
-           is_email_verified, is_phone_verified, status, password_hash, failed_login_attempts, locked_until
+           is_email_verified, is_phone_verified, status, password_hash, failed_login_attempts, locked_until,
+           onboarding_completed_at
     FROM users
     WHERE email = ?
     LIMIT 1
@@ -66,7 +71,8 @@ func (s *Server) loadUserByEmail(email string) (*userAuthRecord, error) {
 func (s *Server) loadUserByPhone(phoneE164 string) (*userAuthRecord, error) {
 	row := s.DB.QueryRow(`
     SELECT id, email, phone_e164, phone_national, full_name, avatar_url, address, birthdate,
-           is_email_verified, is_phone_verified, status, password_hash, failed_login_attempts, locked_until
+           is_email_verified, is_phone_verified, status, password_hash, failed_login_attempts, locked_until,
+           onboarding_completed_at
     FROM users
     WHERE phone_e164 = ?
     LIMIT 1
@@ -91,6 +97,7 @@ func scanUserAuthRecord(row *sql.Row) (*userAuthRecord, error) {
 		&user.PasswordHash,
 		&user.FailedLoginAttempts,
 		&user.LockedUntil,
+		&user.OnboardingCompleted,
 	); err != nil {
 		return nil, err
 	}
@@ -109,6 +116,8 @@ func authUserResponse(user *userAuthRecord) AuthUserResponse {
 		IsEmailVerified:         user.IsEmailVerified,
 		IsPhoneVerified:         user.IsPhoneVerified,
 		EmailVerificationStatus: emailVerificationStatus(user.IsEmailVerified),
+		HasPassword:             hasPassword(user),
+		OnboardingRequired:      requiresOnboarding(user),
 		Status:                  user.Status,
 	}
 }
@@ -136,6 +145,14 @@ func datePtr(value sql.NullTime) *string {
 	}
 	formatted := value.Time.Format("2006-01-02")
 	return &formatted
+}
+
+func hasPassword(user *userAuthRecord) bool {
+	return user.PasswordHash.Valid && strings.TrimSpace(user.PasswordHash.String) != ""
+}
+
+func requiresOnboarding(user *userAuthRecord) bool {
+	return !user.OnboardingCompleted.Valid
 }
 
 func emailVerificationStatus(verified bool) string {

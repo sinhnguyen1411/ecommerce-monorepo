@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Phone } from "lucide-react";
 
+import { isAuthOnlyPath } from "@/lib/auth-route";
 import { useContactSettings } from "@/lib/client-content";
 import { defaultContactSettings } from "@/lib/content";
 
 export default function SocialFloatingButtons() {
+  const pathname = usePathname();
   const settings = useContactSettings();
+  if (isAuthOnlyPath(pathname)) {
+    return null;
+  }
+
   const mobilePhone =
     settings.mobilePhone?.trim() ||
     settings.phone?.trim() ||

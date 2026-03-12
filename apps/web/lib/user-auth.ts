@@ -8,6 +8,8 @@ export type AuthUser = {
   avatar_url?: string;
   address?: string;
   birthdate?: string;
+  has_password?: boolean;
+  onboarding_required?: boolean;
   is_email_verified: boolean;
   is_phone_verified: boolean;
   emailVerificationStatus?: string;
