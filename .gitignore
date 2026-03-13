@@ -42,3 +42,7 @@ opencode.json
 /.codex/skills/opencode-cli
 /.opencode
 AGENTS.md
+.githooks/pre-commit
+scripts/oc-task.ps1
+scripts/oc-task.sh
+/scripts

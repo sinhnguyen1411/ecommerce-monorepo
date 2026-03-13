@@ -208,7 +208,78 @@ npm run build
 
 Notes:
 - Playwright first run may require: `npx playwright install`.
-- Build runs mojibake checks via `prebuild`.
+- Build guard via `prebuild`: `check:mojibake` + `lint:errors`.
+
+## Encoding and Git Hooks
+- Repository text files are normalized to UTF-8 + LF via `.editorconfig` and `.gitattributes`.
+- Web build/commit protection uses:
+  - `cd apps/web && npm run check:mojibake` (mojibake + invisible control-char guard)
+  - `cd apps/web && npm run lint:errors` (parse/lint errors only)
+- Bootstrap scripts set repo-local Git config: `core.hooksPath=.githooks` and `core.autocrlf=false`.
+
+Enable repo hooks once after clone:
+
+PowerShell:
+```powershell
+.\scripts\setup-git-hooks.ps1
+```
+
+sh/bash:
+```sh
+./scripts/setup-git-hooks.sh
+```
+
+<!-- OPENCODE_WORKFLOW:START -->
+## OpenCode Rate-Limit Workflow
+- Default policy for code tasks: mandatory OpenCode wrapper lifecycle (`prepare -> code+verify -> complete`).
+- Workflow state/logs are repo-local under `.opencode/rate-limit/` and should stay git-ignored.
+
+One-time setup:
+
+PowerShell:
+```powershell
+.\scripts\setup-opencode-rate-limit.ps1
+```
+
+sh/bash:
+```sh
+./scripts/setup-opencode-rate-limit.sh
+```
+
+Defaults:
+- `cheapModel=opencode/gpt-5-nano`
+- `strongModel=opencode/big-pickle`
+- `gateWindow=5`
+- `maxExploreRuns=1` (second explore only for `runtime`/`security` or `--force`)
+
+Code task lifecycle:
+```powershell
+.\scripts\oc-task.ps1 -Action prepare -Tags "runtime,ui" -Goal "..." -Context "..."
+# implement + verify changes
+.\scripts\oc-task.ps1 -Action complete -Prompt "..." -Label "checkpoint"
+```
+
+Fail-open path:
+```powershell
+.\scripts\oc-task.ps1 -Action skip -Reason "opencode unavailable"
+```
+
+Status/reset:
+```powershell
+.\scripts\oc-task.ps1 -Action status
+.\scripts\oc-task.ps1 -Action reset
+```
+
+Enforcement roadmap:
+- Sprint 1-2 (soft): no CI blocking, task updates must include `OpenCode: used` or `OpenCode: skipped (reason)`.
+- After KPI stability (hard): add CI lifecycle checks (`prepare+complete` or `skip` with reason) for bootstrapped repos.
+
+Team weekly aggregate:
+```powershell
+$SkillDir = Join-Path $HOME ".codex\skills\opencode-cli"
+powershell -NoProfile -ExecutionPolicy Bypass -File "$SkillDir\scripts\weekly-aggregate.ps1"
+```
+<!-- OPENCODE_WORKFLOW:END -->
 
 ## Deployment
 See `docs/README_DEPLOY.md`.
@@ -236,3 +307,10 @@ Get-Content backup.sql | docker exec -i tambo_mysql mysql -u root -pYOUR_ROOT_PA
 - `docs/SECURITY_ASVS_L1.md`: security gap analysis
 - `docs/HANDOVER_GUIDE.md`: handover notes
 - `apps/web/README_UI.md`: storefront UI summary
+
+
+
+
+
+
+
