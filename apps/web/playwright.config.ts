@@ -18,6 +18,10 @@ export default defineConfig({
     command: "pnpm exec next dev -p 3002",
     url: "http://localhost:3002",
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000
+    timeout: 120_000,
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_DISABLE_STOREFRONT_TRACKER: "1",
+    }
   }
 });

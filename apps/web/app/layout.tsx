@@ -3,6 +3,7 @@ import "./globals.css";
 import { Be_Vietnam_Pro, Noto_Sans } from "next/font/google";
 
 import CartDrawer from "@/components/cart/CartDrawer";
+import StorefrontAnalyticsTracker from "@/components/analytics/StorefrontAnalyticsTracker";
 import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
 import Topbar from "@/components/layout/Topbar";
@@ -49,6 +50,7 @@ export default async function RootLayout({
           promoSettings={homeContent.promoPopup}
           notificationSettings={homeContent.notifications}
         />
+        <StorefrontAnalyticsTracker />
         <Header />
         <div className="min-h-screen pb-16">{children}</div>
         <Footer />
