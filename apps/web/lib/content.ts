@@ -369,8 +369,12 @@ export type HomeIntroSection = {
   title: string;
   headline: string;
   description: string;
-  ctaLabel: string;
-  ctaHref: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  primaryCtaLabel: string;
+  primaryCtaHref: string;
+  secondaryCtaLabel: string;
+  secondaryCtaHref: string;
   imageSrc: string;
   imageAlt: string;
 };
@@ -420,8 +424,12 @@ export const defaultHomePageContent: HomePageContent = {
     headline: "Giải pháp cho tương lai thông minh",
     description:
       "Nông Dược Tam Bố tự hào là đơn vị tiên phong trong việc xây dựng nền nông nghiệp xanh với giải pháp cho tương lai thông minh, bền vững. Với sứ mệnh đồng hành cùng nhà nông, Tam Bố không ngừng nghiên cứu và phát triển các dòng sản phẩm thân thiện với môi trường như phân bón hữu cơ, chế phẩm sinh học và giải pháp xử lý đất trồng an toàn. Chúng tôi hiểu rằng để phát triển lâu dài, nông nghiệp phải đi đôi với bảo vệ tài nguyên thiên nhiên, cải thiện chất lượng đất, nước và hệ sinh thái canh tác. Định hướng của Nông Dược Tam Bố là ứng dụng công nghệ cao vào sản xuất, tối ưu năng suất mà vẫn đảm bảo an toàn cho sức khỏe người tiêu dùng. Các sản phẩm như phân bón sinh học, chế phẩm xử lý tuyến trùng của Tam Bố không chỉ giúp cây trồng sinh trưởng mạnh mẽ mà còn góp phần giảm thiểu tác động tiêu cực đến môi trường. Chúng tôi cam kết mang đến cho bà con giải pháp canh tác hiệu quả, chi phí hợp lý và lợi ích lâu dài. Với Nông Dược Tam Bố, phát triển nông nghiệp xanh không chỉ là mục tiêu mà còn là trách nhiệm đối với thế hệ tương lai. Cùng Tam Bố, vun đắp nền nông nghiệp bền vững từ hôm nay!",
-    ctaLabel: "Xem chi tiết",
+    ctaLabel: "Đặt hàng ngay",
     ctaHref: "/collections/all",
+    primaryCtaLabel: "Đặt hàng ngay",
+    primaryCtaHref: "/collections/all",
+    secondaryCtaLabel: "Tìm hiểu thêm",
+    secondaryCtaHref: "/pages/about-us",
     imageSrc:
       "https://images.pexels.com/photos/19000373/pexels-photo-19000373.jpeg?cs=srgb&dl=pexels-abdulkayum97-19000373.jpg&fm=jpg",
     imageAlt: "Nông Dược Tam Bố"
@@ -637,16 +645,32 @@ const normalizeNotifications = (input: unknown, fallback: NotificationSettings) 
 
 const normalizeIntro = (input: unknown, fallback: HomeIntroSection): HomeIntroSection => {
   const source = input && typeof input === "object"
-    ? (input as Partial<HomeIntroSection>)
+    ? (input as Partial<HomeIntroSection> & { ctaLabel?: string; ctaHref?: string })
     : {};
+  const legacyCtaLabel =
+    typeof source.ctaLabel === "string" ? source.ctaLabel : fallback.primaryCtaLabel;
+  const legacyCtaHref =
+    typeof source.ctaHref === "string" ? source.ctaHref : fallback.primaryCtaHref;
   return {
     eyebrow: typeof source.eyebrow === "string" ? source.eyebrow : fallback.eyebrow,
     title: typeof source.title === "string" ? source.title : fallback.title,
     headline: typeof source.headline === "string" ? source.headline : fallback.headline,
     description:
       typeof source.description === "string" ? source.description : fallback.description,
-    ctaLabel: typeof source.ctaLabel === "string" ? source.ctaLabel : fallback.ctaLabel,
-    ctaHref: typeof source.ctaHref === "string" ? source.ctaHref : fallback.ctaHref,
+    ctaLabel: legacyCtaLabel,
+    ctaHref: legacyCtaHref,
+    primaryCtaLabel:
+      typeof source.primaryCtaLabel === "string" ? source.primaryCtaLabel : legacyCtaLabel,
+    primaryCtaHref:
+      typeof source.primaryCtaHref === "string" ? source.primaryCtaHref : legacyCtaHref,
+    secondaryCtaLabel:
+      typeof source.secondaryCtaLabel === "string"
+        ? source.secondaryCtaLabel
+        : fallback.secondaryCtaLabel,
+    secondaryCtaHref:
+      typeof source.secondaryCtaHref === "string"
+        ? source.secondaryCtaHref
+        : fallback.secondaryCtaHref,
     imageSrc: typeof source.imageSrc === "string" ? source.imageSrc : fallback.imageSrc,
     imageAlt: typeof source.imageAlt === "string" ? source.imageAlt : fallback.imageAlt
   };

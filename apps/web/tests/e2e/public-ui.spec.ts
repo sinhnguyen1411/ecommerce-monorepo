@@ -15,6 +15,26 @@ for (const viewport of viewports) {
       await expect(slider.locator(".home-slide").first()).toBeVisible();
     });
 
+    test("home intro shows dual CTA and no horizontal overflow", async ({ page }) => {
+      await seedContentStorage(page);
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+
+      const introSection = page.locator(".section-home-introduce");
+      await expect(introSection).toBeVisible();
+      const secondaryCta = introSection.getByTestId("home-intro-secondary-cta");
+      const primaryCta = introSection.getByTestId("home-intro-primary-cta");
+      await expect(secondaryCta).toBeVisible();
+      await expect(primaryCta).toBeVisible();
+      await expect(secondaryCta).toHaveAttribute("href", "/pages/about-us");
+      await expect(primaryCta).toHaveAttribute("href", "/collections/all");
+
+      const introOverflow = await introSection.evaluate((node) => {
+        const element = node as HTMLElement;
+        return element.scrollWidth > element.clientWidth + 1;
+      });
+      expect(introOverflow).toBeFalsy();
+    });
+
     test("contact shows seeded information", async ({ page }) => {
       await seedContentStorage(page);
       await page.goto("/pages/lien-he", { waitUntil: "domcontentloaded" });

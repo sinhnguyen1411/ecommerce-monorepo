@@ -11,7 +11,8 @@
     "lint:errors": "next lint --quiet",
     "fix:mojibake": "node scripts/fix-mojibake.mjs",
     "check:mojibake": "node scripts/check-mojibake.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "node scripts/run-e2e-with-backend.mjs",
+    "test:e2e:raw": "playwright test"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.2",
@@ -27,6 +28,7 @@
     "qrcode": "1.5.3",
     "react": "18.3.1",
     "react-dom": "18.3.1",
+    "recharts": "^3.8.0",
     "sonner": "1.5.0",
     "tailwind-merge": "2.5.2",
     "zustand": "4.5.5"

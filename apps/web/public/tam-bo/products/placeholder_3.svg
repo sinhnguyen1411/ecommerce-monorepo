@@ -1,19 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800" role="img" aria-labelledby="title desc">
-  <title id="title">Tam Bo Placeholder 3</title>
-  <desc id="desc">Temporary product image placeholder.</desc>
+  <title id="title">Tam Bo Organic Visual 3</title>
+  <desc id="desc">Organic themed fallback image with cool green palette and field layers.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#e0f2f1"/>
-      <stop offset="100%" stop-color="#b2dfdb"/>
+    <linearGradient id="bg3" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#e6f6f3"/>
+      <stop offset="100%" stop-color="#cdebe2"/>
     </linearGradient>
+    <radialGradient id="orb3" cx="0.5" cy="0.2" r="0.7">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect width="600" height="800" fill="url(#bg)"/>
-  <path d="M0 520 C140 480 280 480 420 520 C520 560 560 570 600 550 V800 H0 Z" fill="#4db6ac"/>
-  <path d="M0 610 C140 580 280 580 420 610 C520 650 560 660 600 640 V800 H0 Z" fill="#26a69a" opacity="0.9"/>
-  <circle cx="300" cy="210" r="95" fill="#ffffff" stroke="#2e7d32" stroke-width="6"/>
-  <circle cx="300" cy="210" r="70" fill="#e0f2f1"/>
-  <g fill="#1b5e20" font-family="Roboto, Arial, sans-serif" text-anchor="middle">
-    <text x="300" y="140" font-size="28" font-weight="700">Tam Bo</text>
-    <text x="300" y="180" font-size="16">Temporary image</text>
+  <rect width="600" height="800" fill="url(#bg3)"/>
+  <circle cx="300" cy="190" r="170" fill="url(#orb3)"/>
+  <path d="M0 518 C120 472 240 466 360 508 C470 546 540 558 600 536 V800 H0 Z" fill="#429f8f"/>
+  <path d="M0 612 C124 576 244 570 360 604 C478 640 548 656 600 636 V800 H0 Z" fill="#2f8a7c" opacity="0.95"/>
+  <g stroke="#dcf4ee" stroke-width="4" opacity="0.64">
+    <path d="M48 612 C170 574 292 574 414 612" fill="none"/>
+    <path d="M64 662 C184 626 306 626 428 662" fill="none"/>
+  </g>
+  <g transform="translate(240 122) scale(1.05)">
+    <path d="M0 54 C0 22 28 0 58 0 C58 32 32 64 0 64 C0 60 0 58 0 54 Z" fill="#2f7a36" opacity="0.84"/>
+    <path d="M54 66 C54 34 82 14 112 14 C112 44 86 78 54 78 C54 74 54 70 54 66 Z" fill="#4f9d66" opacity="0.84"/>
   </g>
 </svg>

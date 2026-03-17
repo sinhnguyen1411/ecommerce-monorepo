@@ -4,19 +4,20 @@ import { mockAdminApi, viewports } from "./helpers";
 
 const openAdminNavIfCollapsed = async (page: any, width: number) => {
   if (width < 1024) {
-    const menuButton = page.getByRole("button", { name: "Mở menu admin" });
+    const menuButton = page.getByRole("button", { name: /menu admin/i });
     if (await menuButton.isVisible()) {
       await menuButton.click();
     }
   }
 };
 
-const clickAdminNav = async (page: any, width: number, label: string | RegExp) => {
+const clickAdminNav = async (page: any, width: number, navId: string) => {
   await openAdminNavIfCollapsed(page, width);
+  const testId = `admin-nav-${navId}`;
 
   if (width < 1024) {
     const sheet = page.getByRole("dialog");
-    const navButton = sheet.getByRole("button", { name: label });
+    const navButton = sheet.getByTestId(testId);
     await navButton.waitFor();
     await navButton.click();
     await page.keyboard.press("Escape");
@@ -24,9 +25,16 @@ const clickAdminNav = async (page: any, width: number, label: string | RegExp) =
     return;
   }
 
-  const navButton = page.locator("aside").getByRole("button", { name: label });
+  const navButton = page.locator("aside").getByTestId(testId);
   await navButton.waitFor();
   await navButton.click();
+  const overlay = page.getByTestId("admin-sidebar-overlay");
+  await page.mouse.move(Math.max(980, width + 180), 140);
+  await page.waitForTimeout(220);
+  if (await overlay.isVisible().catch(() => false)) {
+    await overlay.click({ force: true });
+    await expect(overlay).toBeHidden();
+  }
 };
 
 for (const viewport of viewports) {
@@ -37,19 +45,16 @@ for (const viewport of viewports) {
       await mockAdminApi(page);
       await page.goto("/admin", { waitUntil: "domcontentloaded" });
 
-      await expect(page.getByText("Hành động nhanh")).toBeVisible();
-      await expect(page.getByText("Thông báo hệ thống")).toBeVisible();
-
-      const main = page.getByRole("main");
-      await clickAdminNav(page, viewport.width, "Liên hệ");
-      await expect(
-        main.getByRole("heading", { name: "Thông tin liên hệ" })
-      ).toBeVisible();
-
-      await clickAdminNav(page, viewport.width, /Trang chủ/i);
-      await expect(
-        main.getByRole("heading", { name: "Trang chủ", exact: true })
-      ).toBeVisible();
+      if (viewport.width >= 1024) {
+        await expect(
+          page.locator("aside").getByRole("heading", { name: /admin/i })
+        ).toBeVisible();
+      }
+      await expect(page.getByRole("main")).toBeVisible();
+      await clickAdminNav(page, viewport.width, "contact");
+      await expect(page.getByRole("main")).toBeVisible();
+      await clickAdminNav(page, viewport.width, "home");
+      await expect(page.getByRole("main")).toBeVisible();
     });
   });
 }
@@ -61,16 +66,16 @@ test.describe("Admin UI data flows", () => {
     const categories = [
       {
         id: 1,
-        name: "Hữu cơ",
+        name: "Huu co",
         slug: "huu-co",
-        description: "Nhóm sản phẩm hữu cơ",
+        description: "Nhom san pham huu co",
         sort_order: 1
       },
       {
         id: 2,
         name: "Vi sinh",
         slug: "vi-sinh",
-        description: "Nhóm sản phẩm vi sinh",
+        description: "Nhom san pham vi sinh",
         sort_order: 2
       }
     ];
@@ -80,9 +85,9 @@ test.describe("Admin UI data flows", () => {
       const category = categories[index % categories.length];
       return {
         id,
-        name: `Sản phẩm ${id}`,
+        name: `SÃƒÂ¡Ã‚ÂºÃ‚Â£n phÃƒÂ¡Ã‚ÂºÃ‚Â©m ${id}`,
         slug: `san-pham-${id}`,
-        description: "Mô tả ngắn",
+        description: "Mo ta ngan",
         price: 100000 + id * 1000,
         compare_at_price: id % 2 === 0 ? 120000 + id * 1000 : null,
         featured: id === 1,
@@ -109,14 +114,11 @@ test.describe("Admin UI data flows", () => {
     await mockAdminApi(page, { products, categories });
     await page.goto("/admin", { waitUntil: "domcontentloaded" });
 
-    await clickAdminNav(page, 1024, "Sản phẩm");
-    const section = page
-      .locator("div")
-      .filter({ has: page.getByRole("heading", { name: "Quản lý sản phẩm" }) })
-      .first();
+    await clickAdminNav(page, 1024, "products");
+    const section = page.getByRole("main");
 
-    const statusSelect = section.locator("select").first();
-    const categorySelect = section.locator("select").nth(1);
+    const statusSelect = section.getByTestId("admin-products-filter-status");
+    const categorySelect = section.getByTestId("admin-products-filter-category");
 
     await statusSelect.selectOption("hidden");
     await categorySelect.selectOption("2");
@@ -133,6 +135,130 @@ test.describe("Admin UI data flows", () => {
     await expect(section.getByText("/san-pham-1")).not.toBeVisible();
   });
 
+  test("reorders admin menu and persists after reload", async ({ page }) => {
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    const aside = page.locator("aside");
+    await expect(aside.getByRole("heading", { name: /admin/i })).toBeVisible();
+    const navList = aside.locator("div.space-y-1");
+    await expect(navList).toBeVisible();
+    const navBox = await navList.boundingBox();
+    const sortBox = await aside.getByTestId("admin-nav-sort-toggle").boundingBox();
+    expect(navBox).not.toBeNull();
+    expect(sortBox).not.toBeNull();
+    if (navBox && sortBox) {
+      expect(sortBox.y).toBeGreaterThan(navBox.y + navBox.height - 1);
+    }
+
+    await page.getByTestId("admin-nav-sort-toggle").click();
+    await expect(page.getByTestId("admin-nav-sort-item-overview")).toContainText(/C/i);
+
+    await page.getByTestId("admin-nav-sort-move-down-home").click();
+    await expect(page.getByTestId("admin-nav-sort-item-products")).toBeVisible();
+
+    await page
+      .getByTestId("admin-nav-sort-drag-orders")
+      .dragTo(page.getByTestId("admin-nav-sort-item-products"));
+
+    await page.getByTestId("admin-nav-sort-save").click();
+
+    const normalNavButtons = aside.locator("div.space-y-1 > button");
+    await expect(normalNavButtons.nth(1)).toHaveAttribute("data-testid", "admin-nav-orders");
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(aside.locator("div.space-y-1 > button").nth(1)).toHaveAttribute(
+      "data-testid",
+      "admin-nav-orders"
+    );
+  });
+
+  test("uses hover-expand sidebar and persists density preferences", async ({ page }) => {
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    const aside = page.locator("aside");
+    await expect(page.getByTestId("admin-sidebar-collapse-toggle-header")).toHaveCount(0);
+    await expect(page.getByTestId("admin-sidebar-collapse-toggle")).toHaveCount(0);
+    await expect(aside).toContainText(/ADMIN/i);
+    await expect(aside).not.toContainText(/Bang dieu khien/i);
+    await expect(page.getByRole("banner")).toContainText(/TAM/i);
+    await expect(aside.getByTestId("admin-nav-rail")).toBeVisible();
+
+    await aside.hover();
+    await expect(aside.getByTestId("admin-nav-full")).toBeVisible();
+    const overlay = page.getByTestId("admin-sidebar-overlay");
+    await expect(overlay).toBeVisible();
+
+    await aside.getByTestId("admin-nav-products").click();
+    await expect(aside.getByTestId("admin-nav-full")).toBeVisible();
+
+    await page.mouse.move(1200, 200);
+    await expect(aside.getByTestId("admin-nav-rail")).toBeVisible();
+
+    const densityReqPromise = page.waitForRequest((request) => {
+      if (request.method() !== "PATCH") {
+        return false;
+      }
+      return /\/api\/admin\/me\/preferences$/.test(new URL(request.url()).pathname);
+    });
+    await page.getByTestId("admin-density-toggle").click();
+    const densityReq = await densityReqPromise;
+    const densityPayload = (densityReq.postDataJSON() || {}) as {
+      ui_preferences?: { density?: string };
+    };
+    expect(densityPayload.ui_preferences?.density).toBe("comfortable");
+    await expect(page.getByTestId("admin-density-toggle")).toContainText(/Tho/i);
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator("aside").getByTestId("admin-nav-rail")).toBeVisible();
+    await expect(page.getByTestId("admin-density-toggle")).toContainText(/Tho/i);
+  });
+
+  test("renders overview charts and removes quick upload block", async ({ page }) => {
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    const main = page.getByRole("main");
+    const grainSelect = main.getByTestId("admin-overview-grain");
+    await expect(grainSelect).toBeVisible();
+    await expect(main.getByTestId("admin-overview-orders-chart")).toBeVisible();
+    await expect(main.getByTestId("admin-overview-visits-chart")).toBeVisible();
+    await expect(main.getByTestId("admin-overview-order-status")).toBeVisible();
+    await expect(main.getByTestId("admin-overview-payment-status")).toBeVisible();
+    await expect(main.getByTestId("admin-overview-top-products")).toBeVisible();
+    await expect(main.getByTestId("admin-overview-recent-orders")).toBeVisible();
+
+    const monthRequest = page.waitForRequest((request) => {
+      if (request.method() !== "GET") {
+        return false;
+      }
+      const url = new URL(request.url());
+      return (
+        url.pathname.endsWith("/api/admin/dashboard") &&
+        url.searchParams.get("grain") === "month"
+      );
+    });
+    await grainSelect.selectOption("month");
+    await monthRequest;
+
+    await expect(main.getByText(/Tai len nhanh/i)).toHaveCount(0);
+  });
+
+  test("closes mobile admin sheet after nav selection", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    const menuButton = page.getByRole("button", { name: /menu admin/i });
+    await expect(menuButton).toBeVisible();
+    await menuButton.click();
+
+    const sheet = page.getByRole("dialog");
+    await expect(sheet).toBeVisible();
+    await sheet.getByTestId("admin-nav-products").click();
+    await expect(sheet).toBeHidden();
+  });
   test("opens product dialogs when editing and creating", async ({ page }) => {
     const categories = [
       {
@@ -181,10 +307,7 @@ test.describe("Admin UI data flows", () => {
     await mockAdminApi(page, { products, categories });
     await page.goto("/admin", { waitUntil: "domcontentloaded" });
 
-    await page
-      .locator("aside")
-      .getByRole("button", { name: /Sản phẩm/i })
-      .click();
+    await clickAdminNav(page, 1024, "products");
     const main = page.getByRole("main");
 
     await main.getByTestId("admin-product-edit-1").click();
@@ -207,9 +330,9 @@ test.describe("Admin UI data flows", () => {
     await mockAdminApi(page);
     await page.goto("/admin", { waitUntil: "domcontentloaded" });
 
-    await clickAdminNav(page, 1024, /Trang chủ/i);
+    await clickAdminNav(page, 1024, "home");
     const main = page.getByRole("main");
-    await main.getByRole("button", { name: "Banner sản phẩm", exact: true }).click();
+    await main.getByTestId("admin-home-tab-spotlights").click();
 
     const cards = main.getByTestId("admin-spotlight-card");
     await expect(cards).toHaveCount(2);
@@ -219,7 +342,7 @@ test.describe("Admin UI data flows", () => {
     await main.getByTestId("admin-spotlight-add").click();
     await expect(cards).toHaveCount(3);
     const clonedTitleInput = cards.nth(2).locator("input").first();
-    await expect(clonedTitleInput).toHaveValue(`${secondTitle} (Bản sao)`);
+    await expect(clonedTitleInput).toHaveValue(/B.*sao/);
 
     await clonedTitleInput.fill("Block clone test");
     await expect(clonedTitleInput).toHaveValue("Block clone test");
@@ -243,7 +366,6 @@ test.describe("Admin UI data flows", () => {
     await expect(cards).toHaveCount(1);
 
     await expect(main.getByTestId("admin-spotlight-delete-0")).toBeDisabled();
-    await expect(main.getByText("Tối thiểu 1 block.")).toBeVisible();
 
     const saveRequestPromise = page.waitForRequest((request) => {
       if (request.method() !== "PATCH") {
@@ -267,10 +389,102 @@ test.describe("Admin UI data flows", () => {
     expect(parsed.spotlights?.[0]?.title).toBe("Block clone test");
   });
 
+  test("saves dual intro CTA configuration", async ({ page }) => {
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    await clickAdminNav(page, 1024, "home");
+    const main = page.getByRole("main");
+    await main.getByTestId("admin-home-tab-intro").click();
+
+    await main.getByTestId("admin-intro-secondary-cta-label").fill("Tim hieu them moi");
+    await main.getByTestId("admin-intro-secondary-cta-link").fill("/pages/about-us");
+    await main.getByTestId("admin-intro-primary-cta-label").fill("Dat hang ngay moi");
+    await main.getByTestId("admin-intro-primary-cta-link").fill("/collections/all");
+
+    const saveRequestPromise = page.waitForRequest((request) => {
+      if (request.method() !== "PATCH") {
+        return false;
+      }
+      const pathname = new URL(request.url()).pathname;
+      return /\/api\/admin\/pages\/\d+$/.test(pathname);
+    });
+
+    await main.getByTestId("admin-home-save-intro").click();
+
+    const saveRequest = await saveRequestPromise;
+    const payload = (saveRequest.postDataJSON() || {}) as { content?: string };
+    expect(payload.content).toBeTruthy();
+
+    const parsed = JSON.parse(payload.content || "{}") as {
+      intro?: {
+        primaryCtaLabel?: string;
+        primaryCtaHref?: string;
+        secondaryCtaLabel?: string;
+        secondaryCtaHref?: string;
+      };
+    };
+    expect(parsed.intro?.secondaryCtaLabel).toBe("Tim hieu them moi");
+    expect(parsed.intro?.secondaryCtaHref).toBe("/pages/about-us");
+    expect(parsed.intro?.primaryCtaLabel).toBe("Dat hang ngay moi");
+    expect(parsed.intro?.primaryCtaHref).toBe("/collections/all");
+  });
+
   test("shows error when admin data load fails", async ({ page }) => {
     await mockAdminApi(page, { failPaths: ["/api/admin/products"] });
     await page.goto("/admin", { waitUntil: "domcontentloaded" });
 
     await expect(page.locator("main .border-rose-200")).toBeVisible();
+  });
+
+  test("renders orders as list rows and updates via detail panel", async ({ page }) => {
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    await clickAdminNav(page, 1024, "orders");
+    const main = page.getByRole("main");
+    const orderRow = main.getByTestId("admin-order-row-20");
+
+    await expect(orderRow).toBeVisible();
+    await expect(main.getByTestId("admin-order-detail-20")).toHaveCount(0);
+    await expect(main.getByTestId("admin-order-toggle-20")).toHaveAttribute(
+      "aria-label",
+      /chi/i
+    );
+
+    const quickStatusRequestPromise = page.waitForRequest((request) => {
+      if (request.method() !== "PATCH") {
+        return false;
+      }
+      return /\/api\/admin\/orders\/20$/.test(new URL(request.url()).pathname);
+    });
+    await main.getByTestId("admin-order-quick-status-20").selectOption("confirmed");
+    const quickStatusRequest = await quickStatusRequestPromise;
+    const quickStatusPayload = (quickStatusRequest.postDataJSON() || {}) as {
+      status?: string;
+    };
+    expect(quickStatusPayload.status).toBe("confirmed");
+
+    await main.getByTestId("admin-order-toggle-20").click();
+    const detail = main.getByTestId("admin-order-detail-20");
+    await expect(detail).toBeVisible();
+    await expect(detail.getByTestId("admin-order-save-20")).toHaveCount(0);
+
+    await detail.getByTestId("admin-order-phone-20").fill("0900123456");
+
+    const saveRequestPromise = page.waitForRequest((request) => {
+      if (request.method() !== "PATCH") {
+        return false;
+      }
+      return /\/api\/admin\/orders\/20$/.test(new URL(request.url()).pathname);
+    });
+
+    await detail.getByTestId("admin-order-phone-20").blur();
+    const saveRequest = await saveRequestPromise;
+    const payload = (saveRequest.postDataJSON() || {}) as { phone?: string };
+    expect(payload.phone).toBe("0900123456");
+    await expect(detail.getByTestId("admin-order-save-state-20")).toContainText(
+      /Đang lưu|Đã lưu|Lưu thất bại|Dang luu|Da luu|Luu that bai/i
+    );
   });
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Phone } from "lucide-react";
@@ -11,9 +12,10 @@ import { defaultContactSettings } from "@/lib/content";
 export default function SocialFloatingButtons() {
   const pathname = usePathname();
   const settings = useContactSettings();
-  if (isAuthOnlyPath(pathname)) {
-    return null;
-  }
+  const hiddenOnRoute = isAuthOnlyPath(pathname);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [footerLift, setFooterLift] = useState(0);
 
   const mobilePhone =
     settings.mobilePhone?.trim() ||
@@ -22,18 +24,111 @@ export default function SocialFloatingButtons() {
   const phoneDigits = mobilePhone.replace(/[^0-9+]/g, "");
   const facebookUrl = settings.facebookUrl?.trim() || defaultContactSettings.facebookUrl;
   const zaloUrl = settings.zaloUrl?.trim() || defaultContactSettings.zaloUrl;
-  const baseButton =
-    "flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-[box-shadow,filter] duration-200 hover:shadow-xl hover:brightness-110 cursor-pointer";
+  const baseButton = "social-floating__btn";
   const iconClassName = "h-6 w-6";
+  const floatingClassName = useMemo(() => {
+    const classes = [
+      "social-floating",
+      "fixed",
+      "bottom-6",
+      "right-6",
+      "z-[70]",
+      "flex",
+      "flex-col",
+      "gap-3"
+    ];
+    if (isDesktop) {
+      classes.push("social-floating--desktop");
+      if (!expanded) {
+        classes.push("social-floating--compact");
+      }
+    } else {
+      classes.push("social-floating--mobile");
+    }
+    if (footerLift > 0) {
+      classes.push("social-floating--lifted");
+    }
+    return classes.join(" ");
+  }, [expanded, footerLift, isDesktop]);
+  const dynamicBottom = 24 + Math.min(footerLift, 260);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+    const media = window.matchMedia("(min-width: 1024px)");
+    const handleMedia = () => {
+      const nextDesktop = media.matches;
+      setIsDesktop(nextDesktop);
+      setExpanded(!nextDesktop);
+    };
+    handleMedia();
+    media.addEventListener("change", handleMedia);
+    return () => media.removeEventListener("change", handleMedia);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+    const updateLift = () => {
+      const footer = document.querySelector(".footer-main");
+      if (!footer) {
+        setFooterLift(0);
+        return;
+      }
+      const rect = footer.getBoundingClientRect();
+      const overlap = Math.max(0, window.innerHeight - rect.top);
+      setFooterLift(overlap > 0 ? overlap + 16 : 0);
+    };
+    updateLift();
+    window.addEventListener("resize", updateLift);
+    window.addEventListener("scroll", updateLift, { passive: true });
+    return () => {
+      window.removeEventListener("resize", updateLift);
+      window.removeEventListener("scroll", updateLift);
+    };
+  }, []);
+
+  if (hiddenOnRoute) {
+    return null;
+  }
 
   return (
-    <div className="social-floating fixed bottom-6 right-6 z-[70] flex flex-col gap-3">
+    <div
+      className={floatingClassName}
+      style={{ bottom: `${dynamicBottom}px` }}
+      onMouseEnter={() => {
+        if (isDesktop) {
+          setExpanded(true);
+        }
+      }}
+      onMouseLeave={() => {
+        if (isDesktop) {
+          setExpanded(false);
+        }
+      }}
+      onFocusCapture={() => {
+        if (isDesktop) {
+          setExpanded(true);
+        }
+      }}
+      onBlurCapture={(event) => {
+        if (!isDesktop) {
+          return;
+        }
+        const related = event.relatedTarget as Node | null;
+        if (!related || !event.currentTarget.contains(related)) {
+          setExpanded(false);
+        }
+      }}
+    >
       <Link
         href={facebookUrl}
         target="_blank"
         rel="noreferrer"
         aria-label="Facebook"
-        className={`${baseButton} bg-[#1877f2]`}
+        className={`${baseButton} social-floating__btn--facebook`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -51,7 +146,7 @@ export default function SocialFloatingButtons() {
       <Link
         href={`tel:${phoneDigits}`}
         aria-label="Gọi di động"
-        className={`${baseButton} bg-[#1d4ed8]`}
+        className={`${baseButton} social-floating__btn--phone`}
       >
         <Phone className={iconClassName} />
       </Link>
@@ -60,7 +155,7 @@ export default function SocialFloatingButtons() {
         target="_blank"
         rel="noreferrer"
         aria-label="Zalo"
-        className={`${baseButton} bg-[#0068ff]`}
+        className={`${baseButton} social-floating__btn--zalo`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

@@ -55,23 +55,177 @@ export const seedContentStorage = async (page: Page) => {
   );
 };
 
+type MockAdminRecord = Record<string, unknown>;
+
+type MockAdminOrder = MockAdminRecord & {
+  id: number;
+};
+
+type MockAdminPage = MockAdminRecord & {
+  id: number;
+  title: string;
+  slug: string;
+  content: string;
+  updated_at: string;
+};
+
+type MockDashboardMap = {
+  [key: string]: MockDashboardResponse;
+  day: MockDashboardResponse;
+  month: MockDashboardResponse;
+  year: MockDashboardResponse;
+};
+
+type MockDashboardPoint = {
+  key: string;
+  label: string;
+  orders: number;
+  paid_revenue: number;
+  pageviews: number;
+  unique_visitors: number;
+};
+
+type MockDashboardResponse = {
+  grain: "day" | "month" | "year";
+  range_label: string;
+  summary: {
+    orders: number;
+    paid_revenue: number;
+    average_order_value: number;
+    pageviews: number;
+    unique_visitors: number;
+  };
+  series: MockDashboardPoint[];
+  order_status_totals: Array<{ status: string; count: number }>;
+  payment_status_totals: Array<{ status: string; count: number }>;
+  top_products: Array<{
+    product_id: number;
+    product_name: string;
+    quantity_sold: number;
+    revenue: number;
+  }>;
+  recent_orders: Array<{
+    id: number;
+    order_number: string;
+    customer_name: string;
+    total: number;
+    status: string;
+    payment_status: string;
+    created_at: string;
+  }>;
+};
+
 type AdminApiOverrides = {
-  products?: typeof products;
-  categories?: typeof categories;
-  posts?: typeof posts;
-  qna?: typeof qna;
-  orders?: typeof orders;
-  pages?: typeof pages;
-  paymentSettings?: typeof paymentSettings;
+  products?: MockAdminRecord[];
+  categories?: MockAdminRecord[];
+  posts?: MockAdminRecord[];
+  qna?: MockAdminRecord[];
+  orders?: MockAdminOrder[];
+  pages?: MockAdminPage[];
+  paymentSettings?: MockAdminRecord;
+  dashboard?: MockDashboardMap;
   failPaths?: string[];
 };
 
 export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}) => {
+  const navDefaultOrder = [
+    "home",
+    "products",
+    "categories",
+    "posts",
+    "about",
+    "qna",
+    "orders",
+    "payments",
+    "contact"
+  ];
+  const normalizeNavOrder = (raw: unknown) => {
+    if (!Array.isArray(raw)) {
+      return [...navDefaultOrder];
+    }
+    const valid = new Set(navDefaultOrder);
+    const seen = new Set<string>();
+    const next: string[] = [];
+    raw.forEach((value) => {
+      const id = String(value || "").trim();
+      if (!id || id === "overview" || !valid.has(id) || seen.has(id)) {
+        return;
+      }
+      seen.add(id);
+      next.push(id);
+    });
+    navDefaultOrder.forEach((id) => {
+      if (!seen.has(id)) {
+        next.push(id);
+      }
+    });
+    return next;
+  };
+
+  const normalizeUIPreferences = (raw: unknown) => {
+    const fallback = {
+      sidebar_mode: "rail",
+      density: "compact",
+      orders_columns: ["order", "customer", "total", "payment", "delivery", "actions"]
+    };
+    if (!raw || typeof raw !== "object") {
+      return fallback;
+    }
+
+    const source = raw as Record<string, unknown>;
+    const sidebar_mode =
+      source.sidebar_mode === "full" || source.sidebar_mode === "rail"
+        ? source.sidebar_mode
+        : fallback.sidebar_mode;
+    const density =
+      source.density === "comfortable" || source.density === "compact"
+        ? source.density
+        : fallback.density;
+
+    const allowed = new Set([
+      "order",
+      "customer",
+      "total",
+      "payment",
+      "delivery",
+      "payment_method",
+      "shipping_method",
+      "actions"
+    ]);
+    const essentials = ["order", "customer", "total", "payment", "delivery", "actions"];
+    const seen = new Set<string>();
+    const orders_columns: string[] = [];
+    if (Array.isArray(source.orders_columns)) {
+      source.orders_columns.forEach((entry) => {
+        const value = String(entry || "").trim();
+        if (!value || !allowed.has(value) || seen.has(value)) {
+          return;
+        }
+        seen.add(value);
+        orders_columns.push(value);
+      });
+    }
+    essentials.forEach((id) => {
+      if (!seen.has(id)) {
+        seen.add(id);
+        orders_columns.push(id);
+      }
+    });
+
+    return {
+      sidebar_mode,
+      density,
+      orders_columns
+    };
+  };
+
   const profile = {
     id: 1,
     email: "admin@tam-bo.vn",
     name: "Quản trị viên",
-    role: "ADMIN"
+    role: "ADMIN",
+    nav_order: [...navDefaultOrder],
+    ui_preferences: normalizeUIPreferences(null)
   };
 
   const categories = [
@@ -185,6 +339,158 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
     bank_qr_template: "compact"
   };
 
+
+  const statusTotals = {
+    order: [
+      { status: "pending", count: 6 },
+      { status: "confirmed", count: 4 },
+      { status: "shipping", count: 3 },
+      { status: "completed", count: 8 },
+      { status: "cancelled", count: 1 }
+    ],
+    payment: [
+      { status: "pending", count: 5 },
+      { status: "proof_submitted", count: 4 },
+      { status: "paid", count: 10 },
+      { status: "rejected", count: 1 }
+    ]
+  };
+
+  const dashboardTopProducts = [
+    { product_id: 10, product_name: "Phan huu co Tam Bo", quantity_sold: 42, revenue: 2520000 },
+    { product_id: 12, product_name: "Vi sinh dat", quantity_sold: 29, revenue: 1740000 },
+    { product_id: 15, product_name: "Chelate vi luong", quantity_sold: 18, revenue: 1080000 },
+    { product_id: 16, product_name: "Xu ly re", quantity_sold: 12, revenue: 720000 },
+    { product_id: 20, product_name: "Dinh duong la", quantity_sold: 10, revenue: 500000 }
+  ];
+
+  const dashboardRecentOrders = [
+    {
+      id: 201,
+      order_number: "TB202603160006",
+      customer_name: "Tran Van B",
+      total: 680000,
+      status: "pending",
+      payment_status: "proof_submitted",
+      created_at: "2026-03-16T16:20:00+07:00"
+    },
+    {
+      id: 200,
+      order_number: "TB202603160005",
+      customer_name: "Le Thi C",
+      total: 520000,
+      status: "confirmed",
+      payment_status: "paid",
+      created_at: "2026-03-16T15:40:00+07:00"
+    },
+    {
+      id: 199,
+      order_number: "TB202603160004",
+      customer_name: "Pham Van D",
+      total: 370000,
+      status: "shipping",
+      payment_status: "paid",
+      created_at: "2026-03-16T14:55:00+07:00"
+    },
+    {
+      id: 198,
+      order_number: "TB202603160003",
+      customer_name: "Nguyen Thi E",
+      total: 240000,
+      status: "pending",
+      payment_status: "pending",
+      created_at: "2026-03-16T13:10:00+07:00"
+    },
+    {
+      id: 197,
+      order_number: "TB202603160002",
+      customer_name: "Do Van F",
+      total: 910000,
+      status: "completed",
+      payment_status: "paid",
+      created_at: "2026-03-16T11:45:00+07:00"
+    },
+    {
+      id: 196,
+      order_number: "TB202603160001",
+      customer_name: "Bui Thi G",
+      total: 450000,
+      status: "completed",
+      payment_status: "paid",
+      created_at: "2026-03-16T10:30:00+07:00"
+    }
+  ];
+
+  const dashboard: MockDashboardMap = {
+    day: {
+      grain: "day",
+      range_label: "30 ngay gan nhat",
+      summary: {
+        orders: 18,
+        paid_revenue: 5260000,
+        average_order_value: 292222,
+        pageviews: 1240,
+        unique_visitors: 486
+      },
+      series: [
+        { key: "2026-03-11", label: "11/03", orders: 1, paid_revenue: 220000, pageviews: 92, unique_visitors: 38 },
+        { key: "2026-03-12", label: "12/03", orders: 3, paid_revenue: 680000, pageviews: 118, unique_visitors: 41 },
+        { key: "2026-03-13", label: "13/03", orders: 2, paid_revenue: 450000, pageviews: 144, unique_visitors: 52 },
+        { key: "2026-03-14", label: "14/03", orders: 4, paid_revenue: 1280000, pageviews: 176, unique_visitors: 65 },
+        { key: "2026-03-15", label: "15/03", orders: 3, paid_revenue: 960000, pageviews: 168, unique_visitors: 61 },
+        { key: "2026-03-16", label: "16/03", orders: 5, paid_revenue: 1670000, pageviews: 210, unique_visitors: 77 }
+      ],
+      order_status_totals: statusTotals.order,
+      payment_status_totals: statusTotals.payment,
+      top_products: dashboardTopProducts,
+      recent_orders: dashboardRecentOrders
+    },
+    month: {
+      grain: "month",
+      range_label: "12 thang gan nhat",
+      summary: {
+        orders: 126,
+        paid_revenue: 58420000,
+        average_order_value: 463650,
+        pageviews: 12540,
+        unique_visitors: 4210
+      },
+      series: [
+        { key: "2025-11", label: "11/2025", orders: 14, paid_revenue: 5200000, pageviews: 1110, unique_visitors: 388 },
+        { key: "2025-12", label: "12/2025", orders: 18, paid_revenue: 7900000, pageviews: 1240, unique_visitors: 441 },
+        { key: "2026-01", label: "01/2026", orders: 21, paid_revenue: 9150000, pageviews: 1430, unique_visitors: 503 },
+        { key: "2026-02", label: "02/2026", orders: 27, paid_revenue: 12670000, pageviews: 1580, unique_visitors: 546 },
+        { key: "2026-03", label: "03/2026", orders: 32, paid_revenue: 15500000, pageviews: 1710, unique_visitors: 602 }
+      ],
+      order_status_totals: statusTotals.order,
+      payment_status_totals: statusTotals.payment,
+      top_products: dashboardTopProducts,
+      recent_orders: dashboardRecentOrders
+    },
+    year: {
+      grain: "year",
+      range_label: "5 nam gan nhat",
+      summary: {
+        orders: 420,
+        paid_revenue: 215400000,
+        average_order_value: 512857,
+        pageviews: 48200,
+        unique_visitors: 17100
+      },
+      series: [
+        { key: "2022", label: "2022", orders: 52, paid_revenue: 22800000, pageviews: 6200, unique_visitors: 2210 },
+        { key: "2023", label: "2023", orders: 74, paid_revenue: 34400000, pageviews: 8410, unique_visitors: 3010 },
+        { key: "2024", label: "2024", orders: 88, paid_revenue: 45200000, pageviews: 9460, unique_visitors: 3320 },
+        { key: "2025", label: "2025", orders: 96, paid_revenue: 49600000, pageviews: 10820, unique_visitors: 3840 },
+        { key: "2026", label: "2026", orders: 110, paid_revenue: 63400000, pageviews: 13310, unique_visitors: 4720 }
+      ],
+      order_status_totals: statusTotals.order,
+      payment_status_totals: statusTotals.payment,
+      top_products: dashboardTopProducts,
+      recent_orders: dashboardRecentOrders
+    }
+  };
+
   const pages = [
     {
       id: 11,
@@ -236,10 +542,11 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
     orders: orderData = orders,
     pages: pageData = pages,
     paymentSettings: paymentData = paymentSettings,
+    dashboard: dashboardData = dashboard,
     failPaths = []
   } = overrides;
-  const mutableOrders = structuredClone(orderData);
-  const mutablePages = structuredClone(pageData);
+  const mutableOrders = structuredClone(orderData) as MockAdminOrder[];
+  const mutablePages = structuredClone(pageData) as MockAdminPage[];
 
   await page.route("**/api/admin/**", async (route) => {
     const url = new URL(route.request().url());
@@ -257,7 +564,19 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
     }
     let data: unknown = {};
 
-    if (url.pathname.endsWith("/api/admin/me")) {
+    if (url.pathname.endsWith("/api/admin/me") && method === "GET") {
+      data = profile;
+    } else if (url.pathname.endsWith("/api/admin/me/preferences") && method === "PATCH") {
+      const payload = (route.request().postDataJSON() || {}) as {
+        nav_order?: unknown;
+        ui_preferences?: unknown;
+      };
+      if (payload.nav_order !== undefined) {
+        profile.nav_order = normalizeNavOrder(payload.nav_order);
+      }
+      if (payload.ui_preferences !== undefined) {
+        profile.ui_preferences = normalizeUIPreferences(payload.ui_preferences);
+      }
       data = profile;
     } else if (url.pathname.endsWith("/api/admin/products")) {
       data = productData;
@@ -272,7 +591,10 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
     } else if (url.pathname.endsWith("/api/admin/pages") && method === "POST") {
       const payload = (route.request().postDataJSON() || {}) as Record<string, unknown>;
       const nextId =
-        mutablePages.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+        mutablePages.reduce(
+          (max: number, item: MockAdminPage) => Math.max(max, Number(item.id) || 0),
+          0
+        ) + 1;
       const created = {
         id: nextId,
         title: String(payload.title || "Trang chủ"),
@@ -302,6 +624,9 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
       data = index >= 0 ? mutablePages[index] : {};
     } else if (url.pathname.endsWith("/api/admin/orders")) {
       data = mutableOrders;
+    } else if (url.pathname.endsWith("/api/admin/dashboard")) {
+      const grain = url.searchParams.get("grain") || "day";
+      data = dashboardData[grain] || dashboardData.day || {};
     } else if (/\/api\/admin\/orders\/\d+$/.test(url.pathname) && method === "PATCH") {
       const orderId = Number(url.pathname.split("/").pop());
       const payload = (route.request().postDataJSON() || {}) as Record<string, unknown>;

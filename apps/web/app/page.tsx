@@ -62,9 +62,13 @@ export default async function HomePage() {
   const homeContent = resolveHomePageContent(homePage?.content);
   const intro = homeContent.intro;
   const aboutTeaser = homeContent.aboutTeaser;
+  const introSecondaryHref = intro.secondaryCtaHref || "/pages/about-us";
+  const introSecondaryLabel = intro.secondaryCtaLabel || "Tìm hiểu thêm";
+  const introPrimaryHref = intro.primaryCtaHref || intro.ctaHref || "/collections/all";
+  const introPrimaryLabel = intro.primaryCtaLabel || intro.ctaLabel || "Đặt hàng ngay";
 
   return (
-    <main className="mainWrapper--content">
+    <main className="mainWrapper--content home-main">
       <PromoPopup settings={homeContent.promoPopup} />
       <HomeSlider slides={homeContent.banners} />
 
@@ -77,20 +81,30 @@ export default async function HomePage() {
           <div className="intro-grid">
             <div className="intro-content">
               <div className="block-introduce home-square-card">
+                <div className="block-introduce__eyebrow">{intro.eyebrow}</div>
                 <div className="block-introduce__title">{intro.headline}</div>
                 <div className="block-introduce__desc">{intro.description}</div>
                 <div className="block-introduce__link">
-                  <span className="link1">
-                    <Link href={intro.ctaHref || "/collections/all"} className="button">
-                      {intro.ctaLabel || "Xem chi tiết"}
-                    </Link>
-                  </span>
+                  <Link
+                    href={introSecondaryHref}
+                    className="button intro-cta intro-cta--secondary"
+                    data-testid="home-intro-secondary-cta"
+                  >
+                    {introSecondaryLabel}
+                  </Link>
+                  <Link
+                    href={introPrimaryHref}
+                    className="button intro-cta intro-cta--primary"
+                    data-testid="home-intro-primary-cta"
+                  >
+                    {introPrimaryLabel}
+                  </Link>
                 </div>
               </div>
             </div>
             <div className="intro-image">
-              <div className="home-square-media">
-                <Link href={intro.ctaHref || "/collections/all"} className="image-use-effect3">
+              <div className="home-square-media intro-media">
+                <Link href={introPrimaryHref} className="image-use-effect3 intro-media__link">
                   <Image
                     src={intro.imageSrc}
                     alt={intro.imageAlt || intro.title}

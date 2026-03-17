@@ -16,6 +16,7 @@ import {
   Layers,
   LayoutDashboard,
   Loader2,
+  ListFilter,
   Trash2,
   Newspaper,
   Package,
@@ -36,6 +37,14 @@ import {
 } from "@/components/admin/AdminHelpers";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
   DialogDescription,
   DialogHeader,
@@ -45,15 +54,22 @@ import { AdminDialogContent } from "@/components/admin/AdminDialog";
 import { formatCurrency } from "@/lib/format";
 import {
   AdminCategory,
+  AdminDashboard,
+  AdminDashboardGrain,
+  AdminDensityMode,
   AdminOrder,
+  AdminOrderColumnId,
   AdminPost,
   AdminProduct,
   AdminProfile,
   AdminQnA,
+  AdminSidebarMode,
+  AdminUIPreferences,
   PaymentSettings,
   addAdminProductImage,
   adminLogout,
   adminMe,
+  updateAdminPreferences,
   createAdminCategory,
   createAdminPage,
   createAdminPost,
@@ -63,6 +79,7 @@ import {
   deleteAdminPost,
   deleteAdminProduct,
   deleteAdminQnA,
+  getAdminDashboard,
   getPaymentSettings,
   listAdminCategories,
   listAdminOrders,
@@ -119,6 +136,127 @@ const sectionLabels: Record<string, string> = {
   orders: "Đơn hàng",
   payments: "Thanh toán",
   contact: "Liên hệ"
+};
+
+const ADMIN_FIXED_NAV_ID = "overview";
+const ADMIN_NAV_ITEMS: AdminNavItem[] = [
+  { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
+  { id: "home", label: "Trang chủ", icon: Home },
+  { id: "products", label: "Sản phẩm", icon: Package },
+  { id: "categories", label: "Danh mục", icon: Layers },
+  { id: "posts", label: "Tin tức", icon: Newspaper },
+  { id: "about", label: "Giới thiệu", icon: BookOpen },
+  { id: "qna", label: "Hỏi đáp", icon: HelpCircle },
+  { id: "orders", label: "Đơn hàng", icon: ShoppingCart },
+  { id: "payments", label: "Thanh toán", icon: CreditCard },
+  { id: "contact", label: "Liên hệ", icon: Phone }
+];
+
+const ADMIN_NAV_DEFAULT_ORDER = ADMIN_NAV_ITEMS
+  .filter((item) => item.id !== ADMIN_FIXED_NAV_ID)
+  .map((item) => item.id);
+
+const normalizeAdminNavOrder = (ids?: string[]) => {
+  if (!Array.isArray(ids)) {
+    return [...ADMIN_NAV_DEFAULT_ORDER];
+  }
+
+  const validIds = new Set(ADMIN_NAV_DEFAULT_ORDER);
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+
+  ids.forEach((raw) => {
+    const id = String(raw || "").trim();
+    if (!id || id === ADMIN_FIXED_NAV_ID || !validIds.has(id) || seen.has(id)) {
+      return;
+    }
+    seen.add(id);
+    ordered.push(id);
+  });
+
+  ADMIN_NAV_DEFAULT_ORDER.forEach((id) => {
+    if (!seen.has(id)) {
+      ordered.push(id);
+    }
+  });
+
+  return ordered;
+};
+
+const buildOrderedAdminNavItems = (navOrder: string[]) => {
+  const byId = new Map(ADMIN_NAV_ITEMS.map((item) => [item.id, item]));
+  const fixedOverview = byId.get(ADMIN_FIXED_NAV_ID);
+  const ordered = navOrder
+    .map((id) => byId.get(id))
+    .filter((item): item is AdminNavItem => Boolean(item));
+  if (!fixedOverview) {
+    return ordered;
+  }
+  return [fixedOverview, ...ordered];
+};
+
+const ADMIN_SIDEBAR_MODE_DEFAULT: AdminSidebarMode = "rail";
+const ADMIN_DENSITY_DEFAULT: AdminDensityMode = "compact";
+const ADMIN_ORDERS_COLUMN_DEFAULT: AdminOrderColumnId[] = [
+  "order",
+  "customer",
+  "total",
+  "payment",
+  "delivery",
+  "actions"
+];
+
+const normalizeOrdersColumns = (columns?: AdminOrderColumnId[]) => {
+  const allowed = new Set<AdminOrderColumnId>([
+    "order",
+    "customer",
+    "total",
+    "payment",
+    "delivery",
+    "payment_method",
+    "shipping_method",
+    "actions"
+  ]);
+  const essential = ["order", "customer", "total", "payment", "delivery", "actions"] as const;
+  const seen = new Set<AdminOrderColumnId>();
+  const ordered: AdminOrderColumnId[] = [];
+
+  (columns || []).forEach((raw) => {
+    const value = String(raw || "").trim() as AdminOrderColumnId;
+    if (!value || !allowed.has(value) || seen.has(value)) {
+      return;
+    }
+    seen.add(value);
+    ordered.push(value);
+  });
+
+  essential.forEach((column) => {
+    if (!seen.has(column)) {
+      seen.add(column);
+      ordered.push(column);
+    }
+  });
+
+  return ordered;
+};
+
+const normalizeAdminUIPreferences = (
+  prefs?: AdminUIPreferences
+): Required<Pick<AdminUIPreferences, "sidebar_mode" | "density" | "orders_columns">> => {
+  const sidebarMode =
+    prefs?.sidebar_mode === "full" || prefs?.sidebar_mode === "rail"
+      ? prefs.sidebar_mode
+      : ADMIN_SIDEBAR_MODE_DEFAULT;
+  const density =
+    prefs?.density === "comfortable" || prefs?.density === "compact"
+      ? prefs.density
+      : ADMIN_DENSITY_DEFAULT;
+
+  return {
+    sidebar_mode: sidebarMode,
+    density,
+    orders_columns: normalizeOrdersColumns(prefs?.orders_columns as AdminOrderColumnId[] | undefined)
+  };
 };
 
 type HomeGroupKey =
@@ -222,12 +360,30 @@ export default function AdminDashboardPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
   const [error, setError] = useState("");
-  const [uploadUrl, setUploadUrl] = useState("");
+  const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
+  const [dashboardGrain, setDashboardGrain] = useState<AdminDashboardGrain>("day");
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
+  const [navOrderSnapshot, setNavOrderSnapshot] = useState<string[]>([
+    ...ADMIN_NAV_DEFAULT_ORDER
+  ]);
+  const [navOrderDraft, setNavOrderDraft] = useState<string[]>([
+    ...ADMIN_NAV_DEFAULT_ORDER
+  ]);
+  const [isNavSortMode, setIsNavSortMode] = useState(false);
+  const [navOrderSaving, setNavOrderSaving] = useState(false);
+  const [uiPreferencesSnapshot, setUiPreferencesSnapshot] = useState(
+    normalizeAdminUIPreferences(undefined)
+  );
+  const [uiPreferencesDraft, setUiPreferencesDraft] = useState(
+    normalizeAdminUIPreferences(undefined)
+  );
+  const [uiPreferencesSaving, setUiPreferencesSaving] = useState(false);
   const [homePageId, setHomePageId] = useState<number | null>(null);
   const [homeSnapshot, setHomeSnapshot] = useState<HomePageContent>(
     cloneHomePageContent(defaultHomePageContent)
@@ -380,9 +536,22 @@ export default function AdminDashboardPage() {
         setHomeSavedAtMap(createHomeSavedAtMap(homePage.updated_at || null));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Khng th ti d li!u qun tr9.");
+      setError(err instanceof Error ? err.message : "Không thể tải dữ liệu quản trị.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDashboard = async (grain: AdminDashboardGrain) => {
+    setDashboardLoading(true);
+    setDashboardError("");
+    try {
+      const dashboardData = await getAdminDashboard(grain);
+      setDashboard(dashboardData);
+    } catch (err) {
+      setDashboardError(err instanceof Error ? err.message : "Khong the tai dashboard.");
+    } finally {
+      setDashboardLoading(false);
     }
   };
 
@@ -391,14 +560,27 @@ export default function AdminDashboardPage() {
     adminMe()
       .then((profileData) => {
         if (!cancelled) {
+          const normalizedNavOrder = normalizeAdminNavOrder(profileData.nav_order);
+          const normalizedUIPreferences = normalizeAdminUIPreferences(
+            profileData.ui_preferences
+          );
           setIsAuthed(true);
           setProfile(profileData);
+          setNavOrderSnapshot(normalizedNavOrder);
+          setNavOrderDraft(normalizedNavOrder);
+          setUiPreferencesSnapshot(normalizedUIPreferences);
+          setUiPreferencesDraft(normalizedUIPreferences);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setIsAuthed(false);
           setProfile(null);
+          setNavOrderSnapshot([...ADMIN_NAV_DEFAULT_ORDER]);
+          setNavOrderDraft([...ADMIN_NAV_DEFAULT_ORDER]);
+          const defaults = normalizeAdminUIPreferences(undefined);
+          setUiPreferencesSnapshot(defaults);
+          setUiPreferencesDraft(defaults);
         }
       });
     return () => {
@@ -410,19 +592,16 @@ export default function AdminDashboardPage() {
     if (!isAuthed) {
       return;
     }
-    loadAll();
+    void loadAll();
   }, [isAuthed]);
 
-  const handleUpload = async (file: File | null) => {
-    if (!file) return;
-    setError("");
-    try {
-      const result = await uploadAdminFile(file);
-      setUploadUrl(result.url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Khng th ti ln t!p.");
+  useEffect(() => {
+    if (!isAuthed) {
+      return;
     }
-  };
+    void loadDashboard(dashboardGrain);
+  }, [dashboardGrain, isAuthed]);
+
 
   const handleLogout = async () => {
     if (loggingOut) {
@@ -434,9 +613,16 @@ export default function AdminDashboardPage() {
       await adminLogout();
       setIsAuthed(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Khng th ng xut.");
+      setError(err instanceof Error ? err.message : "Không thể đăng xuất.");
     } finally {
       setLoggingOut(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    await loadAll();
+    if (activeSection === "overview") {
+      await loadDashboard(dashboardGrain);
     }
   };
 
@@ -470,7 +656,7 @@ export default function AdminDashboardPage() {
         [group]: saved.updated_at || new Date().toLocaleString("vi-VN")
       }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Khng th lu n'i dung trang ch.");
+      setError(err instanceof Error ? err.message : "Không thể lưu nội dung trang chủ.");
     }
   };
 
@@ -606,11 +792,11 @@ export default function AdminDashboardPage() {
   const handleAboutSave = async () => {
     setError("");
     if (!aboutDraft.hero.title.trim()) {
-      setError("Vui lng nhp tiu  trang gi:i thi!u.");
+      setError("Vui lòng nhập tiêu đề trang giới thiệu.");
       return;
     }
     if (!aboutDraft.slides.length) {
-      setError("Trang gi:i thi!u cn t nht m't slide n'i dung.");
+      setError("Trang giới thiệu cần ít nhất một slide nội dung.");
       return;
     }
 
@@ -627,7 +813,7 @@ export default function AdminDashboardPage() {
       setAboutDirty(false);
       setAboutSavedAt(new Date().toLocaleString("vi-VN"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Khng th lu trang gi:i thi!u.");
+      setError(err instanceof Error ? err.message : "Không thể lưu trang giới thiệu.");
     }
   };
 
@@ -661,20 +847,117 @@ export default function AdminDashboardPage() {
     [orders]
   );
 
+  const navOrderDirty = useMemo(() => {
+    if (navOrderDraft.length !== navOrderSnapshot.length) {
+      return true;
+    }
+    return navOrderDraft.some((id, index) => id !== navOrderSnapshot[index]);
+  }, [navOrderDraft, navOrderSnapshot]);
+
+  const handleNavOrderReorder = (fromId: string, toId: string) => {
+    if (fromId === toId) {
+      return;
+    }
+    setNavOrderDraft((prev) => {
+      const fromIndex = prev.indexOf(fromId);
+      const toIndex = prev.indexOf(toId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+        return prev;
+      }
+      return reorderList(prev, fromIndex, toIndex);
+    });
+  };
+
+  const handleNavOrderMove = (id: string, direction: -1 | 1) => {
+    setNavOrderDraft((prev) => {
+      const fromIndex = prev.indexOf(id);
+      const toIndex = fromIndex + direction;
+      if (fromIndex < 0 || toIndex < 0 || toIndex >= prev.length) {
+        return prev;
+      }
+      return reorderList(prev, fromIndex, toIndex);
+    });
+  };
+
+  const handleNavOrderSave = async () => {
+    if (!navOrderDirty || navOrderSaving) {
+      return;
+    }
+
+    setError("");
+    setNavOrderSaving(true);
+    try {
+      const updatedProfile = await updateAdminPreferences({
+        nav_order: navOrderDraft,
+        ui_preferences: uiPreferencesDraft
+      });
+      const normalizedOrder = normalizeAdminNavOrder(updatedProfile.nav_order);
+      const normalizedUIPreferences = normalizeAdminUIPreferences(
+        updatedProfile.ui_preferences
+      );
+      setProfile(updatedProfile);
+      setNavOrderSnapshot(normalizedOrder);
+      setNavOrderDraft(normalizedOrder);
+      setUiPreferencesSnapshot(normalizedUIPreferences);
+      setUiPreferencesDraft(normalizedUIPreferences);
+      setIsNavSortMode(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể lưu thứ tự menu quản trị.");
+    } finally {
+      setNavOrderSaving(false);
+    }
+  };
+
+  const persistUIPreferences = async (
+    patch: Partial<Pick<AdminUIPreferences, "sidebar_mode" | "density" | "orders_columns">>
+  ) => {
+    const next = normalizeAdminUIPreferences({
+      ...uiPreferencesDraft,
+      ...patch
+    });
+    setUiPreferencesDraft(next);
+    setError("");
+    setUiPreferencesSaving(true);
+
+    try {
+      const updatedProfile = await updateAdminPreferences({
+        ui_preferences: next
+      });
+      const normalizedUIPreferences = normalizeAdminUIPreferences(
+        updatedProfile.ui_preferences
+      );
+      setProfile(updatedProfile);
+      setUiPreferencesSnapshot(normalizedUIPreferences);
+      setUiPreferencesDraft(normalizedUIPreferences);
+    } catch (err) {
+      setUiPreferencesDraft(uiPreferencesSnapshot);
+      setError(err instanceof Error ? err.message : "Không thể lưu thiết lập hiển thị admin.");
+    } finally {
+      setUiPreferencesSaving(false);
+    }
+  };
+
+  const handleDensityChange = (density: AdminDensityMode) => {
+    if (density === uiPreferencesDraft.density) {
+      return;
+    }
+    void persistUIPreferences({ density });
+  };
+
+  const handleOrdersColumnsChange = (columns: AdminOrderColumnId[]) => {
+    const normalizedColumns = normalizeOrdersColumns(columns);
+    if (
+      normalizedColumns.length === uiPreferencesDraft.orders_columns.length &&
+      normalizedColumns.every((value, index) => value === uiPreferencesDraft.orders_columns[index])
+    ) {
+      return;
+    }
+    void persistUIPreferences({ orders_columns: normalizedColumns });
+  };
+
   const navItems = useMemo<AdminNavItem[]>(
-    () => [
-      { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
-      { id: "home", label: "Trang chủ", icon: Home },
-      { id: "products", label: "Sản phẩm", icon: Package },
-      { id: "categories", label: "Danh mục", icon: Layers },
-      { id: "posts", label: "Tin tức", icon: Newspaper },
-      { id: "about", label: "Giới thiệu", icon: BookOpen },
-      { id: "qna", label: "Hỏi đáp", icon: HelpCircle },
-      { id: "orders", label: "Đơn hàng", icon: ShoppingCart },
-      { id: "payments", label: "Thanh toán", icon: CreditCard },
-      { id: "contact", label: "Liên hệ", icon: Phone }
-    ],
-    []
+    () => buildOrderedAdminNavItems(navOrderDraft),
+    [navOrderDraft]
   );
 
   const navMeta = useMemo(
@@ -711,7 +994,7 @@ export default function AdminDashboardPage() {
         <div className="flex min-h-screen items-center justify-center px-6 py-10">
           <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-base text-slate-600 shadow-sm">
             <Loader2 className="h-5 w-5 animate-spin text-[var(--color-primary)]" />
-            ang kim tra quyn qun tr9...
+            Đang kiểm tra quyền quản trị...
           </div>
         </div>
       </div>
@@ -727,16 +1010,16 @@ export default function AdminDashboardPage() {
               Admin
             </p>
             <h1 className="mt-2 text-2xl font-semibold text-slate-900">
-              Cn ng nhp
+              Cần đăng nhập
             </h1>
             <p className="mt-3 text-base text-slate-600 md:text-sm">
-              Vui lng ng nhp  qun l ni dung.
+              Vui lòng đăng nhập để quản lý nội dung.
             </p>
             <Button
               asChild
               className="mt-6 h-11 w-full bg-[var(--color-cta)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
             >
-              <Link href="/admin/login">ng nhp qun tr9</Link>
+              <Link href="/admin/login">Đăng nhập quản trị</Link>
             </Button>
           </div>
         </div>
@@ -754,7 +1037,20 @@ export default function AdminDashboardPage() {
       profile={profile}
       onLogout={handleLogout}
       loggingOut={loggingOut}
-      onRefresh={loadAll}
+      onRefresh={handleRefresh}
+      density={uiPreferencesDraft.density}
+      onDensityChange={handleDensityChange}
+      preferencesSaving={uiPreferencesSaving}
+      navSort={{
+        enabled: isNavSortMode,
+        dirty: navOrderDirty,
+        saving: navOrderSaving,
+        onToggle: () => setIsNavSortMode((prev) => !prev),
+        onSave: () => void handleNavOrderSave(),
+        onReset: () => setNavOrderDraft([...navOrderSnapshot]),
+        onMove: handleNavOrderMove,
+        onReorder: handleNavOrderReorder
+      }}
     >
       {error ? (
         <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-base text-rose-700 md:text-sm">
@@ -764,7 +1060,7 @@ export default function AdminDashboardPage() {
       {loading ? (
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-600 md:text-sm">
           <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary)]" />
-          ang ti d li!u qun tr9...
+          Đang tải dữ liệu quản trị...
         </div>
       ) : null}
 
@@ -781,8 +1077,12 @@ export default function AdminDashboardPage() {
           totalRevenue={totalRevenue}
           banners={homeDraft.banners}
           contactSettings={contactDraft}
-          uploadUrl={uploadUrl}
-          onUpload={handleUpload}
+          dashboard={dashboard}
+          dashboardLoading={dashboardLoading}
+          dashboardError={dashboardError}
+          dashboardGrain={dashboardGrain}
+          onDashboardGrainChange={setDashboardGrain}
+          density={uiPreferencesDraft.density}
           onNavigate={setActiveSection}
         />
       )}
@@ -815,6 +1115,7 @@ export default function AdminDashboardPage() {
           categories={categories}
           onReload={loadAll}
           setError={setError}
+          density={uiPreferencesDraft.density}
         />
       )}
 
@@ -823,11 +1124,17 @@ export default function AdminDashboardPage() {
           categories={categories}
           onReload={loadAll}
           setError={setError}
+          density={uiPreferencesDraft.density}
         />
       )}
 
       {activeSection === "posts" && (
-        <AdminPostsSection posts={posts} onReload={loadAll} setError={setError} />
+        <AdminPostsSection
+          posts={posts}
+          onReload={loadAll}
+          setError={setError}
+          density={uiPreferencesDraft.density}
+        />
       )}
 
       {activeSection === "about" && (
@@ -846,11 +1153,23 @@ export default function AdminDashboardPage() {
       )}
 
       {activeSection === "orders" && (
-        <AdminOrdersSection orders={orders} onReload={loadAll} setError={setError} />
+        <AdminOrdersSection
+          orders={orders}
+          setError={setError}
+          density={uiPreferencesDraft.density}
+          columns={uiPreferencesDraft.orders_columns}
+          onColumnsChange={handleOrdersColumnsChange}
+          savingPreferences={uiPreferencesSaving}
+        />
       )}
 
       {activeSection === "payments" && (
-        <AdminPaymentsSection settings={settings} onSave={setSettings} setError={setError} />
+        <AdminPaymentsSection
+          settings={settings}
+          onSave={setSettings}
+          setError={setError}
+          density={uiPreferencesDraft.density}
+        />
       )}
 
       {activeSection === "contact" && (
@@ -970,6 +1289,7 @@ function AdminHomeSection({
       <Button
         onClick={() => void onSaveGroup(group)}
         disabled={!dirtyMap[group]}
+        data-testid={`admin-home-save-${group}`}
         className="bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
       >
         {label}
@@ -993,6 +1313,7 @@ function AdminHomeSection({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
+                data-testid={`admin-home-tab-${tab.id}`}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-base font-semibold transition md:text-sm cursor-pointer ${
                   active
                     ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
@@ -1048,11 +1369,20 @@ function AdminHomeSection({
                 onChange={(event) => onIntroChange({ headline: event.target.value })}
               />
             </AdminField>
-            <AdminField label="CTA label">
+            <AdminField label="CTA phụ label">
               <input
                 className={inputClass}
-                value={content.intro.ctaLabel}
-                onChange={(event) => onIntroChange({ ctaLabel: event.target.value })}
+                data-testid="admin-intro-secondary-cta-label"
+                value={content.intro.secondaryCtaLabel}
+                onChange={(event) => onIntroChange({ secondaryCtaLabel: event.target.value })}
+              />
+            </AdminField>
+            <AdminField label="CTA chính label">
+              <input
+                className={inputClass}
+                data-testid="admin-intro-primary-cta-label"
+                value={content.intro.primaryCtaLabel}
+                onChange={(event) => onIntroChange({ primaryCtaLabel: event.target.value })}
               />
             </AdminField>
             <AdminField label="Mô tả" helper="Nội dung dài của khối định hướng.">
@@ -1064,11 +1394,20 @@ function AdminHomeSection({
               />
             </AdminField>
             <div className="grid gap-4">
-              <AdminField label="CTA link">
+              <AdminField label="CTA phụ link">
                 <input
                   className={inputClass}
-                  value={content.intro.ctaHref}
-                  onChange={(event) => onIntroChange({ ctaHref: event.target.value })}
+                  data-testid="admin-intro-secondary-cta-link"
+                  value={content.intro.secondaryCtaHref}
+                  onChange={(event) => onIntroChange({ secondaryCtaHref: event.target.value })}
+                />
+              </AdminField>
+              <AdminField label="CTA chính link">
+                <input
+                  className={inputClass}
+                  data-testid="admin-intro-primary-cta-link"
+                  value={content.intro.primaryCtaHref}
+                  onChange={(event) => onIntroChange({ primaryCtaHref: event.target.value })}
                 />
               </AdminField>
               <AdminField label="Ảnh chính">
@@ -1413,12 +1752,14 @@ function AdminProductsSection({
   products,
   categories,
   onReload,
-  setError
+  setError,
+  density
 }: {
   products: AdminProduct[];
   categories: AdminCategory[];
   onReload: () => void;
   setError: (value: string) => void;
+  density: AdminDensityMode;
 }) {
   const initialForm = {
     name: "",
@@ -1444,6 +1785,20 @@ function AdminProductsSection({
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [page, setPage] = useState(1);
   const dialogScrollRef = useRef<HTMLDivElement | null>(null);
+  const isCompact = density === "compact";
+  const sectionGapClass = isCompact ? "space-y-5" : "space-y-6";
+  const panelClass = isCompact
+    ? "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+    : "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm";
+  const filterGridClass = isCompact
+    ? "mt-4 grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr]"
+    : "mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr]";
+  const tableHeaderClass = isCompact
+    ? "hidden bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500 md:grid md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:gap-3"
+    : "hidden md:grid md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:gap-3 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-500 md:text-sm";
+  const tableRowClass = isCompact
+    ? "grid gap-3 px-4 py-3 text-sm md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:items-center transition hover:bg-slate-50"
+    : "grid gap-4 px-4 py-4 text-base md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:items-center md:text-sm transition hover:bg-slate-50";
 
   const totalImages = existingImages.length + newImages.length;
   const canAddMore = totalImages < 10;
@@ -1543,11 +1898,11 @@ function AdminProductsSection({
       return;
     }
     if (!url.startsWith("http")) {
-      setError("Vui lng nhp URL hp l!.");
+      setError("Vui lòng nhập URL hợp lệ.");
       return;
     }
     if (!canAddMore) {
-      setError("Ti a 10 nh cho mi sn phm.");
+      setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
       return;
     }
     if (existingImages.includes(url) || newImages.includes(url)) {
@@ -1565,7 +1920,7 @@ function AdminProductsSection({
     }
 
     if (totalImages + files.length > 10) {
-      setError("Ti a 10 nh cho mi sn phm.");
+      setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
       event.target.value = "";
       return;
     }
@@ -1608,7 +1963,7 @@ function AdminProductsSection({
       return;
     }
     if (total > 10) {
-      setError("Ti a 10 nh cho mi sn phm.");
+      setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
       return;
     }
     if (!form.name.trim()) {
@@ -1622,7 +1977,7 @@ function AdminProductsSection({
 
     const priceValue = Number(form.price || 0);
     if (!priceValue || Number.isNaN(priceValue)) {
-      setError("Vui lng nhp gi bn hp l!.");
+      setError("Vui lòng nhập giá bán hợp lệ.");
       return;
     }
 
@@ -1668,7 +2023,7 @@ function AdminProductsSection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title="Quản lý sản phẩm"
-          description="Theo di tn kho, cp nht gi v hnh nh sn phm."
+          description="Theo dõi tồn kho, cập nhật giá và hình ảnh sản phẩm."
           actions={
             <Button
               onClick={openCreateDialog}
@@ -1680,10 +2035,11 @@ function AdminProductsSection({
           }
         />
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
+        <div className={filterGridClass}>
           <AdminField label="Tìm kiếm" helper="Theo tên hoặc slug sản phẩm.">
             <input
               className={inputClass}
+              data-testid="admin-products-filter-query"
               placeholder="Tìm theo tên hoặc slug"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -1692,6 +2048,7 @@ function AdminProductsSection({
           <AdminField label="Trạng thái">
             <select
               className={selectClass}
+              data-testid="admin-products-filter-status"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
@@ -1706,6 +2063,7 @@ function AdminProductsSection({
           <AdminField label="Danh mục">
             <select
               className={selectClass}
+              data-testid="admin-products-filter-category"
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.target.value)}
             >
@@ -1719,8 +2077,8 @@ function AdminProductsSection({
           </AdminField>
         </div>
 
-        <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
-          <div className="hidden md:grid md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:gap-3 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-500 md:text-sm">
+        <div className={`${isCompact ? "mt-4" : "mt-5"} overflow-hidden rounded-xl border border-slate-200`}>
+          <div className={tableHeaderClass}>
             <span>Sản phẩm</span>
             <span>Giá</span>
             <span>Trạng thái</span>
@@ -1735,7 +2093,7 @@ function AdminProductsSection({
                 return (
                   <div
                     key={product.id}
-                    className="grid gap-4 px-4 py-4 text-base md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:items-center md:text-sm transition hover:bg-slate-50"
+                    className={tableRowClass}
                   >
                     <div className="flex items-start gap-3">
                       <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100">
@@ -1821,13 +2179,13 @@ function AdminProductsSection({
               })
             ) : (
               <div className="px-4 py-8 text-center text-base text-slate-500 md:text-sm">
-                Cha c sn phm ph hp b lc.
+                Chưa có sản phẩm phù hợp bộ lọc.
               </div>
             )}
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className={`${isCompact ? "mt-3" : "mt-4"} flex flex-wrap items-center justify-between gap-3`}>
           <span className="text-base text-slate-500 md:text-sm">
             Hiển thị {pagedProducts.length}/{filteredProducts.length} sản phẩm
           </span>
@@ -1846,8 +2204,8 @@ function AdminProductsSection({
               {editingId ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
             </DialogTitle>
             <DialogDescription>
-              Ti thiu 3 nh v ti a 10 nh cho mi sn phm. C th thm nh bng
-              URL hoc ti trc tip.
+              Tối thiểu 3 ảnh và tối đa 10 ảnh cho mỗi sản phẩm. Có thể thêm ảnh bằng
+              URL hoặc tải trực tiếp.
             </DialogDescription>
           </DialogHeader>
 
@@ -1859,7 +2217,7 @@ function AdminProductsSection({
                   description="Tên, slug và mô tả ngắn cho sản phẩm."
                 />
                 <div className="mt-4 grid gap-4">
-                  <AdminField label="Tên sản phẩm" helper="Hin th9 trn trang chi tit.">
+                  <AdminField label="Tên sản phẩm" helper="Hiển thị trên trang chi tiết.">
                     <input
                       className={inputClass}
                       value={form.name}
@@ -1888,10 +2246,10 @@ function AdminProductsSection({
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <AdminSectionHeader
                   title="Giá & trạng thái"
-                  description="Kim sot gi bn v hin th9."
+                  description="Kiểm soát giá bán và hiển thị."
                 />
                 <div className="mt-4 grid gap-4">
-                  <AdminField label="Giá bán" helper="Nhp gi bn hi!n ti.">
+                  <AdminField label="Giá bán" helper="Nhập giá bán hiện tại.">
                     <input
                       type="number"
                       className={inputClass}
@@ -1901,7 +2259,7 @@ function AdminProductsSection({
                   </AdminField>
                   <AdminField
                     label="Giá niêm yết"
-                    helper="B trng nu khng c gi gc."
+                    helper="Bỏ trống nếu không có giá gốc."
                   >
                     <input
                       type="number"
@@ -1930,7 +2288,7 @@ function AdminProductsSection({
                     </AdminField>
                     <AdminField
                       label="Sản phẩm nổi bật"
-                      helper="nh du  hin th9 n'i bật."
+                      helper="Đánh dấu để hiển thị nổi bật."
                     >
                       <div className="flex items-center gap-2">
                         <input
@@ -1953,7 +2311,7 @@ function AdminProductsSection({
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <AdminSectionHeader
                   title="Phân loại & sắp xếp"
-                  description="Th v th t hin th9 trn danh sch."
+                  description="Thẻ và thứ tự hiển thị trên danh sách."
                 />
                 <div className="mt-4 grid gap-4">
                   <AdminField
@@ -2011,7 +2369,7 @@ function AdminProductsSection({
                     })
                   ) : (
                     <p className="text-base text-slate-500 md:text-sm">
-                      Cha c danh mc  chn.
+                      Chưa có danh mục đã chọn.
                     </p>
                   )}
                 </div>
@@ -2045,7 +2403,7 @@ function AdminProductsSection({
                       </Button>
                     </div>
                     <p className="text-base text-slate-500 md:text-xs">
-                      Dng URL bt u bng http(s). Cn trng {remainingSlots} ảnh.
+                      Dùng URL bắt đầu bằng http(s). Còn trống {remainingSlots} ảnh.
                     </p>
                   </div>
 
@@ -2170,11 +2528,13 @@ function AdminProductsSection({
 function AdminCategoriesSection({
   categories,
   onReload,
-  setError
+  setError,
+  density
 }: {
   categories: AdminCategory[];
   onReload: () => void;
   setError: (value: string) => void;
+  density: AdminDensityMode;
 }) {
   const initialForm = {
     name: "",
@@ -2187,6 +2547,14 @@ function AdminCategoriesSection({
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 8;
+  const isCompact = density === "compact";
+  const layoutClass = isCompact ? "grid gap-5 lg:grid-cols-[1.1fr_0.9fr]" : "grid gap-6 lg:grid-cols-[1.1fr_0.9fr]";
+  const panelClass = isCompact
+    ? "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+    : "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm";
+  const rowClass = isCompact
+    ? "flex flex-wrap items-start justify-between gap-3 py-3"
+    : "flex flex-wrap items-start justify-between gap-3 py-4";
 
   const filteredCategories = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -2269,13 +2637,13 @@ function AdminCategoriesSection({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className={layoutClass}>
+      <div className={panelClass}>
         <AdminSectionHeader
           title="Danh mục sản phẩm"
-          description="Qun l danh mc  lc v sp xp sn phm."
+          description="Quản lý danh mục để lọc và sắp xếp sản phẩm."
         />
-        <div className="mt-4 grid gap-4">
+        <div className={`${isCompact ? "mt-3" : "mt-4"} grid gap-4`}>
           <AdminField label="Tìm kiếm" helper="Theo tên hoặc slug danh mục.">
             <input
               className={inputClass}
@@ -2286,12 +2654,12 @@ function AdminCategoriesSection({
           </AdminField>
         </div>
 
-        <div className="mt-4 divide-y divide-slate-200">
+        <div className={`${isCompact ? "mt-3" : "mt-4"} divide-y divide-slate-200`}>
           {pagedCategories.length ? (
             pagedCategories.map((category) => (
               <div
                 key={category.id}
-                className="flex flex-wrap items-start justify-between gap-3 py-4"
+                className={rowClass}
               >
                 <div className="space-y-1">
                   <p className="text-base font-semibold text-slate-900 md:text-sm">
@@ -2333,12 +2701,12 @@ function AdminCategoriesSection({
             ))
           ) : (
             <p className="py-6 text-center text-base text-slate-500 md:text-sm">
-              Cha c danh mc ph hp b lc.
+              Chưa có danh mục phù hợp bộ lọc.
             </p>
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className={`${isCompact ? "mt-3" : "mt-4"} flex flex-wrap items-center justify-between gap-3`}>
           <span className="text-base text-slate-500 md:text-sm">
             Tổng {filteredCategories.length} danh mục
           </span>
@@ -2346,13 +2714,13 @@ function AdminCategoriesSection({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className={panelClass}>
         <AdminSectionHeader
           title={editingId ? "Cập nhật danh mục" : "Tạo danh mục"}
-          description="Cp nht thng tin hin th9 cho danh mc."
+          description="Cập nhật thông tin hiển thị cho danh mục."
         />
-        <div className="mt-4 grid gap-4">
-          <AdminField label="Tên danh mục" helper="Hin th9 trn menu v sn phm.">
+        <div className={`${isCompact ? "mt-3" : "mt-4"} grid gap-4`}>
+          <AdminField label="Tên danh mục" helper="Hiển thị trên menu và sản phẩm.">
             <input
               className={inputClass}
               value={form.name}
@@ -2410,11 +2778,13 @@ function AdminCategoriesSection({
 function AdminPostsSection({
   posts,
   onReload,
-  setError
+  setError,
+  density
 }: {
   posts: AdminPost[];
   onReload: () => void;
   setError: (value: string) => void;
+  density: AdminDensityMode;
 }) {
   const initialForm = {
     title: "",
@@ -2433,6 +2803,14 @@ function AdminPostsSection({
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 6;
+  const isCompact = density === "compact";
+  const layoutClass = isCompact ? "grid gap-5 lg:grid-cols-[1.1fr_0.9fr]" : "grid gap-6 lg:grid-cols-[1.1fr_0.9fr]";
+  const panelClass = isCompact
+    ? "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+    : "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm";
+  const rowClass = isCompact
+    ? "flex flex-wrap items-start justify-between gap-3 py-3"
+    : "flex flex-wrap items-start justify-between gap-3 py-4";
 
   const filteredPosts = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -2458,7 +2836,7 @@ function AdminPostsSection({
   const handleSubmit = async () => {
     setError("");
     if (!form.title.trim()) {
-      setError("Vui lng nhp tiu  bi vit.");
+      setError("Vui lòng nhập tiêu đề bài viết.");
       return;
     }
     if (!form.slug.trim()) {
@@ -2493,23 +2871,23 @@ function AdminPostsSection({
   };
 
   const statusOptions = [
-    { value: "published", label: "ang hin th9" },
+    { value: "published", label: "đang hiển thị" },
     { value: "hidden", label: "Đang ẩn" }
   ];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className={layoutClass}>
+      <div className={panelClass}>
         <AdminSectionHeader
           title="Tin tức & kiến thức"
           description="Cập nhật bài viết, tin tức và kiến thức nhà nông."
         />
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <AdminField label="Tìm kiếm" helper="Theo tiu  hoc slug.">
+        <div className={`${isCompact ? "mt-3" : "mt-4"} grid gap-4 md:grid-cols-2`}>
+          <AdminField label="Tìm kiếm" helper="Theo tiêu đề hoặc slug.">
             <input
               className={inputClass}
-              placeholder="Tm theo tiu  hoc slug"
+              placeholder="Tìm theo tiêu đề hoặc slug"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -2530,7 +2908,7 @@ function AdminPostsSection({
           </AdminField>
         </div>
 
-        <div className="mt-4 divide-y divide-slate-200">
+        <div className={`${isCompact ? "mt-3" : "mt-4"} divide-y divide-slate-200`}>
           {pagedPosts.length ? (
             pagedPosts.map((post) => {
               const statusLabel =
@@ -2539,7 +2917,7 @@ function AdminPostsSection({
               return (
                 <div
                   key={post.id}
-                  className="flex flex-wrap items-start justify-between gap-3 py-4"
+                  className={rowClass}
                 >
                   <div className="space-y-1">
                     <p className="text-base font-semibold text-slate-900 md:text-sm">
@@ -2601,12 +2979,12 @@ function AdminPostsSection({
             })
           ) : (
             <p className="py-6 text-center text-base text-slate-500 md:text-sm">
-              Cha c bi vit ph hp b lc.
+              Chưa có bài viết phù hợp bộ lọc.
             </p>
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className={`${isCompact ? "mt-3" : "mt-4"} flex flex-wrap items-center justify-between gap-3`}>
           <span className="text-base text-slate-500 md:text-sm">
             Tổng {filteredPosts.length} bài viết
           </span>
@@ -2614,13 +2992,13 @@ function AdminPostsSection({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className={panelClass}>
         <AdminSectionHeader
           title={editingId ? "Cập nhật bài viết" : "Tạo bài viết"}
-          description="Qun l n'i dung tin tức và kiến thức."
+          description="Quản lý nội dung tin tức và kiến thức."
         />
-        <div className="mt-4 grid gap-4">
-          <AdminField label="Tiu " helper="Tiu  hin th9 trn trang bi vit.">
+        <div className={`${isCompact ? "mt-3" : "mt-4"} grid gap-4`}>
+          <AdminField label="Tiu " helper="Tiêu đề hiển thị trên trang bài viết.">
             <input
               className={inputClass}
               value={form.title}
@@ -2686,7 +3064,7 @@ function AdminPostsSection({
           </AdminField>
           <AdminField
             label="Trích dẫn"
-            helper="on m t ngn hin th9 x danh sch."
+            helper="Đoạn mô tả ngắn hiển thị ở danh sách."
           >
             <textarea
               className={textareaClass}
@@ -2791,12 +3169,12 @@ function AdminQnASection({
       setEditingId(null);
       onReload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Khng th lu hi p.");
+      setError(err instanceof Error ? err.message : "Không thể lưu hỏi đáp.");
     }
   };
 
   const statusOptions = [
-    { value: "published", label: "ang hin th9" },
+    { value: "published", label: "đang hiển thị" },
     { value: "hidden", label: "Đang ẩn" }
   ];
 
@@ -2805,7 +3183,7 @@ function AdminQnASection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title="Hi p"
-          description="Qun l cu hi thng gp v n'i dung h tr."
+          description="Quản lý câu hỏi thường gặp và nội dung hỗ trợ."
         />
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -2877,7 +3255,7 @@ function AdminQnASection({
                             setError(
                               err instanceof Error
                                 ? err.message
-                                : "Khng th xa hi p."
+                                : "Không thể xóa hỏi đáp."
                             )
                           )
                       }
@@ -2891,7 +3269,7 @@ function AdminQnASection({
             })
           ) : (
             <p className="py-6 text-center text-base text-slate-500 md:text-sm">
-              Cha c hi p ph hp b lc.
+              Chưa có hỏi đáp phù hợp bộ lọc.
             </p>
           )}
         </div>
@@ -2907,7 +3285,7 @@ function AdminQnASection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title={editingId ? "Cp nht hi p" : "To hi p"}
-          description="Son n'i dung trả lời cho khách hàng."
+          description="Soạn nội dung trả lời cho khách hàng."
         />
         <div className="mt-4 grid gap-4">
           <AdminField label="Câu hỏi" helper="Nhập câu hỏi thường gặp.">
@@ -2973,12 +3351,18 @@ function AdminQnASection({
 
 function AdminOrdersSection({
   orders,
-  onReload,
-  setError
+  setError,
+  density,
+  columns,
+  onColumnsChange,
+  savingPreferences
 }: {
   orders: AdminOrder[];
-  onReload: () => void;
   setError: (value: string) => void;
+  density: AdminDensityMode;
+  columns: AdminOrderColumnId[];
+  onColumnsChange: (columns: AdminOrderColumnId[]) => void;
+  savingPreferences: boolean;
 }) {
   const statusOptions = ["pending", "confirmed", "shipping", "completed", "cancelled"];
   const paymentOptions = ["pending", "proof_submitted", "paid", "rejected"];
@@ -2995,11 +3379,42 @@ function AdminOrdersSection({
     paid: "Đã thanh toán",
     rejected: "Từ chối"
   };
-  const [statusFilter, setStatusFilter] = useState("");
-  const [paymentFilter, setPaymentFilter] = useState("");
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const pageSize = 4;
+  const optionalColumns: Array<{ id: AdminOrderColumnId; label: string }> = [
+    { id: "payment_method", label: "Phương thức thanh toán" },
+    { id: "shipping_method", label: "Hình thức giao hàng" }
+  ];
+  const isCompact = density === "compact";
+  const panelClass = isCompact
+    ? "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+    : "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm";
+  const toolbarGridClass = isCompact
+    ? "mt-3 grid gap-3 xl:grid-cols-[1.2fr_1fr_1fr_auto]"
+    : "mt-4 grid gap-4 xl:grid-cols-[1.2fr_1fr_1fr_auto]";
+  const visibleColumns = useMemo(() => normalizeOrdersColumns(columns), [columns]);
+  const orderTableTemplate = useMemo(() => {
+    const widthMap: Record<AdminOrderColumnId, string> = {
+      order: "minmax(190px,1.3fr)",
+      customer: "minmax(220px,1.5fr)",
+      total: "minmax(120px,0.9fr)",
+      payment: "minmax(170px,1.1fr)",
+      delivery: "minmax(170px,1.1fr)",
+      payment_method: "minmax(150px,0.9fr)",
+      shipping_method: "minmax(150px,0.9fr)",
+      actions: "minmax(88px,0.7fr)"
+    };
+    return visibleColumns.map((column) => widthMap[column]).join(" ");
+  }, [visibleColumns]);
+
+  const headerLabels: Record<AdminOrderColumnId, string> = {
+    order: "Mã đơn / thời gian",
+    customer: "Khách hàng",
+    total: "Tổng tiền",
+    payment: "Thanh toán",
+    delivery: "Trạng thái giao hàng",
+    payment_method: "PTTT",
+    shipping_method: "Vận chuyển",
+    actions: "Hành động"
+  };
 
   type OrderEdit = {
     customer_name: string;
@@ -3012,44 +3427,126 @@ function AdminOrdersSection({
     payment_status: string;
     admin_note: string;
   };
+
+  type OrderSaveState = {
+    saving: boolean;
+    saved: boolean;
+    error: string;
+    lastSavedAt: string | null;
+  };
+
+  const createOrderEdit = (order: AdminOrder): OrderEdit => ({
+    customer_name: order.customer_name || "",
+    email: order.email || "",
+    phone: order.phone || "",
+    address: order.address || "",
+    note: order.note || "",
+    delivery_time: order.delivery_time || "",
+    status: order.status || "pending",
+    payment_status: order.payment_status || "pending",
+    admin_note: order.admin_note || ""
+  });
+
+  const createEmptyOrderEdit = (): OrderEdit => ({
+    customer_name: "",
+    email: "",
+    phone: "",
+    address: "",
+    note: "",
+    delivery_time: "",
+    status: "pending",
+    payment_status: "pending",
+    admin_note: ""
+  });
+
+  const formatOrderTime = (raw: string) => {
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
+      return raw || "-";
+    }
+    return parsed.toLocaleString("vi-VN", {
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
+  const [statusFilter, setStatusFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+  const [orderRows, setOrderRows] = useState<AdminOrder[]>(orders);
   const [edits, setEdits] = useState<Record<number, OrderEdit>>({});
+  const [saveStates, setSaveStates] = useState<Record<number, OrderSaveState>>({});
+
+  const editsRef = useRef<Record<number, OrderEdit>>({});
+  const inFlightRef = useRef<Record<number, boolean>>({});
+  const queuedRef = useRef<Record<number, boolean>>({});
+  const requestSeqRef = useRef<Record<number, number>>({});
+  const appliedSeqRef = useRef<Record<number, number>>({});
+  const debounceTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  const pageSize = 8;
+  const autoSaveDelayMs = 700;
+
+  useEffect(() => {
+    setOrderRows(orders);
+  }, [orders]);
 
   useEffect(() => {
     const next: Record<number, OrderEdit> = {};
     orders.forEach((order) => {
-      next[order.id] = {
-        customer_name: order.customer_name || "",
-        email: order.email || "",
-        phone: order.phone || "",
-        address: order.address || "",
-        note: order.note || "",
-        delivery_time: order.delivery_time || "",
-        status: order.status || "pending",
-        payment_status: order.payment_status || "pending",
-        admin_note: order.admin_note || ""
-      };
+      next[order.id] = createOrderEdit(order);
     });
     setEdits(next);
+    editsRef.current = next;
+    setSaveStates({});
+    inFlightRef.current = {};
+    queuedRef.current = {};
+    requestSeqRef.current = {};
+    appliedSeqRef.current = {};
   }, [orders]);
+
+  useEffect(() => {
+    editsRef.current = edits;
+  }, [edits]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimersRef.current).forEach((timer) => clearTimeout(timer));
+      debounceTimersRef.current = {};
+    };
+  }, []);
 
   const filteredOrders = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return orders.filter((order) => {
+    return orderRows.filter((order) => {
       if (statusFilter && order.status !== statusFilter) return false;
       if (paymentFilter && order.payment_status !== paymentFilter) return false;
       if (!term) return true;
-      return [
-        order.order_number,
-        order.customer_name,
-        order.phone,
-        order.email
-      ].some((value) => value?.toLowerCase().includes(term));
+      return [order.order_number, order.customer_name, order.phone, order.email]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(term));
     });
-  }, [orders, statusFilter, paymentFilter, query]);
+  }, [orderRows, statusFilter, paymentFilter, query]);
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, paymentFilter, query, orders.length]);
+  }, [statusFilter, paymentFilter, query, orderRows.length]);
+
+  useEffect(() => {
+    if (expandedOrderId === null) {
+      return;
+    }
+    const exists = filteredOrders.some((order) => order.id === expandedOrderId);
+    if (!exists) {
+      setExpandedOrderId(null);
+    }
+  }, [expandedOrderId, filteredOrders]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
   const pagedOrders = useMemo(
@@ -3057,51 +3554,166 @@ function AdminOrdersSection({
     [filteredOrders, page, pageSize]
   );
 
-  const updateEdit = (id: number, patch: Partial<OrderEdit>) => {
-    setEdits((prev) => ({
+  const clearOrderDebounce = (orderId: number) => {
+    const timer = debounceTimersRef.current[orderId];
+    if (!timer) {
+      return;
+    }
+    clearTimeout(timer);
+    delete debounceTimersRef.current[orderId];
+  };
+
+  const setOrderSaveState = (orderId: number, patch: Partial<OrderSaveState>) => {
+    setSaveStates((prev) => ({
       ...prev,
-      [id]: { ...prev[id], ...patch }
+      [orderId]: {
+        ...(prev[orderId] || {}),
+        saving: false,
+        saved: false,
+        error: "",
+        lastSavedAt: null,
+        ...patch
+      }
     }));
   };
 
-  const handleUpdate = async (order: AdminOrder) => {
-    const edit = edits[order.id];
-    if (!edit) return;
-    try {
-      await updateAdminOrder(order.id, {
-        customer_name: edit.customer_name,
-        email: edit.email,
-        phone: edit.phone,
-        address: edit.address,
-        note: edit.note,
-        delivery_time: edit.delivery_time,
-        status: edit.status,
-        payment_status: edit.payment_status,
-        admin_note: edit.admin_note
-      });
-      onReload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Khng th cp nht đơn hàng.");
+  const getUpdatePayload = (edit: OrderEdit) => ({
+    customer_name: edit.customer_name,
+    email: edit.email,
+    phone: edit.phone,
+    address: edit.address,
+    note: edit.note,
+    delivery_time: edit.delivery_time,
+    status: edit.status,
+    payment_status: edit.payment_status,
+    admin_note: edit.admin_note
+  });
+
+  const persistOrder = async (orderId: number) => {
+    const edit = editsRef.current[orderId];
+    if (!edit) {
+      return;
     }
+
+    if (inFlightRef.current[orderId]) {
+      queuedRef.current[orderId] = true;
+      return;
+    }
+
+    const requestSeq = (requestSeqRef.current[orderId] || 0) + 1;
+    requestSeqRef.current[orderId] = requestSeq;
+    inFlightRef.current[orderId] = true;
+    setOrderSaveState(orderId, { saving: true, saved: false, error: "" });
+
+    try {
+      const updated = await updateAdminOrder(orderId, getUpdatePayload(edit));
+      if (requestSeq < (appliedSeqRef.current[orderId] || 0)) {
+        return;
+      }
+      appliedSeqRef.current[orderId] = requestSeq;
+      setOrderRows((prev) =>
+        prev.map((order) => (order.id === orderId ? { ...order, ...updated } : order))
+      );
+      setOrderSaveState(orderId, {
+        saving: false,
+        saved: true,
+        error: "",
+        lastSavedAt: new Date().toLocaleTimeString("vi-VN", {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        })
+      });
+      setError("");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Không thể cập nhật đơn hàng.";
+      setOrderSaveState(orderId, {
+        saving: false,
+        saved: false,
+        error: message
+      });
+      setError(message);
+    } finally {
+      inFlightRef.current[orderId] = false;
+      if (queuedRef.current[orderId]) {
+        queuedRef.current[orderId] = false;
+        void persistOrder(orderId);
+      }
+    }
+  };
+
+  const scheduleOrderSave = (orderId: number) => {
+    clearOrderDebounce(orderId);
+    debounceTimersRef.current[orderId] = setTimeout(() => {
+      delete debounceTimersRef.current[orderId];
+      void persistOrder(orderId);
+    }, autoSaveDelayMs);
+  };
+
+  const flushOrderSave = (orderId: number) => {
+    clearOrderDebounce(orderId);
+    void persistOrder(orderId);
+  };
+
+  const updateOrderField = (
+    orderId: number,
+    patch: Partial<OrderEdit>,
+    mode: "debounce" | "immediate" = "debounce"
+  ) => {
+    const nextEdit = {
+      ...(editsRef.current[orderId] || createEmptyOrderEdit()),
+      ...patch
+    };
+    setEdits((prev) => {
+      const next = {
+        ...prev,
+        [orderId]: nextEdit
+      };
+      editsRef.current = next;
+      return next;
+    });
+
+    if (mode === "immediate") {
+      clearOrderDebounce(orderId);
+      editsRef.current = {
+        ...editsRef.current,
+        [orderId]: nextEdit
+      };
+      void persistOrder(orderId);
+      return;
+    }
+
+    scheduleOrderSave(orderId);
+  };
+
+  const toggleOptionalColumn = (columnId: AdminOrderColumnId) => {
+    const hasColumn = visibleColumns.includes(columnId);
+    if (hasColumn) {
+      onColumnsChange(visibleColumns.filter((column) => column !== columnId));
+      return;
+    }
+    onColumnsChange([...visibleColumns, columnId]);
   };
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className={panelClass}>
         <AdminSectionHeader
-          title="Qun l đơn hàng"
-          description="Theo dõi trạng thái giao hàng và thanh toán."
+          title="Quản lý đơn hàng"
+          description="Hiển thị danh sách đơn theo dạng dòng để xử lý nhanh, mở chi tiết khi cần chỉnh sửa."
         />
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          <AdminField label="Tìm kiếm" helper="Theo m n, tn, i!n thoi.">
+        <div className={toolbarGridClass}>
+          <AdminField label="Tìm kiếm" helper="Theo mã đơn, tên khách hàng, email hoặc số điện thoại.">
             <input
               className={inputClass}
-              placeholder="Tm theo m n hoc khch hng"
+              placeholder="Nhập từ khóa tìm đơn hàng"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
           </AdminField>
-          <AdminField label="Trng thi n">
+          <AdminField label="Trạng thái đơn">
             <select
               className={selectClass}
               value={statusFilter}
@@ -3129,188 +3741,362 @@ function AdminOrdersSection({
               ))}
             </select>
           </AdminField>
+          <div className="flex flex-wrap items-end justify-end gap-2 xl:pb-0.5">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="normal-case border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  data-testid="admin-orders-column-toggle"
+                  disabled={savingPreferences}
+                >
+                  <ListFilter className="h-4 w-4" />
+                  Cột hiển thị
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Tùy chọn cột</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {optionalColumns.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    checked={visibleColumns.includes(column.id)}
+                    onCheckedChange={() => toggleOptionalColumn(column.id)}
+                  >
+                    {column.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <span
+              className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+              data-testid="admin-density-indicator"
+            >
+              Mật độ: {isCompact ? "Gọn" : "Thoáng"}
+            </span>
+          </div>
         </div>
       </div>
 
-      {pagedOrders.length ? (
-        pagedOrders.map((order) => {
-          const edit = edits[order.id];
-          return (
-            <div
-              key={order.id}
-              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-base font-semibold uppercase tracking-[0.2em] text-slate-400 md:text-sm">
-                    {order.order_number}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900">
-                    {formatCurrency(order.total)}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-base text-slate-600 md:text-sm">
-                    <span className="rounded-full bg-slate-100 px-3 py-1">
-                      {statusLabels[order.status] || order.status}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-3 py-1">
-                      {paymentLabels[order.payment_status] || order.payment_status}
-                    </span>
-                    <span>Giao hàng: {order.shipping_method || "standard"}</span>
-                  </div>
-                  {order.promo_code ? (
-                    <p className="mt-2 text-base text-slate-500 md:text-sm">
-                      Mã khuyến mãi: {order.promo_code}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="text-base text-slate-600 md:text-sm">
-                  <p className="font-semibold text-slate-900">{order.customer_name}</p>
-                  <p>{order.phone}</p>
-                  <p>{order.email}</p>
-                </div>
-              </div>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <div
+            className="sticky top-0 z-10 hidden items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 lg:grid"
+            style={{ gridTemplateColumns: orderTableTemplate }}
+          >
+            {visibleColumns.map((column) => (
+              <span key={column} className={column === "actions" ? "text-right" : ""}>
+                {headerLabels[column]}
+              </span>
+            ))}
+          </div>
 
-              {edit ? (
-                <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                  <AdminField label="Tên khách hàng">
-                    <input
-                      className={inputClass}
-                      value={edit.customer_name}
-                      onChange={(event) =>
-                        updateEdit(order.id, { customer_name: event.target.value })
-                      }
-                    />
-                  </AdminField>
-                  <AdminField label="Email">
-                    <input
-                      className={inputClass}
-                      value={edit.email}
-                      onChange={(event) => updateEdit(order.id, { email: event.target.value })}
-                    />
-                  </AdminField>
-                  <AdminField label="S i!n thoi">
-                    <input
-                      className={inputClass}
-                      value={edit.phone}
-                      onChange={(event) => updateEdit(order.id, { phone: event.target.value })}
-                    />
-                  </AdminField>
-                  <AdminField label="9a ch0">
-                    <input
-                      className={inputClass}
-                      value={edit.address}
-                      onChange={(event) =>
-                        updateEdit(order.id, { address: event.target.value })
-                      }
-                    />
-                  </AdminField>
-                  <AdminField label="Thời gian giao">
-                    <input
-                      className={inputClass}
-                      value={edit.delivery_time}
-                      onChange={(event) =>
-                        updateEdit(order.id, { delivery_time: event.target.value })
-                      }
-                    />
-                  </AdminField>
-                  <AdminField label="Ghi ch đơn hàng">
-                    <textarea
-                      className={textareaClass}
-                      value={edit.note}
-                      onChange={(event) => updateEdit(order.id, { note: event.target.value })}
-                    />
-                  </AdminField>
-                  <AdminField label="Trng thi n">
-                    <select
-                      className={selectClass}
-                      value={edit.status}
-                      onChange={(event) =>
-                        updateEdit(order.id, { status: event.target.value })
-                      }
-                    >
-                      {statusOptions.map((value) => (
-                        <option key={value} value={value}>
-                          {statusLabels[value] || value}
-                        </option>
-                      ))}
-                    </select>
-                  </AdminField>
-                  <AdminField label="Trạng thái thanh toán">
-                    <select
-                      className={selectClass}
-                      value={edit.payment_status}
-                      onChange={(event) =>
-                        updateEdit(order.id, { payment_status: event.target.value })
-                      }
-                    >
-                      {paymentOptions.map((value) => (
-                        <option key={value} value={value}>
-                          {paymentLabels[value] || value}
-                        </option>
-                      ))}
-                    </select>
-                  </AdminField>
-                </div>
-              ) : null}
+          {pagedOrders.length ? (
+            pagedOrders.map((order) => {
+              const edit = edits[order.id] || createOrderEdit(order);
+              const isExpanded = expandedOrderId === order.id;
+              const saveState = saveStates[order.id];
+              const saveStateText = saveState?.saving
+                ? "Đang lưu..."
+                : saveState?.error
+                  ? "Lưu thất bại"
+                  : saveState?.saved
+                    ? `Đã lưu lúc ${saveState.lastSavedAt}`
+                    : "Chưa lưu";
+              const saveStateClass = saveState?.saving
+                ? "text-slate-600"
+                : saveState?.error
+                  ? "text-rose-600"
+                  : saveState?.saved
+                    ? "text-emerald-600"
+                    : "text-slate-500";
 
-              <div className="mt-4">
-                <AdminField label="Ghi ch n'i b'" helper="Ch0 hin th9 cho qun tr9 vin.">
-                  <textarea
-                    className={textareaClass}
-                    value={edit?.admin_note || ""}
-                    onChange={(event) =>
-                      updateEdit(order.id, { admin_note: event.target.value })
-                    }
-                  />
-                </AdminField>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleUpdate(order)}
-                    className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
+              return (
+                <div key={order.id} className="border-b border-slate-200 last:border-b-0" data-testid={`admin-order-row-${order.id}`}>
+                  <div
+                    className={`grid gap-3 px-4 ${isCompact ? "py-3" : "py-4"} lg:items-center`}
+                    style={{ gridTemplateColumns: orderTableTemplate }}
                   >
-                    Lu đơn hàng
-                  </Button>
-                  {order.payment_proof_url ? (
-                    <a
-                      href={order.payment_proof_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-base font-semibold text-[var(--color-primary)] hover:underline md:text-sm"
-                    >
-                      Xem chứng từ thanh toán
-                    </a>
+                    {visibleColumns.map((column) => {
+                      if (column === "order") {
+                        return (
+                          <div key={column}>
+                            <p className="text-sm font-semibold text-slate-900">{order.order_number}</p>
+                            <p className="text-xs text-slate-500">{formatOrderTime(order.created_at)}</p>
+                          </div>
+                        );
+                      }
+
+                      if (column === "customer") {
+                        return (
+                          <div key={column}>
+                            <p className="text-sm font-semibold text-slate-900">{order.customer_name || "Chưa có tên"}</p>
+                            <p className="text-xs text-slate-600">{order.phone || "-"}</p>
+                            <p className="text-xs text-slate-500">{order.email || "-"}</p>
+                          </div>
+                        );
+                      }
+
+                      if (column === "total") {
+                        return (
+                          <div key={column} className="text-sm font-semibold text-slate-900">
+                            {formatCurrency(order.total)}
+                          </div>
+                        );
+                      }
+
+                      if (column === "payment") {
+                        return (
+                          <div key={column}>
+                            <select
+                              className={`${selectClass} min-h-[44px] py-1 text-xs`}
+                              value={edit.payment_status}
+                              onChange={(event) =>
+                                updateOrderField(
+                                  order.id,
+                                  { payment_status: event.target.value },
+                                  "immediate"
+                                )
+                              }
+                              data-testid={`admin-order-quick-payment-${order.id}`}
+                            >
+                              {paymentOptions.map((value) => (
+                                <option key={value} value={value}>
+                                  {paymentLabels[value] || value}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      }
+
+                      if (column === "delivery") {
+                        return (
+                          <div key={column}>
+                            <select
+                              className={`${selectClass} min-h-[44px] py-1 text-xs`}
+                              value={edit.status}
+                              onChange={(event) =>
+                                updateOrderField(order.id, { status: event.target.value }, "immediate")
+                              }
+                              data-testid={`admin-order-quick-status-${order.id}`}
+                            >
+                              {statusOptions.map((value) => (
+                                <option key={value} value={value}>
+                                  {statusLabels[value] || value}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      }
+
+                      if (column === "payment_method") {
+                        return (
+                          <div key={column} className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                            {order.payment_method || "-"}
+                          </div>
+                        );
+                      }
+
+                      if (column === "shipping_method") {
+                        return (
+                          <div key={column} className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                            {order.shipping_method || "standard"}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={column} className="flex justify-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setExpandedOrderId((prev) => (prev === order.id ? null : order.id))}
+                            className="h-11 w-11 border-slate-200 p-0 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                            data-testid={`admin-order-toggle-${order.id}`}
+                            aria-label={
+                              isExpanded
+                                ? `Ẩn chi tiết đơn ${order.order_number}`
+                                : `Mở chi tiết đơn ${order.order_number}`
+                            }
+                            title={
+                              isExpanded
+                                ? `Ẩn chi tiết đơn ${order.order_number}`
+                                : `Mở chi tiết đơn ${order.order_number}`
+                            }
+                          >
+                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {isExpanded ? (
+                    <div className="border-t border-slate-200 bg-slate-50/70 px-4 py-4" data-testid={`admin-order-detail-${order.id}`}>
+                      <div className="mb-3 flex items-center justify-end">
+                        <span
+                          className={`text-xs font-semibold ${saveStateClass}`}
+                          data-testid={`admin-order-save-state-${order.id}`}
+                          aria-live="polite"
+                        >
+                          {saveStateText}
+                        </span>
+                      </div>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <AdminField label="Tên khách hàng">
+                          <input
+                            className={inputClass}
+                            value={edit.customer_name}
+                            onChange={(event) =>
+                              updateOrderField(order.id, { customer_name: event.target.value })
+                            }
+                            onBlur={() => flushOrderSave(order.id)}
+                          />
+                        </AdminField>
+                        <AdminField label="Email">
+                          <input
+                            className={inputClass}
+                            value={edit.email}
+                            onChange={(event) => updateOrderField(order.id, { email: event.target.value })}
+                            onBlur={() => flushOrderSave(order.id)}
+                          />
+                        </AdminField>
+                        <AdminField label="Số điện thoại">
+                          <input
+                            className={inputClass}
+                            data-testid={`admin-order-phone-${order.id}`}
+                            value={edit.phone}
+                            onChange={(event) => updateOrderField(order.id, { phone: event.target.value })}
+                            onBlur={() => flushOrderSave(order.id)}
+                          />
+                        </AdminField>
+                        <AdminField label="Địa chỉ">
+                          <input
+                            className={inputClass}
+                            value={edit.address}
+                            onChange={(event) => updateOrderField(order.id, { address: event.target.value })}
+                            onBlur={() => flushOrderSave(order.id)}
+                          />
+                        </AdminField>
+                        <AdminField label="Thời gian giao">
+                          <input
+                            className={inputClass}
+                            value={edit.delivery_time}
+                            onChange={(event) =>
+                              updateOrderField(order.id, { delivery_time: event.target.value })
+                            }
+                            onBlur={() => flushOrderSave(order.id)}
+                          />
+                        </AdminField>
+                        <AdminField label="Ghi chú đơn hàng">
+                          <textarea
+                            className={textareaClass}
+                            value={edit.note}
+                            onChange={(event) => updateOrderField(order.id, { note: event.target.value })}
+                            onBlur={() => flushOrderSave(order.id)}
+                          />
+                        </AdminField>
+                        <AdminField label="Trạng thái đơn">
+                          <select
+                            className={selectClass}
+                            value={edit.status}
+                            onChange={(event) =>
+                              updateOrderField(order.id, { status: event.target.value }, "immediate")
+                            }
+                          >
+                            {statusOptions.map((value) => (
+                              <option key={value} value={value}>
+                                {statusLabels[value] || value}
+                              </option>
+                            ))}
+                          </select>
+                        </AdminField>
+                        <AdminField label="Trạng thái thanh toán">
+                          <select
+                            className={selectClass}
+                            value={edit.payment_status}
+                            onChange={(event) =>
+                              updateOrderField(
+                                order.id,
+                                { payment_status: event.target.value },
+                                "immediate"
+                              )
+                            }
+                          >
+                            {paymentOptions.map((value) => (
+                              <option key={value} value={value}>
+                                {paymentLabels[value] || value}
+                              </option>
+                            ))}
+                          </select>
+                        </AdminField>
+                      </div>
+
+                      <div className="mt-4">
+                        <AdminField label="Ghi chú nội bộ" helper="Chỉ hiển thị cho quản trị viên.">
+                          <textarea
+                            className={textareaClass}
+                            value={edit.admin_note}
+                            onChange={(event) =>
+                              updateOrderField(order.id, { admin_note: event.target.value })
+                            }
+                            onBlur={() => flushOrderSave(order.id)}
+                          />
+                        </AdminField>
+                      </div>
+
+                      <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                        <p className="font-semibold text-slate-900">Sản phẩm trong đơn</p>
+                        {order.items?.length ? (
+                          <div className="mt-2 space-y-2">
+                            {order.items.map((item) => (
+                              <div key={`${order.id}-${item.product_id}`} className="flex items-center justify-between gap-3">
+                                <span>
+                                  {item.name} x{item.quantity}
+                                </span>
+                                <span className="font-semibold">{formatCurrency(item.unit_price)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-slate-500">Đơn hàng chưa có dòng sản phẩm.</p>
+                        )}
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                        <span className={`text-xs font-semibold ${saveStateClass}`}>{saveStateText}</span>
+                        {order.payment_proof_url ? (
+                          <a
+                            href={order.payment_proof_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-semibold text-[var(--color-primary)] hover:underline"
+                          >
+                            Xem chứng từ thanh toán
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
                   ) : null}
                 </div>
-              </div>
-
-              {order.items?.length ? (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-600 md:text-sm">
-                  <p className="font-semibold text-slate-700">Sn phm trong n</p>
-                  <div className="mt-2 space-y-2">
-                    {order.items.map((item) => (
-                      <div key={`${order.id}-${item.product_id}`} className="flex justify-between">
-                        <span>
-                          {item.name} x{item.quantity}
-                        </span>
-                        <span>{formatCurrency(item.unit_price)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+              );
+            })
+          ) : (
+            <div className="px-4 py-6 text-center text-sm text-slate-500">
+              Chưa có đơn hàng phù hợp bộ lọc.
             </div>
-          );
-        })
-      ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-base text-slate-500 md:text-sm">
-          Cha c đơn hàng ph hp b lc.
+          )}
         </div>
-      )}
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-base text-slate-500 md:text-sm">
+        <span className="text-sm text-slate-500">
           Hiển thị {pagedOrders.length}/{filteredOrders.length} đơn hàng
         </span>
         <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
@@ -3318,15 +4104,16 @@ function AdminOrdersSection({
     </div>
   );
 }
-
 function AdminPaymentsSection({
   settings,
   onSave,
-  setError
+  setError,
+  density
 }: {
   settings: PaymentSettings | null;
   onSave: (value: PaymentSettings) => void;
   setError: (value: string) => void;
+  density: AdminDensityMode;
 }) {
   const [form, setForm] = useState<PaymentSettings>(
     settings || {
@@ -3351,6 +4138,11 @@ function AdminPaymentsSection({
       });
     }
   }, [settings]);
+  const isCompact = density === "compact";
+  const panelClass = isCompact
+    ? "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+    : "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm";
+  const gridGapClass = isCompact ? "mt-4 grid gap-3" : "mt-5 grid gap-4";
 
   const handleSave = async () => {
     try {
@@ -3362,12 +4154,12 @@ function AdminPaymentsSection({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className={panelClass}>
       <AdminSectionHeader
         title="Cấu hình thanh toán"
         description="Thiết lập các phương thức thanh toán và thông tin chuyỒn khoản."
       />
-      <div className="mt-5 grid gap-4">
+      <div className={gridGapClass}>
         <div className="grid gap-3">
           <label className="flex items-center gap-2 text-base font-semibold text-slate-700 md:text-sm cursor-pointer">
             <input
@@ -3430,7 +4222,7 @@ function AdminPaymentsSection({
         </AdminField>
         <AdminField
           label="Quick Link VietQR"
-          helper="Dn link VietQR  t 'ng hiỒn th9 m QR thanh ton."
+          helper="Dán link VietQR tự động hiển thị mã QR thanh toán."
         >
           <input
             className={inputClass}
@@ -3450,8 +4242,6 @@ function AdminPaymentsSection({
     </div>
   );
 }
-
-
 function AdminAboutSection({
   value,
   onChange,
@@ -3569,7 +4359,7 @@ function AdminAboutSection({
   const handleSlideSubmit = () => {
     setError("");
     if (!slideForm.title.trim()) {
-      setError("Vui lng nhp tiu  slide.");
+      setError("Vui lòng nhập tiêu đề slide.");
       return;
     }
     if (!slideForm.image.trim()) {
@@ -3611,7 +4401,7 @@ function AdminAboutSection({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <AdminSectionHeader
             title="Trang giới thiệu"
-            description="Cp nht n'i dung hiỒn th9 trn trang gi:i thi!u. H tr nh v CTA theo tng slide."
+            description="Cập nhật nội dung hiển thị trên trang giới thiệu. Hỗ trợ ảnh và CTA theo từng slide."
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 {savedAt ? (
@@ -3629,21 +4419,21 @@ function AdminAboutSection({
           />
 
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            <AdminField label="Eyebrow" helper="V d: Gi:i thi!u">
+            <AdminField label="Eyebrow" helper="Ví dụ: Giới thiệu">
               <input
                 className={inputClass}
                 value={value.hero.eyebrow}
                 onChange={(event) => updateHero({ eyebrow: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Tiu  chnh" helper="Tiu  l:n hin th9 x phn u trang.">
+            <AdminField label="Tiu  chnh" helper="Tiêu đề lớn hiển thị ở phần đầu trang.">
               <input
                 className={inputClass}
                 value={value.hero.title}
                 onChange={(event) => updateHero({ title: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Mô tả" helper="on gi:i thi!u ngn bn d:i tiu .">
+            <AdminField label="Mô tả" helper="Đoạn giới thiệu ngắn bên dưới tiêu đề.">
               <textarea
                 className={textareaClass}
                 value={value.hero.lead}
@@ -3664,7 +4454,7 @@ function AdminAboutSection({
                 onChange={(event) => updateHero({ imageAlt: event.target.value })}
               />
             </AdminField>
-            <AdminField label="CTA chính" helper="Nt lin h! n'i bật.">
+            <AdminField label="CTA chính" helper="Nút liên hệ nổi bật.">
               <input
                 className={inputClass}
                 value={value.hero.ctaLabel}
@@ -3692,7 +4482,7 @@ function AdminAboutSection({
                 onChange={(event) => updateHero({ secondaryHref: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Pill highlights" helper="Mi dng l m't nhãn n'i bt.">
+            <AdminField label="Pill highlights" helper="Mỗi dòng là một nhãn nổi bật.">
               <textarea
                 className={textareaClass}
                 value={heroPillsValue}
@@ -3737,7 +4527,7 @@ function AdminAboutSection({
               onClick={addStat}
               className="normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
             >
-              Thm ch0 s
+              Thêm chỉ số
             </Button>
           </div>
         </div>
@@ -3745,7 +4535,7 @@ function AdminAboutSection({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <AdminSectionHeader
             title="Nội dung chi tiết"
-            description="C th dng HTML (p, h3, ul, li). Nội dung này hiỒn th9 nh m't slide di."
+            description="Có thể dùng HTML (p, h3, ul, li). Nội dung này hiển thị như một slide dài."
           />
           <div className="mt-4">
             <textarea
@@ -3758,16 +4548,16 @@ function AdminAboutSection({
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <AdminSectionHeader title="CTA cuối trang" description="Khi ku gi lin h! cui trang gi:i thi!u." />
+          <AdminSectionHeader title="CTA cuối trang" description="Khối kêu gọi liên hệ cuối trang giới thiệu." />
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <AdminField label="Tiu " helper="Dng tiu  ku gi hnh 'ng.">
+            <AdminField label="Tiêu đề" helper="Dòng tiêu đề kêu gọi hành động.">
               <input
                 className={inputClass}
                 value={value.contact.title}
                 onChange={(event) => handleContactChange({ title: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Nội dung" helper="M t ngn bn d:i tiu .">
+            <AdminField label="Nội dung" helper="Mô tả ngắn bên dưới tiêu đề.">
               <textarea
                 className={textareaClass}
                 value={value.contact.description}
@@ -3796,7 +4586,7 @@ function AdminAboutSection({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <AdminSectionHeader
             title="Danh sách slide"
-            description="Cc slide gi:i thi!u hin th9 theo chiu dc trn trang."
+            description="Các slide giới thiệu hiển thị theo chiều dọc trên trang."
           />
           <div className="mt-4 space-y-4">
             {value.slides.length ? (
@@ -3843,7 +4633,7 @@ function AdminAboutSection({
               ))
             ) : (
               <p className="text-base text-slate-500 md:text-sm">
-                Cha c slide no. Hy to slide u tin.
+                Chưa có slide nào. Hãy tạo slide đầu tiên.
               </p>
             )}
           </div>
@@ -3852,10 +4642,10 @@ function AdminAboutSection({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <AdminSectionHeader
             title={editingId ? "Cập nhật slide" : "Tạo slide mới"}
-            description="Mi slide gm hnh nh, m t v nt lin h!."
+            description="Mỗi slide gồm hình ảnh, mô tả và nút liên hệ."
           />
           <div className="mt-4 grid gap-4">
-            <AdminField label="Tag" helper="V d: Chng 01 (c th  trng).">
+            <AdminField label="Tag" helper="Ví dụ: Chặng 01 (có thể để trống).">
               <input
                 className={inputClass}
                 value={slideForm.tag}
@@ -3876,7 +4666,7 @@ function AdminAboutSection({
                 onChange={(event) => setSlideForm({ ...slideForm, description: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Danh sách bullet" helper="Mi dng l m't bullet.">
+            <AdminField label="Danh sách bullet" helper="Mỗi dòng là một bullet.">
               <textarea
                 className={textareaClass}
                 value={slideForm.bullets}
@@ -3897,7 +4687,7 @@ function AdminAboutSection({
                 onChange={(event) => setSlideForm({ ...slideForm, imageAlt: event.target.value })}
               />
             </AdminField>
-            <AdminField label="Nút CTA" helper="V d: Lin h! t vn.">
+            <AdminField label="Nút CTA" helper="Ví dụ: Liên hệ tư vấn.">
               <input
                 className={inputClass}
                 value={slideForm.ctaLabel}
@@ -3951,8 +4741,8 @@ function AdminContactSection({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <AdminSectionHeader
-        title="Thng tin lin h!"
-        description="Cp nht thng tin hin th9 x trang lin h!, topbar v footer."
+        title="Thông tin liên hệ"
+        description="Cập nhật thông tin hiển thị ở trang liên hệ, topbar và footer."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {savedAt ? (
@@ -3972,35 +4762,35 @@ function AdminContactSection({
       />
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <AdminField label="S i!n thoi" helper="Hin th9 x topbar v footer.">
+        <AdminField label="Số điện thoại" helper="Hiển thị ở topbar và footer.">
           <input
             className={inputClass}
             value={value.phone}
             onChange={(event) => onChange({ phone: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Số fax" helper="Tu chn, hin th9 x trang lin h!.">
+        <AdminField label="Số fax" helper="Tùy chọn, hiển thị ở trang liên hệ.">
           <input
             className={inputClass}
             value={value.fax}
             onChange={(event) => onChange({ fax: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Email" helper="9a ch0 email nhn lin h!.">
+        <AdminField label="Email" helper="Địa chỉ email nhận liên hệ.">
           <input
             className={inputClass}
             value={value.email}
             onChange={(event) => onChange({ email: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Gi lm vi!c" helper="V d: 8:00 - 17:00 mi ngy.">
+        <AdminField label="Giờ làm việc" helper="Ví dụ: 8:00 - 17:00 mỗi ngày.">
           <input
             className={inputClass}
             value={value.businessHours}
             onChange={(event) => onChange({ businessHours: event.target.value })}
           />
         </AdminField>
-        <AdminField label="9a ch0" helper="9a ch0 ca hng hoc vn phng.">
+        <AdminField label="Địa chỉ" helper="Địa chỉ cửa hàng hoặc văn phòng.">
           <textarea
             className={textareaClass}
             value={value.address}
@@ -4009,7 +4799,7 @@ function AdminContactSection({
         </AdminField>
         <AdminField
           label="URL bn "
-          helper="Dn URL embed Google Maps  hin th9 bn ."
+          helper="Dán URL embed Google Maps để hiển thị bản đồ."
         >
           <textarea
             className={textareaClass}
@@ -4083,7 +4873,7 @@ function AdminPromoPopupSection({
 
   const addProgram = () => {
     onChange({
-      programs: [...value.programs, { title: "u i m:i", description: "" }]
+      programs: [...value.programs, { title: "Ưu đãi mới", description: "" }]
     });
   };
 
@@ -4093,7 +4883,7 @@ function AdminPromoPopupSection({
 
   const addCoupon = () => {
     onChange({
-      coupons: [...value.coupons, { label: "M u i", code: "", description: "" }]
+      coupons: [...value.coupons, { label: "Mã ưu đãi", code: "", description: "" }]
     });
   };
 
@@ -4105,7 +4895,7 @@ function AdminPromoPopupSection({
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <AdminSectionHeader
         title="Popup khuyến mãi"
-        description="Thit lp n'i dung popup khuyến mãi hiỒn th9 x trang ch."
+        description="Thiết lập nội dung popup khuyến mãi hiển thị ở trang chủ."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {savedAt ? (
@@ -4135,7 +4925,7 @@ function AdminPromoPopupSection({
             <option value="false">Đang tắt</option>
           </select>
         </AdminField>
-        <AdminField label="' tr& (giy)" helper="Popup s hin th9 sau s giy ny.">
+        <AdminField label="' tr& (giy)" helper="Popup sẽ hiển thị sau số giây này.">
           <input
             className={inputClass}
             type="number"
@@ -4151,14 +4941,14 @@ function AdminPromoPopupSection({
             onChange={(event) => onChange({ title: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Ph " helper="Dng m t ngn bn d:i tiu .">
+        <AdminField label="Phụ đề" helper="Dòng mô tả ngắn bên dưới tiêu đề.">
           <input
             className={inputClass}
             value={value.subtitle}
             onChange={(event) => onChange({ subtitle: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Ảnh popup" helper="URL nh hin th9 x phn trn ca popup.">
+        <AdminField label="Ảnh popup" helper="URL ảnh hiển thị ở phần trên của popup.">
           <input
             className={inputClass}
             value={value.imageSrc}
@@ -4172,7 +4962,7 @@ function AdminPromoPopupSection({
             onChange={(event) => onChange({ imageAlt: event.target.value })}
           />
         </AdminField>
-        <AdminField label="Nút CTA" helper="Nhn nt lin h! trong popup.">
+        <AdminField label="Nút CTA" helper="Nhãn nút liên hệ trong popup.">
           <input
             className={inputClass}
             value={value.ctaLabel}
@@ -4192,20 +4982,20 @@ function AdminPromoPopupSection({
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold text-slate-900 md:text-sm">
-              Chng trnh u i
+              Chương trình ưu đãi
             </h3>
             <Button
               onClick={addProgram}
               className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
             >
-              Thm u i
+              Thêm ưu đãi
             </Button>
           </div>
           <div className="mt-4 space-y-4">
             {value.programs.map((item, index) => (
               <div key={`program-${index}`} className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">u i #{index + 1}</span>
+                  <span className="text-sm font-semibold">Ưu đãi #{index + 1}</span>
                   <Button
                     onClick={() => removeProgram(index)}
                     className="h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 normal-case tracking-normal text-sm cursor-pointer"
@@ -4259,7 +5049,7 @@ function AdminPromoPopupSection({
                     className={inputClass}
                     value={item.label}
                     onChange={(event) => handleCouponChange(index, { label: event.target.value })}
-                    placeholder="Tn u i"
+                    placeholder="Tên ưu đãi"
                   />
                   <input
                     className={inputClass}
@@ -4305,7 +5095,7 @@ function AdminNotificationsSection({
   const addItem = () => {
     const nextItem: NotificationItem = {
       id: `notify-${Date.now()}`,
-      title: "Thng bo m:i",
+      title: "Thông báo mới",
       description: "",
       href: "/",
       isActive: true
@@ -4356,7 +5146,7 @@ function AdminNotificationsSection({
         <div className="mt-4 space-y-4">
           {value.items.length === 0 ? (
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-              Cha c thng bo tu ch0nh.
+              Chưa có thông báo tùy chỉnh.
             </div>
           ) : (
             value.items.map((item, index) => (
@@ -4483,7 +5273,7 @@ function AdminBannersSection({
   const handleSubmit = () => {
     setError("");
     if (!form.title.trim()) {
-      setError("Vui lng nhp tiu  banner.");
+      setError("Vui lòng nhập tiêu đề banner.");
       return;
     }
     if (!form.desktopSrc.trim()) {
@@ -4495,7 +5285,7 @@ function AdminBannersSection({
       return;
     }
     if (!form.ctaHref.trim()) {
-      setError("Vui lng nhp ng dn CTA.");
+      setError("Vui lòng nhập đường dẫn CTA.");
       return;
     }
 
@@ -4527,7 +5317,7 @@ function AdminBannersSection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title="Banner trang chủ"
-          description="Qun l n'i dung slider hiỒn th9 x trang ch."
+          description="Quản lý nội dung slider hiển thị ở trang chủ."
           actions={
             <div className="flex flex-wrap items-center gap-2">
               {savedAt ? (
@@ -4586,7 +5376,7 @@ function AdminBannersSection({
                           : "bg-rose-50 text-rose-600"
                       }`}
                     >
-                      {banner.isActive ? "ang hin th9" : "Đang ẩn"}
+                      {banner.isActive ? "đang hiển thị" : "Đang ẩn"}
                     </span>
                   </div>
                 </div>
@@ -4612,7 +5402,7 @@ function AdminBannersSection({
             ))
           ) : (
             <p className="text-base text-slate-500 md:text-sm">
-              Cha c banner no. Hy to banner u tin.
+              Chưa có banner nào. Hãy tạo banner đầu tiên.
             </p>
           )}
         </div>
@@ -4621,7 +5411,7 @@ function AdminBannersSection({
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <AdminSectionHeader
           title={editingId ? "Cập nhật banner" : "Tạo banner"}
-          description="Nhp y  thng tin  hin th9 trn slider."
+          description="Nhập đầy đủ thông tin để hiển thị trên slider."
         />
         <div className="mt-4 grid gap-4">
           <AdminField label="Tiu " helper="Tiu  chnh ca banner.">
@@ -4633,7 +5423,7 @@ function AdminBannersSection({
           </AdminField>
           <AdminField
             label="Nhãn banner"
-            helper="V d: Banner n'i bật, u i tun ny."
+            helper="Ví dụ: Banner nổi bật, ưu đãi tuần này."
           >
             <input
               className={inputClass}
@@ -4669,7 +5459,7 @@ function AdminBannersSection({
               onChange={(event) => setForm({ ...form, desktopSrc: event.target.value })}
             />
           </AdminField>
-          <AdminField label="Ảnh mobile" helper="Nu b trng s dng nh desktop.">
+          <AdminField label="Ảnh mobile" helper="Nếu bỏ trống sẽ dùng ảnh desktop.">
             <input
               className={inputClass}
               value={form.mobileSrc}

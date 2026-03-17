@@ -1,19 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800" role="img" aria-labelledby="title desc">
-  <title id="title">Tam Bo Placeholder 1</title>
-  <desc id="desc">Temporary product image placeholder.</desc>
+  <title id="title">Tam Bo Organic Visual 1</title>
+  <desc id="desc">Organic themed fallback image with soft green fields.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#e8f5e9"/>
-      <stop offset="100%" stop-color="#c8e6c9"/>
+    <linearGradient id="bg1" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#eefbf1"/>
+      <stop offset="100%" stop-color="#d8f2df"/>
     </linearGradient>
+    <radialGradient id="orb1" cx="0.2" cy="0.2" r="0.7">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect width="600" height="800" fill="url(#bg)"/>
-  <path d="M0 520 C140 470 280 470 420 520 C520 560 560 570 600 550 V800 H0 Z" fill="#7cb342"/>
-  <path d="M0 600 C140 560 280 560 420 600 C520 640 560 650 600 630 V800 H0 Z" fill="#8bc34a" opacity="0.9"/>
-  <circle cx="420" cy="230" r="95" fill="#ffffff" stroke="#4c8b1f" stroke-width="6"/>
-  <circle cx="420" cy="230" r="70" fill="#eaf7d9"/>
-  <g fill="#2f6f16" font-family="Roboto, Arial, sans-serif">
-    <text x="40" y="150" font-size="28" font-weight="700">Tam Bo</text>
-    <text x="40" y="190" font-size="16">Temporary image</text>
+  <rect width="600" height="800" fill="url(#bg1)"/>
+  <circle cx="140" cy="170" r="180" fill="url(#orb1)"/>
+  <path d="M0 500 C120 460 240 450 360 490 C470 525 540 540 600 520 V800 H0 Z" fill="#5ea13f"/>
+  <path d="M0 580 C120 545 240 535 360 570 C480 605 550 620 600 600 V800 H0 Z" fill="#7fbf4f" opacity="0.95"/>
+  <g fill="#2f7a36" opacity="0.35">
+    <circle cx="470" cy="180" r="86"/>
+    <circle cx="520" cy="210" r="62"/>
+  </g>
+  <g transform="translate(378 138) scale(1.1)">
+    <path d="M0 44 C0 16 24 0 48 0 C48 28 26 52 0 52 C0 50 0 48 0 44 Z" fill="#2f7a36" opacity="0.85"/>
+    <path d="M42 56 C42 30 63 14 88 14 C88 41 68 68 42 68 C42 64 42 60 42 56 Z" fill="#5aa148" opacity="0.85"/>
   </g>
 </svg>

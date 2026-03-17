@@ -38,6 +38,78 @@ export type AdminProfile = {
   email: string;
   name: string;
   role: string;
+  nav_order?: string[];
+  ui_preferences?: AdminUIPreferences;
+};
+
+export type AdminSidebarMode = "rail" | "full";
+export type AdminDensityMode = "compact" | "comfortable";
+export type AdminOrderColumnId =
+  | "order"
+  | "customer"
+  | "total"
+  | "payment"
+  | "delivery"
+  | "payment_method"
+  | "shipping_method"
+  | "actions";
+
+export type AdminUIPreferences = {
+  sidebar_mode?: AdminSidebarMode;
+  density?: AdminDensityMode;
+  orders_columns?: AdminOrderColumnId[];
+};
+
+export type AdminDashboardGrain = "day" | "month" | "year";
+
+export type AdminDashboardPoint = {
+  key: string;
+  label: string;
+  orders: number;
+  paid_revenue: number;
+  pageviews: number;
+  unique_visitors: number;
+};
+
+export type AdminDashboardSummary = {
+  orders: number;
+  paid_revenue: number;
+  average_order_value: number;
+  pageviews: number;
+  unique_visitors: number;
+};
+
+export type AdminDashboardStatusTotal = {
+  status: string;
+  count: number;
+};
+
+export type AdminDashboardTopProduct = {
+  product_id: number;
+  product_name: string;
+  quantity_sold: number;
+  revenue: number;
+};
+
+export type AdminDashboardRecentOrder = {
+  id: number;
+  order_number: string;
+  customer_name: string;
+  total: number;
+  status: string;
+  payment_status: string;
+  created_at: string;
+};
+
+export type AdminDashboard = {
+  grain: AdminDashboardGrain;
+  range_label: string;
+  summary: AdminDashboardSummary;
+  series: AdminDashboardPoint[];
+  order_status_totals: AdminDashboardStatusTotal[];
+  payment_status_totals: AdminDashboardStatusTotal[];
+  top_products: AdminDashboardTopProduct[];
+  recent_orders: AdminDashboardRecentOrder[];
 };
 
 export type AdminCategory = {
@@ -153,6 +225,16 @@ export function adminLogout() {
 
 export function adminMe() {
   return adminRequest<AdminProfile>("/api/admin/me");
+}
+
+export function updateAdminPreferences(input: {
+  nav_order?: string[];
+  ui_preferences?: AdminUIPreferences;
+}) {
+  return adminRequest<AdminProfile>("/api/admin/me/preferences", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
 }
 
 export function listAdminProducts() {
@@ -300,6 +382,12 @@ export function listAdminOrders(params?: {
   return adminRequest<AdminOrder[]>(
     suffix ? `/api/admin/orders?${suffix}` : "/api/admin/orders",
   );
+}
+
+export function getAdminDashboard(grain: AdminDashboardGrain) {
+  const search = new URLSearchParams();
+  search.set("grain", grain);
+  return adminRequest<AdminDashboard>(`/api/admin/dashboard?${search.toString()}`);
 }
 
 export function updateAdminOrder(
