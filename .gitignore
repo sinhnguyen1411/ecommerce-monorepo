@@ -29,6 +29,8 @@ build
 # tool caches
 .eslintcache
 .stylelintcache
+apps/web/test-results/
+apps/web/tsconfig.tsbuildinfo
 
 # vercel
 .vercel

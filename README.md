@@ -131,7 +131,7 @@ Ensure `NEXT_PUBLIC_API_URL=http://localhost:8080`.
 - Migrations run when `MIGRATE_ON_START=true`.
 - Seed behavior (`SEED_ON_START=true`):
   - Empty DB: all seed files run.
-  - Existing products: promotions/users seed refresh only.
+  - Existing products: promotions/users/content-quality seed refresh.
 - Sources: `migrations/`, `seed/`.
 
 Default seed includes:
@@ -139,6 +139,7 @@ Default seed includes:
 - Payment settings
 - Coupons: `WELCOME50`, `FRESH10`, `SAVE10`, `SAVE20`, `SAVE40`
 - Buyer test users (`buyer@tambo.local`, `buyer2@tambo.local`) with seeded addresses
+- Content quality normalization for products/posts/pages/Q&A/locations via `seed/005_content_quality.sql`
 
 Need a new admin password hash: use `tmp_bcrypt.go`.
 
@@ -208,6 +209,8 @@ npm run build
 
 Notes:
 - Playwright first run may require: `npx playwright install`.
+- `npm run test:e2e` starts `mysql`, `redis`, and `api` via Docker Compose, waits for `http://localhost:8080/healthz`, runs Playwright, then stops only the services it started.
+- Use `npm run test:e2e:raw` only when the backend is already running and healthy.
 - Build guard via `prebuild`: `check:mojibake` + `lint:errors`.
 
 ## Encoding and Git Hooks
@@ -300,12 +303,14 @@ Get-Content backup.sql | docker exec -i tambo_mysql mysql -u root -pYOUR_ROOT_PA
 
 ## Documentation
 - `docs/README_LOCAL.md`: local setup
+- `docs/STARTUP.md`: startup and test workflow
 - `docs/README_DEPLOY.md`: deployment
 - `docs/API.md`: API contract
 - `docs/AUTH_GOOGLE_OTP_SETUP.md`: Google OAuth + Gmail OTP setup
 - `docs/PROJECT_CONTEXT.md`: deep internal project context
 - `docs/SECURITY_ASVS_L1.md`: security gap analysis
 - `docs/HANDOVER_GUIDE.md`: handover notes
+- `docs/CONTENT_QUALITY_CHECKLIST.md`: editorial/content-quality checklist
 - `apps/web/README_UI.md`: storefront UI summary
 
 

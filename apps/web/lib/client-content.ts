@@ -46,7 +46,7 @@ const sanitizeHomeBanners = (input: HomeBanner[] | null) => {
       return banner;
     }
     const updated: HomeBanner = { ...banner };
-    const fields: (keyof HomeBanner)[] = [
+    const fields = [
       "id",
       "badge",
       "title",
@@ -56,7 +56,7 @@ const sanitizeHomeBanners = (input: HomeBanner[] | null) => {
       "desktopSrc",
       "mobileSrc",
       "alt"
-    ];
+    ] as const satisfies readonly (keyof HomeBanner)[];
 
     for (const field of fields) {
       const current = banner[field];
@@ -82,7 +82,7 @@ const sanitizeContactSettings = (input: ContactSettings | null) => {
 
   let changed = false;
   const next: ContactSettings = { ...input };
-  const fields: (keyof ContactSettings)[] = [
+  const fields = [
     "phone",
     "mobilePhone",
     "fax",
@@ -92,7 +92,7 @@ const sanitizeContactSettings = (input: ContactSettings | null) => {
     "mapUrl",
     "facebookUrl",
     "zaloUrl"
-  ];
+  ] as const satisfies readonly (keyof ContactSettings)[];
 
   for (const field of fields) {
     const current = input[field];

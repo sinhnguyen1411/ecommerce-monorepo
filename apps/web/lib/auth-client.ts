@@ -10,6 +10,7 @@ type ApiEnvelope<T> = {
   error?: {
     message: string;
     code: string;
+    retry_at?: string;
   };
 };
 

@@ -134,7 +134,7 @@ export default async function QnAPage() {
               </div>
               <div className="content-pageDetail qna-list">
                 {resolvedItems.map((item, index) => (
-                  <article key={item.id ?? item.question} className="qna-card">
+                  <article key={`${item.question}-${index}`} className="qna-card">
                     <div className="qna-card-header">
                       <span className="qna-index">{formatIndex(index)}</span>
                       <h3>{item.question}</h3>
