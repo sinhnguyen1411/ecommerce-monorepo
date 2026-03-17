@@ -121,6 +121,7 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 		api.GET("/payment-settings", s.cacheGetMiddleware(s.Config.CacheStaticTTL), s.GetPaymentSettings)
 		api.GET("/promotions", s.cacheGetMiddleware(s.Config.CacheListTTL), s.ListPromotions)
 		api.POST("/promotions/validate", s.ValidatePromotion)
+		api.POST("/analytics/pageview", s.TrackPageView)
 		api.POST("/orders", s.CreateOrder)
 		api.GET("/orders/:id/summary", s.GetOrderSummary)
 		api.PATCH("/orders/:id/payment-method", s.buyerWriteRateLimitMiddleware(nil), s.UpdateOrderPaymentMethod)
@@ -132,6 +133,7 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 		admin := api.Group("/admin", s.requireRole("admin"), s.adminWriteRateLimitMiddleware())
 		{
 			admin.GET("/me", s.AdminMe)
+			admin.PATCH("/me/preferences", s.AdminUpdatePreferences)
 			admin.GET("/products", s.AdminListProducts)
 			admin.POST("/products", s.AdminCreateProduct)
 			admin.GET("/products/:id", s.AdminGetProduct)
@@ -165,6 +167,7 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 			admin.GET("/orders", s.AdminListOrders)
 			admin.GET("/orders/:id", s.AdminGetOrder)
 			admin.PATCH("/orders/:id", s.AdminUpdateOrder)
+			admin.GET("/dashboard", s.AdminDashboard)
 
 			admin.GET("/payment-settings", s.AdminGetPaymentSettings)
 			admin.PUT("/payment-settings", s.AdminUpdatePaymentSettings)

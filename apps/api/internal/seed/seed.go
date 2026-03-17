@@ -18,7 +18,10 @@ func ApplyIfNeeded(db *sql.DB, dir string) error {
 		if err := applySeedFile(db, dir, "003_promotions.sql"); err != nil {
 			return err
 		}
-		return applySeedFile(db, dir, "004_users.sql")
+		if err := applySeedFile(db, dir, "004_users.sql"); err != nil {
+			return err
+		}
+		return applySeedFile(db, dir, "005_content_quality.sql")
 	}
 
 	entries, err := os.ReadDir(dir)
