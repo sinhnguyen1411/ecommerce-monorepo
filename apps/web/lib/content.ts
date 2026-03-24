@@ -132,9 +132,9 @@ export type AboutPageContent = {
 export const defaultAboutContent: AboutPageContent = {
   hero: {
     eyebrow: "Giới thiệu",
-    title: "Nông Dược Tam Bố đồng hành cùng mùa vụ bền vững",
+    title: "Hành trình nông nghiệp bền vững cùng Nông Dược Tam Bố",
     lead:
-      "Chúng tôi cung cấp vật tư nông nghiệp chính hãng và tư vấn kỹ thuật sát thực tế canh tác, giúp nhà vườn tối ưu năng suất và chất lượng nông sản theo từng mùa vụ.",
+      "Chúng tôi xây dựng giải pháp sinh học và dịch vụ tư vấn sát thực tế canh tác, giúp nhà vườn tối ưu năng suất và chất lượng theo từng mùa vụ.",
     image:
       "https://images.pexels.com/photos/30717830/pexels-photo-30717830.jpeg?cs=srgb&dl=pexels-1500mcoffee-30717830.jpg&fm=jpg",
     imageAlt: "Nhà vườn chăm sóc cây trồng tại nông trại",
@@ -142,82 +142,80 @@ export const defaultAboutContent: AboutPageContent = {
     ctaHref: "/pages/lien-he",
     secondaryLabel: "Hỏi đáp kỹ thuật",
     secondaryHref: "/pages/hoi-dap-cung-nha-nong",
-    pills: ["Nguồn gốc rõ ràng", "Tư vấn tại vườn", "Theo sát mùa vụ"]
+    pills: ["Chính hãng rõ nguồn gốc", "Tư vấn tại vườn", "Theo sát mùa vụ"]
   },
   stats: [
-    { value: "15+ năm", label: "Kinh nghiệm đồng hành nhà vườn" },
-    { value: "3.000+", label: "Hộ nông tin chọn" },
-    { value: "120+", label: "Danh mục sản phẩm sinh học" }
+    { value: "15+ năm", label: "Đồng hành cùng nhà nông" },
+    { value: "3.000+ hộ", label: "Nhà vườn tin chọn" },
+    { value: "20+ điểm", label: "Hệ thống cửa hàng" }
   ],
   slides: [
     {
       id: "about-slide-1",
-      tag: "Chặng 01",
-      title: "Khảo sát vườn và đánh giá thổ nhưỡng",
+      tag: "Lịch sử",
+      title: "Lịch sử hình thành",
       description:
-        "Đội ngũ kỹ thuật khảo sát thực địa, xác định nhu cầu dinh dưỡng và rủi ro sâu bệnh theo mùa vụ.",
-      bullets: ["Đo độ pH và cấu trúc đất", "Phân tích nhu cầu dưỡng chất", "Lập kế hoạch chăm sóc theo mùa"],
+        "Khởi đầu từ nhu cầu thực tế của nhà vườn, Tam Bố từng bước mở rộng đội ngũ và danh mục giải pháp sinh học.",
+      bullets: [
+        "Khởi nguồn từ nông hộ địa phương",
+        "Mở rộng đội ngũ kỹ thuật thực địa",
+        "Chuẩn hóa danh mục sản phẩm"
+      ],
       image:
         "https://images.pexels.com/photos/19000373/pexels-photo-19000373.jpeg?cs=srgb&dl=pexels-abdulkayum97-19000373.jpg&fm=jpg",
-      imageAlt: "Khảo sát vườn và đánh giá mùa vụ",
-      ctaLabel: "Đặt lịch khảo sát",
-      ctaHref: "/pages/lien-he"
+      imageAlt: "Hành trình phát triển cùng nhà vườn",
+      ctaLabel: "",
+      ctaHref: ""
     },
     {
       id: "about-slide-2",
-      tag: "Chặng 02",
-      title: "Tối ưu dinh dưỡng và phòng trừ sinh học",
+      tag: "Tầm nhìn & Sứ mệnh",
+      title: "Tầm nhìn & sứ mệnh",
       description:
-        "Chúng tôi xây dựng giải pháp dinh dưỡng cân bằng, ưu tiên sinh học để giảm chi phí và bảo vệ môi trường.",
-      bullets: ["Lựa chọn phân bón phù hợp", "Giải pháp phòng trừ an toàn", "Theo dõi hiệu quả sau sử dụng"],
+        "Kiên định với nông nghiệp bền vững, tối ưu năng suất đi cùng bảo vệ đất và hệ sinh thái canh tác.",
+      bullets: [
+        "Ưu tiên giải pháp sinh học an toàn",
+        "Đồng hành kỹ thuật dài hạn",
+        "Nâng giá trị nông sản cho nhà vườn"
+      ],
       image:
         "https://images.pexels.com/photos/31231189/pexels-photo-31231189.jpeg?cs=srgb&dl=pexels-vi-t-anh-nguy-n-2150409023-31231189.jpg&fm=jpg",
-      imageAlt: "Giải pháp dinh dưỡng và phòng trừ",
-      ctaLabel: "Nhận giải pháp",
-      ctaHref: "/pages/lien-he"
+      imageAlt: "Tầm nhìn bền vững và sứ mệnh đồng hành",
+      ctaLabel: "",
+      ctaHref: ""
     },
     {
       id: "about-slide-3",
-      tag: "Chặng 03",
-      title: "Theo dõi sau bán hàng và tư vấn liên tục",
+      tag: "Hệ thống cửa hàng",
+      title: "Hệ thống cửa hàng",
       description:
-        "Kỹ thuật viên luôn cập nhật tình hình vườn, hỗ trợ xử lý nhanh khi có biến động thời tiết hay sâu bệnh.",
-      bullets: ["Tư vấn trực tuyến 24/7", "Cập nhật lịch chăm sóc định kỳ", "Hỗ trợ tận nơi khi cần"],
-      image:
-        "https://images.pexels.com/photos/19455179/pexels-photo-19455179.jpeg?cs=srgb&dl=pexels-julian-cabrera-s-3685809-19455179.jpg&fm=jpg",
-      imageAlt: "Theo dõi vườn và tư vấn liên tục",
-      ctaLabel: "Kết nối chuyên gia",
-      ctaHref: "/pages/lien-he"
-    },
-    {
-      id: "about-slide-4",
-      tag: "Chặng 04",
-      title: "Phát triển bền vững và tăng giá trị nông sản",
-      description:
-        "Định hướng dài hạn giúp nhà vườn nâng cao chất lượng, duy trì năng suất ổn định và nâng cao giá trị nông sản.",
-      bullets: ["Giảm chi phí đầu vào", "Gia tăng chất lượng thu hoạch", "Tư vấn chiến lược mùa vụ dài hạn"],
+        "Mạng lưới điểm nhận hàng và tư vấn giúp bà con tiếp cận sản phẩm nhanh chóng, thuận tiện.",
+      bullets: [
+        "Tư vấn tại cửa hàng",
+        "Hỗ trợ chọn giải pháp phù hợp",
+        "Kết nối giao hàng nhanh"
+      ],
       image:
         "https://images.pexels.com/photos/9816769/pexels-photo-9816769.jpeg?cs=srgb&dl=pexels-brianjiz-9816769.jpg&fm=jpg",
-      imageAlt: "Nông sản bền vững và giá trị cao",
-      ctaLabel: "Liên hệ tư vấn",
-      ctaHref: "/pages/lien-he"
+      imageAlt: "Hệ thống cửa hàng và điểm nhận hàng",
+      ctaLabel: "Xem hệ thống cửa hàng",
+      ctaHref: "/pages/locations"
     }
   ],
   contact: {
     title: "Kết nối cùng đội ngũ Nông Dược Tam Bố",
     description:
-      "Hãy để chúng tôi đồng hành cùng nhà vườn trong từng mùa vụ với giải pháp phù hợp và đội ngũ kỹ thuật tận tâm.",
+      "Gửi nhu cầu của bạn để được tư vấn nhanh, giải pháp phù hợp và hỗ trợ kỹ thuật theo mùa vụ.",
     ctaLabel: "Gửi yêu cầu",
     ctaHref: "/pages/lien-he"
   },
   storyHtml:
-    `<p><strong>Công ty Cổ phần Nông Dược Tam Bố</strong> cung cấp vật tư nông nghiệp chính hãng và dịch vụ tư vấn kỹ thuật canh tác cho nhà vườn tại khu vực Di Linh - Lâm Đồng.</p>` +
-    `<p>Chúng tôi đồng hành cùng bà con từ khâu lựa chọn giống, giải pháp dinh dưỡng, đến quy trình chăm sóc tối ưu năng suất và chất lượng nông sản theo từng mùa vụ.</p>` +
-    `<h3>Hướng đi của chúng tôi</h3>` +
+    `<p><strong>Công ty Cổ phần Nông Dược Tam Bố</strong> được thành lập với mục tiêu mang giải pháp sinh học và tư vấn kỹ thuật sát thực tế canh tác.</p>` +
+    `<p>Chúng tôi phát triển theo hướng bền vững, chú trọng chất lượng sản phẩm và dịch vụ đồng hành dài hạn.</p>` +
     `<ul>` +
-    `<li>Tập trung vào danh mục sản phẩm có nguồn gốc rõ ràng, chất lượng ổn định.</li>` +
-    `<li>Tư vấn dựa trên thực tế canh tác tại địa phương.</li>` +
-    `<li>Hỗ trợ kỹ thuật trong suốt vòng đời cây trồng.</li>` +
+    `<li>Danh mục sản phẩm có nguồn gốc rõ ràng, ổn định.</li>` +
+    `<li>Đội ngũ kỹ thuật hỗ trợ tận vườn theo mùa vụ.</li>` +
+    `<li>Hệ thống cửa hàng giúp bà con tiếp cận nhanh.</li>` +
     `</ul>`
 };
 
@@ -388,6 +386,10 @@ export type HomeSpotlightBlock = {
   ctaHref: string;
   imageSrc: string;
   imageAlt: string;
+  foregroundImageSrc?: string;
+  foregroundImageAlt?: string;
+  /** @deprecated Accent overlay text is no longer authored in admin/storefront. */
+  accentText?: string;
 };
 
 export type HomeFeatureBlock = {
@@ -449,7 +451,9 @@ export const defaultHomePageContent: HomePageContent = {
       ctaHref: "/collections/all",
       imageSrc:
         "https://images.pexels.com/photos/19455179/pexels-photo-19455179.jpeg?cs=srgb&dl=pexels-julian-cabrera-s-3685809-19455179.jpg&fm=jpg",
-      imageAlt: "Organic Master"
+      imageAlt: "Organic Master",
+      foregroundImageSrc: "",
+      foregroundImageAlt: "Organic Master foreground"
     },
     {
       id: "home-spotlight-2",
@@ -465,7 +469,9 @@ export const defaultHomePageContent: HomePageContent = {
       ctaHref: "/collections/all",
       imageSrc:
         "https://images.pexels.com/photos/9816769/pexels-photo-9816769.jpeg?cs=srgb&dl=pexels-brianjiz-9816769.jpg&fm=jpg",
-      imageAlt: "Microbial"
+      imageAlt: "Microbial",
+      foregroundImageSrc: "",
+      foregroundImageAlt: "Microbial foreground"
     }
   ],
   features: [
@@ -683,6 +689,10 @@ const normalizeSpotlights = (input: unknown, fallback: HomeSpotlightBlock[]) => 
     const current = item && typeof item === "object"
       ? (item as Partial<HomeSpotlightBlock>)
       : {};
+    const legacy = current as Partial<HomeSpotlightBlock> & {
+      CTALabel?: string;
+      CTAHref?: string;
+    };
     return {
       id: typeof current.id === "string" ? current.id : base.id,
       title: typeof current.title === "string" ? current.title : base.title,
@@ -692,10 +702,32 @@ const normalizeSpotlights = (input: unknown, fallback: HomeSpotlightBlock[]) => 
         Array.isArray(current.bullets) && current.bullets.length
           ? current.bullets.filter((value): value is string => typeof value === "string")
           : [...base.bullets],
-      ctaLabel: typeof current.ctaLabel === "string" ? current.ctaLabel : base.ctaLabel,
-      ctaHref: typeof current.ctaHref === "string" ? current.ctaHref : base.ctaHref,
+      ctaLabel:
+        typeof current.ctaLabel === "string"
+          ? current.ctaLabel
+          : typeof legacy.CTALabel === "string"
+            ? legacy.CTALabel
+            : base.ctaLabel,
+      ctaHref:
+        typeof current.ctaHref === "string"
+          ? current.ctaHref
+          : typeof legacy.CTAHref === "string"
+            ? legacy.CTAHref
+            : base.ctaHref,
       imageSrc: typeof current.imageSrc === "string" ? current.imageSrc : base.imageSrc,
-      imageAlt: typeof current.imageAlt === "string" ? current.imageAlt : base.imageAlt
+      imageAlt: typeof current.imageAlt === "string" ? current.imageAlt : base.imageAlt,
+      foregroundImageSrc:
+        typeof current.foregroundImageSrc === "string"
+          ? current.foregroundImageSrc
+          : typeof base.foregroundImageSrc === "string"
+            ? base.foregroundImageSrc
+            : "",
+      foregroundImageAlt:
+        typeof current.foregroundImageAlt === "string"
+          ? current.foregroundImageAlt
+          : typeof base.foregroundImageAlt === "string"
+            ? base.foregroundImageAlt
+            : ""
     };
   });
   return next.length ? next : fallback.map((item) => ({ ...item, bullets: [...item.bullets] }));

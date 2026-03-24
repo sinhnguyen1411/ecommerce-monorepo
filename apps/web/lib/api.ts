@@ -1,3 +1,5 @@
+﻿import { fixMojibake } from "@/lib/format";
+
 const serverUrl =
   process.env.API_INTERNAL_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
@@ -83,6 +85,54 @@ export type Post = {
   tags?: string[];
 };
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function sanitizeApiPayload<T>(input: T): T {
+  if (typeof input === "string") {
+    return fixMojibake(input) as T;
+  }
+
+  if (Array.isArray(input)) {
+    return input.map((item) => sanitizeApiPayload(item)) as T;
+  }
+
+  if (!isPlainObject(input)) {
+    return input;
+  }
+
+  let changed = false;
+  const next: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    const sanitizedValue = sanitizeApiPayload(value);
+    next[key] = sanitizedValue;
+    if (sanitizedValue !== value) {
+      changed = true;
+    }
+  }
+
+  return (changed ? next : input) as T;
+}
+
+export type PostPagination = {
+  page: number;
+  limit: number;
+  total_items: number;
+  total_pages: number;
+  has_prev: boolean;
+  has_next: boolean;
+};
+
+export type PostPaginatedList = {
+  items: Post[];
+  pagination: PostPagination;
+};
+
 export type Page = {
   id: number;
   title: string;
@@ -129,13 +179,28 @@ export type OrderRequest = {
 
 export type OrderResponse = {
   id: number;
+  order_ref: string;
   order_number: string;
+  order_lookup_token: string;
+  order_access_token: string;
+  order_access_expires_at: string;
   subtotal: number;
   shipping_fee: number;
   discount_total: number;
   total: number;
   payment_method: string;
   status: string;
+};
+
+export type OrderAccessTokenResponse = {
+  order_id: number;
+  order_ref: string;
+  order_access_token: string;
+  order_access_expires_at: string;
+};
+
+export type OrderAccessContext = {
+  orderAccessToken?: string;
 };
 
 export type OrderSummary = {
@@ -145,6 +210,7 @@ export type OrderSummary = {
   payment_method: string;
   payment_status?: string;
   status?: string;
+  payment_proof_url?: string;
 };
 
 export type PaymentSettings = {
@@ -253,7 +319,7 @@ async function apiRequest<T>(
     throw new Error(message);
   }
 
-  return payload.data;
+  return sanitizeApiPayload(payload.data);
 }
 
 export function getCategories() {
@@ -322,6 +388,22 @@ export function getPosts(params?: { tag?: string }) {
   return apiRequest<Post[]>(path);
 }
 
+export function getPostsPage(params?: { tag?: string; page?: number; limit?: number }) {
+  const search = new URLSearchParams();
+  if (params?.tag) {
+    search.set("tag", params.tag);
+  }
+  if (typeof params?.page === "number" && Number.isFinite(params.page)) {
+    search.set("page", String(params.page));
+  }
+  if (typeof params?.limit === "number" && Number.isFinite(params.limit)) {
+    search.set("limit", String(params.limit));
+  }
+  const suffix = search.toString();
+  const path = suffix ? `/api/posts?${suffix}` : "/api/posts";
+  return apiRequest<PostPaginatedList>(path, { cache: "no-store" });
+}
+
 export function getPost(slug: string) {
   return apiRequest<Post>(`/api/posts/${slug}`);
 }
@@ -367,6 +449,14 @@ export function getPromotions() {
   return apiRequest<Promotion[]>("/api/promotions", { cache: "no-store" });
 }
 
+function orderAccessTokenFromContext(context?: OrderAccessContext): string | undefined {
+  const token = context?.orderAccessToken?.trim();
+  if (!token) {
+    return undefined;
+  }
+  return token;
+}
+
 export async function createOrder(input: OrderRequest) {
   return apiRequest<OrderResponse>("/api/orders", {
     method: "POST",
@@ -374,31 +464,60 @@ export async function createOrder(input: OrderRequest) {
   });
 }
 
-export async function getOrderSummary(orderId: number) {
-  return apiRequest<OrderSummary>(`/api/orders/${orderId}/summary`, { cache: "no-store" });
-}
-
-export async function getOrderPaymentQR(orderId: number) {
-  return apiRequest<OrderPaymentQR>(`/api/orders/${orderId}/payment/qr`, {
-    cache: "no-store"
+export async function createOrderAccessToken(orderRef: string, orderLookupToken: string) {
+  return apiRequest<OrderAccessTokenResponse>("/api/orders/access-token", {
+    method: "POST",
+    body: JSON.stringify({
+      order_ref: orderRef,
+      order_lookup_token: orderLookupToken
+    })
   });
 }
 
-export async function updateOrderPaymentMethod(orderId: number, paymentMethod: string) {
+export async function getOrderSummary(orderId: number, context?: OrderAccessContext) {
+  const orderAccessToken = orderAccessTokenFromContext(context);
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/summary`, {
+    cache: "no-store",
+    headers: orderAccessToken ? { Authorization: `Bearer ${orderAccessToken}` } : undefined
+  });
+}
+
+export async function getOrderPaymentQR(orderId: number, context?: OrderAccessContext) {
+  const orderAccessToken = orderAccessTokenFromContext(context);
+  return apiRequest<OrderPaymentQR>(`/api/orders/${orderId}/payment/qr`, {
+    cache: "no-store",
+    headers: orderAccessToken ? { Authorization: `Bearer ${orderAccessToken}` } : undefined
+  });
+}
+
+export async function updateOrderPaymentMethod(
+  orderId: number,
+  paymentMethod: string,
+  context?: OrderAccessContext
+) {
+  const orderAccessToken = orderAccessTokenFromContext(context);
   return apiRequest<OrderPaymentMethodUpdate>(`/api/orders/${orderId}/payment-method`, {
     method: "PATCH",
+    headers: orderAccessToken ? { Authorization: `Bearer ${orderAccessToken}` } : undefined,
     body: JSON.stringify({ payment_method: paymentMethod })
   });
 }
 
-export async function uploadPaymentProof(orderId: number, file: File) {
+export async function uploadPaymentProof(orderId: number, file: File, context?: OrderAccessContext) {
   const formData = new FormData();
   formData.append("file", file);
+
+  const orderAccessToken = orderAccessTokenFromContext(context);
+  const headers = new Headers();
+  if (orderAccessToken) {
+    headers.set("Authorization", `Bearer ${orderAccessToken}`);
+  }
 
   const response = await fetch(buildUrl(`/api/orders/${orderId}/payment-proof`), {
     method: "POST",
     body: formData,
-    credentials: "include"
+    credentials: "include",
+    headers
   });
 
   const payload = (await response.json()) as ApiEnvelope<{
@@ -411,3 +530,4 @@ export async function uploadPaymentProof(orderId: number, file: File) {
 
   return payload.data;
 }
+

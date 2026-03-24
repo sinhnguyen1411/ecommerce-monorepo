@@ -33,7 +33,7 @@ export const metadata = {
   description: "Sản phẩm nông nghiệp, tin tức mùa vụ và góc chia sẻ của Tam Bố."
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function RootLayout({
   children

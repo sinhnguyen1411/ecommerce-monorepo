@@ -52,15 +52,21 @@ export async function authRequest<T>(
 ) {
   const auth = requestOptions?.auth ?? false;
   const retry = requestOptions?.retry ?? true;
+  const hasFormDataBody =
+    typeof FormData !== "undefined" && options?.body instanceof FormData;
+
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string> | undefined),
+  };
+  if (!hasFormDataBody && !headers["Content-Type"] && !headers["content-type"]) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const response = await fetch(buildUrl(path), {
     ...options,
     cache: "no-store",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {}),
-    },
+    headers,
   });
 
   const payload = (await response.json()) as ApiEnvelope<T>;

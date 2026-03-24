@@ -126,3 +126,14 @@ export function resetPassword(input: {
     body: JSON.stringify(input)
   });
 }
+
+export function changePassword(input: { old_password: string; new_password: string }) {
+  return authRequest<{ changed: boolean }>(
+    "/api/auth/change-password",
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    },
+    { auth: true }
+  );
+}
