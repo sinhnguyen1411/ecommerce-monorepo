@@ -15,6 +15,9 @@ import (
 
 func main() {
 	cfg := config.Load()
+	if err := cfg.ValidateRuntime(); err != nil {
+		log.Fatalf("invalid runtime config: %v", err)
+	}
 
 	if err := migrations.EnsureDir(cfg.UploadDir); err != nil {
 		log.Fatalf("failed to create upload dir: %v", err)
@@ -32,7 +35,7 @@ func main() {
 	}
 
 	if cfg.SeedOnStart {
-		if err := seed.ApplyIfNeeded(database, "./seed"); err != nil {
+		if err := seed.ApplyIfNeeded(database, "./seed", cfg.SeedRefreshOnStart); err != nil {
 			log.Fatalf("failed to seed data: %v", err)
 		}
 	}

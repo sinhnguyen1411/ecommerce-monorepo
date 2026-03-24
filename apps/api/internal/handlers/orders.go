@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -36,23 +35,28 @@ type OrderRequest struct {
 }
 
 type OrderResponse struct {
-	ID            int     `json:"id"`
-	OrderNumber   string  `json:"order_number"`
-	Subtotal      float64 `json:"subtotal"`
-	ShippingFee   float64 `json:"shipping_fee"`
-	DiscountTotal float64 `json:"discount_total"`
-	Total         float64 `json:"total"`
-	PaymentMethod string  `json:"payment_method"`
-	Status        string  `json:"status"`
+	ID                 int     `json:"id"`
+	OrderRef           string  `json:"order_ref"`
+	OrderNumber        string  `json:"order_number"`
+	OrderLookupToken   string  `json:"order_lookup_token"`
+	OrderAccessToken   string  `json:"order_access_token"`
+	OrderAccessExpires string  `json:"order_access_expires_at"`
+	Subtotal           float64 `json:"subtotal"`
+	ShippingFee        float64 `json:"shipping_fee"`
+	DiscountTotal      float64 `json:"discount_total"`
+	Total              float64 `json:"total"`
+	PaymentMethod      string  `json:"payment_method"`
+	Status             string  `json:"status"`
 }
 
 type OrderSummaryResponse struct {
-	ID            int     `json:"id"`
-	OrderNumber   string  `json:"order_number"`
-	Total         float64 `json:"total"`
-	PaymentMethod string  `json:"payment_method"`
-	PaymentStatus string  `json:"payment_status"`
-	Status        string  `json:"status"`
+	ID              int     `json:"id"`
+	OrderNumber     string  `json:"order_number"`
+	Total           float64 `json:"total"`
+	PaymentMethod   string  `json:"payment_method"`
+	PaymentStatus   string  `json:"payment_status"`
+	Status          string  `json:"status"`
+	PaymentProofURL string  `json:"payment_proof_url"`
 }
 
 type OrderPaymentMethodRequest struct {
@@ -239,6 +243,12 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to generate order number")
 		return
 	}
+	orderLookupToken, orderLookupTokenHash, err := generateOrderLookupToken()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "token_error", "Failed to allocate order token")
+		return
+	}
+	orderLookupIssuedAt := time.Now()
 	var addressLineDB any = nil
 	var districtDB any = nil
 	var provinceDB any = nil
@@ -252,9 +262,31 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		provinceDB = provinceName
 	}
 	result, err := tx.Exec(`
-    INSERT INTO orders (order_number, user_id, customer_name, email, phone, address, address_line, district, province, note, delivery_time, promo_code, shipping_method, subtotal, shipping_fee, discount_total, total, payment_method, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-  `, orderNumber, userID, name, email, nationalPhone, address, addressLineDB, districtDB, provinceDB, input.Note, input.DeliveryTime, promoCode, shippingMethod, subtotal, shippingFee, discountTotal, total, input.PaymentMethod)
+    INSERT INTO orders (
+      order_number,
+      order_lookup_token_hash,
+      order_lookup_token_issued_at,
+      user_id,
+      customer_name,
+      email,
+      phone,
+      address,
+      address_line,
+      district,
+      province,
+      note,
+      delivery_time,
+      promo_code,
+      shipping_method,
+      subtotal,
+      shipping_fee,
+      discount_total,
+      total,
+      payment_method,
+      status
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+  `, orderNumber, orderLookupTokenHash, orderLookupIssuedAt, userID, name, email, nationalPhone, address, addressLineDB, districtDB, provinceDB, input.Note, input.DeliveryTime, promoCode, shippingMethod, subtotal, shippingFee, discountTotal, total, input.PaymentMethod)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create order")
 		return
@@ -292,15 +324,25 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		return
 	}
 
+	orderAccess, err := s.issueOrderAccessToken(orderID, orderNumber, orderLookupTokenHash)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "token_error", "Failed to issue order access token")
+		return
+	}
+
 	respondOK(c, OrderResponse{
-		ID:            orderID,
-		OrderNumber:   orderNumber,
-		Subtotal:      subtotal,
-		ShippingFee:   shippingFee,
-		DiscountTotal: discountTotal,
-		Total:         total,
-		PaymentMethod: input.PaymentMethod,
-		Status:        "pending",
+		ID:                 orderID,
+		OrderRef:           orderNumber,
+		OrderNumber:        orderNumber,
+		OrderLookupToken:   orderLookupToken,
+		OrderAccessToken:   orderAccess.OrderAccessToken,
+		OrderAccessExpires: orderAccess.OrderAccessExpiresAt,
+		Subtotal:           subtotal,
+		ShippingFee:        shippingFee,
+		DiscountTotal:      discountTotal,
+		Total:              total,
+		PaymentMethod:      input.PaymentMethod,
+		Status:             "pending",
 	})
 }
 
@@ -348,26 +390,19 @@ func (s *Server) UploadPaymentProof(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "invalid_order", "Invalid order ID")
 		return
 	}
+	if !s.enforceOrderAccess(c, orderID) {
+		return
+	}
 
 	file, err := c.FormFile("file")
 	if err != nil {
 		respondError(c, http.StatusBadRequest, "missing_file", "Payment proof file is required")
 		return
 	}
-	if !s.enforceUploadSize(c, file.Size) {
+	url, ok := s.saveValidatedImageUpload(c, file, fmt.Sprintf("order_%d", orderID))
+	if !ok {
 		return
 	}
-
-	extension := filepath.Ext(file.Filename)
-	filename := fmt.Sprintf("order_%d_%d%s", orderID, time.Now().Unix(), extension)
-	path := filepath.Join(s.Config.UploadDir, filename)
-
-	if err := c.SaveUploadedFile(file, path); err != nil {
-		respondError(c, http.StatusInternalServerError, "upload_error", "Failed to save payment proof")
-		return
-	}
-
-	url := "/uploads/" + filename
 	if _, err := s.DB.Exec("UPDATE orders SET payment_proof_url = ?, payment_status = 'proof_submitted' WHERE id = ?", url, orderID); err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update payment proof")
 		return
@@ -382,17 +417,21 @@ func (s *Server) GetOrderSummary(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "invalid_order", "Invalid order ID")
 		return
 	}
+	if !s.enforceOrderAccess(c, orderID) {
+		return
+	}
 
 	var (
-		id            int
-		orderNumber   string
-		total         float64
-		paymentMethod string
-		paymentStatus string
-		status        string
+		id              int
+		orderNumber     string
+		total           float64
+		paymentMethod   string
+		paymentStatus   string
+		status          string
+		paymentProofURL string
 	)
-	row := s.DB.QueryRow(`SELECT id, order_number, total, payment_method, IFNULL(payment_status, ''), status FROM orders WHERE id = ?`, orderID)
-	if err := row.Scan(&id, &orderNumber, &total, &paymentMethod, &paymentStatus, &status); err != nil {
+	row := s.DB.QueryRow(`SELECT id, order_number, total, payment_method, IFNULL(payment_status, ''), status, IFNULL(payment_proof_url, '') FROM orders WHERE id = ?`, orderID)
+	if err := row.Scan(&id, &orderNumber, &total, &paymentMethod, &paymentStatus, &status, &paymentProofURL); err != nil {
 		if err == sql.ErrNoRows {
 			respondError(c, http.StatusNotFound, "not_found", "Order not found")
 			return
@@ -402,12 +441,13 @@ func (s *Server) GetOrderSummary(c *gin.Context) {
 	}
 
 	respondOK(c, OrderSummaryResponse{
-		ID:            id,
-		OrderNumber:   orderNumber,
-		Total:         total,
-		PaymentMethod: strings.TrimSpace(paymentMethod),
-		PaymentStatus: normalizePaymentStatus(paymentStatus),
-		Status:        strings.TrimSpace(status),
+		ID:              id,
+		OrderNumber:     orderNumber,
+		Total:           total,
+		PaymentMethod:   strings.TrimSpace(paymentMethod),
+		PaymentStatus:   normalizePaymentStatus(paymentStatus),
+		Status:          strings.TrimSpace(status),
+		PaymentProofURL: s.buildAssetURL(paymentProofURL),
 	})
 }
 
@@ -415,6 +455,9 @@ func (s *Server) UpdateOrderPaymentMethod(c *gin.Context) {
 	orderID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		respondError(c, http.StatusBadRequest, "invalid_order", "Invalid order ID")
+		return
+	}
+	if !s.enforceOrderAccess(c, orderID) {
 		return
 	}
 

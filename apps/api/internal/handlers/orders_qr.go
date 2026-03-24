@@ -43,6 +43,9 @@ func (s *Server) GetOrderPaymentQR(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "invalid_order", "Invalid order ID")
 		return
 	}
+	if !s.enforceOrderAccess(c, orderID) {
+		return
+	}
 
 	var (
 		total           float64

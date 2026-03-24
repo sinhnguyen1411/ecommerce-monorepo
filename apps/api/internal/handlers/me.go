@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 	"strings"
 	"time"
@@ -38,21 +37,17 @@ func (s *Server) UpdateMe(c *gin.Context) {
 		return
 	}
 
-	if strings.TrimSpace(input.Phone) != "" {
-		current := sql.NullString{}
-		if err := s.DB.QueryRow(`SELECT phone_e164 FROM users WHERE id = ?`, userID).Scan(&current); err != nil {
-			respondError(c, http.StatusInternalServerError, "db_error", "Failed to update profile")
-			return
-		}
-		normalized, _, err := auth.NormalizeVNPhone(input.Phone)
+	phone := strings.TrimSpace(input.Phone)
+	var phoneE164 string
+	var phoneNational string
+	if phone != "" {
+		normalized, national, err := auth.NormalizeVNPhone(phone)
 		if err != nil {
 			respondError(c, http.StatusBadRequest, "invalid_phone", "Invalid phone number")
 			return
 		}
-		if !current.Valid || current.String != normalized {
-			respondError(c, http.StatusBadRequest, "phone_verification_required", "Use phone verification to update phone number")
-			return
-		}
+		phoneE164 = normalized
+		phoneNational = national
 	}
 
 	fullName := strings.TrimSpace(input.FullName)
@@ -82,7 +77,21 @@ func (s *Server) UpdateMe(c *gin.Context) {
 		birthdateVal = parsed
 	}
 
-	if _, err := s.DB.Exec(`UPDATE users SET full_name = ?, avatar_url = ?, address = ?, birthdate = ? WHERE id = ?`, fullNameVal, avatarVal, addressVal, birthdateVal, userID); err != nil {
+	if phone != "" {
+		if _, err := s.DB.Exec(
+			`UPDATE users SET full_name = ?, avatar_url = ?, address = ?, birthdate = ?, phone_e164 = ?, phone_national = ? WHERE id = ?`,
+			fullNameVal,
+			avatarVal,
+			addressVal,
+			birthdateVal,
+			phoneE164,
+			phoneNational,
+			userID,
+		); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to update profile")
+			return
+		}
+	} else if _, err := s.DB.Exec(`UPDATE users SET full_name = ?, avatar_url = ?, address = ?, birthdate = ? WHERE id = ?`, fullNameVal, avatarVal, addressVal, birthdateVal, userID); err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update profile")
 		return
 	}

@@ -97,6 +97,7 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 			account.GET("/profile", s.GetProfile)
 			account.GET("/addresses", s.ListAddresses)
 			account.GET("/orders", s.ListUserOrders)
+			account.GET("/orders/:id", s.GetUserOrder)
 		}
 		accountWrite := api.Group("/account", s.requireRole("user"), s.buyerWriteRateLimitMiddleware(nil))
 		{
@@ -105,6 +106,8 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 			accountWrite.POST("/addresses", s.CreateAddress)
 			accountWrite.PATCH("/addresses/:id", s.UpdateAddress)
 			accountWrite.DELETE("/addresses/:id", s.DeleteAddress)
+			accountWrite.PATCH("/orders/:id", s.UpdateUserOrder)
+			accountWrite.POST("/orders/:id/payment-proof", s.UploadUserOrderPaymentProof)
 		}
 
 		api.GET("/categories", s.cacheGetMiddleware(s.Config.CacheListTTL), s.ListCategories)
@@ -123,6 +126,7 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 		api.POST("/promotions/validate", s.ValidatePromotion)
 		api.POST("/analytics/pageview", s.TrackPageView)
 		api.POST("/orders", s.CreateOrder)
+		api.POST("/orders/access-token", s.buyerWriteRateLimitMiddleware(nil), s.CreateOrderAccessToken)
 		api.GET("/orders/:id/summary", s.GetOrderSummary)
 		api.PATCH("/orders/:id/payment-method", s.buyerWriteRateLimitMiddleware(nil), s.UpdateOrderPaymentMethod)
 		api.GET("/orders/:id/payment/qr", s.GetOrderPaymentQR)

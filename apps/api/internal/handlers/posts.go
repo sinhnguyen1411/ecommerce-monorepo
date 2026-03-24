@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,21 +21,87 @@ type Post struct {
 	PublishedAt time.Time `json:"published_at"`
 }
 
+type PostsPagination struct {
+	Page       int  `json:"page"`
+	Limit      int  `json:"limit"`
+	TotalItems int  `json:"total_items"`
+	TotalPages int  `json:"total_pages"`
+	HasPrev    bool `json:"has_prev"`
+	HasNext    bool `json:"has_next"`
+}
+
+type PostsListPaginatedResponse struct {
+	Items      []Post          `json:"items"`
+	Pagination PostsPagination `json:"pagination"`
+}
+
+const (
+	defaultPostsPage  = 1
+	defaultPostsLimit = 10
+	maxPostsLimit     = 50
+)
+
 func (s *Server) ListPosts(c *gin.Context) {
 	tag := strings.TrimSpace(c.Query("tag"))
-	query := `
+	pageParam := strings.TrimSpace(c.Query("page"))
+	limitParam := strings.TrimSpace(c.Query("limit"))
+	withPagination := pageParam != "" || limitParam != ""
+
+	page := parsePositiveInt(pageParam, defaultPostsPage)
+	limit := parsePositiveInt(limitParam, defaultPostsLimit)
+	if limit > maxPostsLimit {
+		limit = maxPostsLimit
+	}
+
+	listQuery := `
     SELECT id, title, slug, IFNULL(excerpt, ''), IFNULL(cover_image, ''), IFNULL(tags, ''), published_at
+    FROM posts
+    WHERE status = 'published'
+  `
+	countQuery := `
+    SELECT COUNT(*)
     FROM posts
     WHERE status = 'published'
   `
 	args := make([]any, 0)
 	if tag != "" {
-		query += " AND tags LIKE ?"
+		listQuery += " AND tags LIKE ?"
+		countQuery += " AND tags LIKE ?"
 		args = append(args, "%"+tag+"%")
 	}
-	query += " ORDER BY published_at DESC"
+	listQuery += " ORDER BY published_at DESC, id DESC"
 
-	rows, err := s.DB.Query(query, args...)
+	var pagination PostsPagination
+	if withPagination {
+		var totalItems int
+		if err := s.DB.QueryRow(countQuery, args...).Scan(&totalItems); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to count posts")
+			return
+		}
+
+		totalPages := 1
+		if totalItems > 0 {
+			totalPages = (totalItems + limit - 1) / limit
+		}
+		if page > totalPages {
+			page = totalPages
+		}
+		offset := (page - 1) * limit
+
+		pagination = PostsPagination{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: totalItems,
+			TotalPages: totalPages,
+			HasPrev:    page > 1,
+			HasNext:    page < totalPages,
+		}
+
+		listQuery += " LIMIT ? OFFSET ?"
+		args = append(args, limit, offset)
+	}
+
+	rows, err := s.DB.Query(listQuery, args...)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load posts")
 		return
@@ -56,6 +123,14 @@ func (s *Server) ListPosts(c *gin.Context) {
 		post.Tags = parsePostTags(tags)
 		post.CoverImage = s.buildAssetURL(post.CoverImage)
 		posts = append(posts, post)
+	}
+
+	if withPagination {
+		respondOK(c, PostsListPaginatedResponse{
+			Items:      posts,
+			Pagination: pagination,
+		})
+		return
 	}
 
 	respondOK(c, posts)
@@ -106,4 +181,15 @@ func parsePostTags(tags sql.NullString) []string {
 		values = append(values, value)
 	}
 	return values
+}
+
+func parsePositiveInt(value string, fallback int) int {
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return fallback
+	}
+	return parsed
 }

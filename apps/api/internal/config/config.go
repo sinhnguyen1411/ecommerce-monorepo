@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -24,6 +25,7 @@ type Config struct {
 	UploadDir                    string
 	MigrateOnStart               bool
 	SeedOnStart                  bool
+	SeedRefreshOnStart           bool
 	PublicBaseURL                string
 	FrontendBaseURL              string
 	UserTokenTTL                 time.Duration
@@ -46,6 +48,8 @@ type Config struct {
 	RegisterRateLimitWindow      time.Duration
 	OrderRateLimitMax            int
 	OrderRateLimitWindow         time.Duration
+	OrderAccessTokenTTL          time.Duration
+	AllowLegacyOrderIDLookup     bool
 	PromoValidateRateLimitMax    int
 	PromoValidateRateLimitWindow time.Duration
 	PaymentProofRateLimitMax     int
@@ -125,6 +129,7 @@ func Load() Config {
 		UploadDir:                    getEnv("UPLOAD_DIR", "./uploads"),
 		MigrateOnStart:               getBool("MIGRATE_ON_START", true),
 		SeedOnStart:                  getBool("SEED_ON_START", false),
+		SeedRefreshOnStart:           getBool("SEED_REFRESH_ON_START", false),
 		PublicBaseURL:                strings.TrimRight(getEnv("PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
 		FrontendBaseURL:              strings.TrimRight(getEnv("FRONTEND_BASE_URL", "http://localhost:3000"), "/"),
 		UserTokenTTL:                 getDuration("USER_TOKEN_TTL", 15*time.Minute),
@@ -147,6 +152,8 @@ func Load() Config {
 		RegisterRateLimitWindow:      getDuration("REGISTER_RATE_LIMIT_WINDOW", 1*time.Hour),
 		OrderRateLimitMax:            getInt("ORDER_RATE_LIMIT_MAX", 5),
 		OrderRateLimitWindow:         getDuration("ORDER_RATE_LIMIT_WINDOW", 10*time.Minute),
+		OrderAccessTokenTTL:          getDuration("ORDER_ACCESS_TOKEN_TTL", 20*time.Minute),
+		AllowLegacyOrderIDLookup:     getBool("ALLOW_LEGACY_ORDER_ID_LOOKUP", true),
 		PromoValidateRateLimitMax:    getInt("PROMO_VALIDATE_RATE_LIMIT_MAX", 30),
 		PromoValidateRateLimitWindow: getDuration("PROMO_VALIDATE_RATE_LIMIT_WINDOW", 10*time.Minute),
 		PaymentProofRateLimitMax:     getInt("PAYMENT_PROOF_RATE_LIMIT_MAX", 3),
@@ -191,6 +198,47 @@ func Load() Config {
 		VietQRClientID:               getEnv("VIETQR_CLIENT_ID", ""),
 		VietQRAPIKey:                 getEnv("VIETQR_API_KEY", ""),
 	}
+}
+
+func (c Config) ValidateRuntime() error {
+	jwtSecret := strings.TrimSpace(c.JWTSecret)
+	otpSecret := strings.TrimSpace(c.OTPSecret)
+	if jwtSecret == "" {
+		return fmt.Errorf("JWT_SECRET is required")
+	}
+	if otpSecret == "" {
+		return fmt.Errorf("OTP_SECRET is required")
+	}
+	if c.OrderAccessTokenTTL <= 0 {
+		return fmt.Errorf("ORDER_ACCESS_TOKEN_TTL must be greater than zero")
+	}
+
+	if strings.EqualFold(strings.TrimSpace(c.AppEnv), "production") {
+		if isWeakSecret(jwtSecret) {
+			return fmt.Errorf("JWT_SECRET is too weak for production")
+		}
+		if isWeakSecret(otpSecret) {
+			return fmt.Errorf("OTP_SECRET is too weak for production")
+		}
+		if c.SeedOnStart {
+			return fmt.Errorf("SEED_ON_START must be false in production")
+		}
+	}
+
+	return nil
+}
+
+func isWeakSecret(value string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	if len(normalized) < 24 {
+		return true
+	}
+
+	switch normalized {
+	case "change-me", "change-me-secret", "changeme", "secret", "default", "password":
+		return true
+	}
+	return false
 }
 
 func getEnv(key, fallback string) string {

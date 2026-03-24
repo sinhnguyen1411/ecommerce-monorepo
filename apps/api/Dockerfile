@@ -1,4 +1,4 @@
-﻿FROM golang:1.22-alpine AS base
+﻿FROM golang:1.25-alpine AS base
 WORKDIR /app
 COPY go.mod ./
 RUN go mod download
@@ -17,3 +17,4 @@ COPY --from=builder /app/api ./api
 ENV PORT=8080
 EXPOSE 8080
 CMD ["./api"]
+

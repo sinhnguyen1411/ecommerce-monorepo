@@ -10,27 +10,27 @@ import (
 )
 
 type AdminOrder struct {
-	ID            int                `json:"id"`
-	OrderNumber   string             `json:"order_number"`
-	CustomerName  string             `json:"customer_name"`
-	Email         string             `json:"email"`
-	Phone         string             `json:"phone"`
-	Address       string             `json:"address"`
-	Note          string             `json:"note"`
-	DeliveryTime  string             `json:"delivery_time"`
-	PromoCode     string             `json:"promo_code"`
-	ShippingMethod string            `json:"shipping_method"`
-	Subtotal      float64            `json:"subtotal"`
-	ShippingFee   float64            `json:"shipping_fee"`
-	DiscountTotal float64            `json:"discount_total"`
-	Total         float64            `json:"total"`
-	PaymentMethod string             `json:"payment_method"`
-	PaymentStatus string             `json:"payment_status"`
-	Status        string             `json:"status"`
-	PaymentProof  string             `json:"payment_proof_url"`
-	AdminNote     string             `json:"admin_note"`
-	CreatedAt     string             `json:"created_at"`
-	Items         []OrderItemSummary `json:"items"`
+	ID             int                `json:"id"`
+	OrderNumber    string             `json:"order_number"`
+	CustomerName   string             `json:"customer_name"`
+	Email          string             `json:"email"`
+	Phone          string             `json:"phone"`
+	Address        string             `json:"address"`
+	Note           string             `json:"note"`
+	DeliveryTime   string             `json:"delivery_time"`
+	PromoCode      string             `json:"promo_code"`
+	ShippingMethod string             `json:"shipping_method"`
+	Subtotal       float64            `json:"subtotal"`
+	ShippingFee    float64            `json:"shipping_fee"`
+	DiscountTotal  float64            `json:"discount_total"`
+	Total          float64            `json:"total"`
+	PaymentMethod  string             `json:"payment_method"`
+	PaymentStatus  string             `json:"payment_status"`
+	Status         string             `json:"status"`
+	PaymentProof   string             `json:"payment_proof_url"`
+	AdminNote      string             `json:"admin_note"`
+	CreatedAt      string             `json:"created_at"`
+	Items          []OrderItemSummary `json:"items"`
 }
 
 type AdminOrderUpdateInput struct {
@@ -43,6 +43,31 @@ type AdminOrderUpdateInput struct {
 	Status        string `json:"status"`
 	PaymentStatus string `json:"payment_status"`
 	AdminNote     string `json:"admin_note"`
+}
+
+var adminAllowedOrderStatuses = map[string]struct{}{
+	"pending":         {},
+	"confirmed":       {},
+	"packed":          {},
+	"shipping":        {},
+	"delivered":       {},
+	"completed":       {},
+	"cancelled":       {},
+	"failed_delivery": {},
+	"returned":        {},
+}
+
+var adminAllowedPaymentStatuses = map[string]struct{}{
+	"pending":         {},
+	"proof_submitted": {},
+	"paid":            {},
+	"rejected":        {},
+	"refunded":        {},
+	"partial_refund":  {},
+}
+
+func normalizeAdminStatus(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 func (s *Server) AdminListOrders(c *gin.Context) {
@@ -174,6 +199,22 @@ func (s *Server) AdminUpdateOrder(c *gin.Context) {
 		return
 	}
 
+	status := normalizeAdminStatus(input.Status)
+	if status != "" {
+		if _, ok := adminAllowedOrderStatuses[status]; !ok {
+			respondError(c, http.StatusBadRequest, "invalid_status", "Order status is invalid")
+			return
+		}
+	}
+
+	paymentStatus := normalizeAdminStatus(input.PaymentStatus)
+	if paymentStatus != "" {
+		if _, ok := adminAllowedPaymentStatuses[paymentStatus]; !ok {
+			respondError(c, http.StatusBadRequest, "invalid_status", "Payment status is invalid")
+			return
+		}
+	}
+
 	_, err = s.DB.Exec(`
     UPDATE orders
     SET customer_name = COALESCE(NULLIF(?, ''), customer_name),
@@ -186,7 +227,7 @@ func (s *Server) AdminUpdateOrder(c *gin.Context) {
         payment_status = COALESCE(NULLIF(?, ''), payment_status),
         admin_note = ?
     WHERE id = ?
-  `, input.CustomerName, input.Email, input.Phone, input.Address, input.Note, input.DeliveryTime, input.Status, input.PaymentStatus, input.AdminNote, id)
+  `, input.CustomerName, input.Email, input.Phone, input.Address, input.Note, input.DeliveryTime, status, paymentStatus, input.AdminNote, id)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to update order")
 		return
