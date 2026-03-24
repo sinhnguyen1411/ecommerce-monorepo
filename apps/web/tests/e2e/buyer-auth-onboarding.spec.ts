@@ -56,6 +56,43 @@ const defaultAddress: BuyerAddress = {
   is_default: true
 };
 
+const accountOrderSummary = {
+  id: 301,
+  order_number: "TB170326N0005",
+  customer_name: "Buyer Demo",
+  email: "buyer@gmail.com",
+  phone: "0901234567",
+  address: "123 Demo Street, District 1, Ho Chi Minh",
+  note: "",
+  delivery_time: "Trong ngày",
+  promo_code: "",
+  shipping_method: "standard",
+  subtotal: 1050000,
+  shipping_fee: 0,
+  discount_total: 0,
+  total: 1050000,
+  payment_method: "bank_transfer",
+  payment_status: "pending",
+  status: "pending",
+  payment_proof_url: "",
+  created_at: "2026-03-17T12:18:00Z",
+  updated_at: "2026-03-17T12:18:00Z",
+  items: []
+};
+
+const accountOrderDetail = {
+  ...accountOrderSummary,
+  items: [
+    {
+      product_id: 501,
+      name: "Organic Master",
+      quantity: 1,
+      unit_price: 1050000,
+      line_total: 1050000
+    }
+  ]
+};
+
 const querySep = String.fromCharCode(63);
 const escapedQuerySep = `${String.fromCharCode(92)}${querySep}`;
 
@@ -330,6 +367,101 @@ test.describe("Buyer auth onboarding", () => {
 
     await expect(page.locator("#onboarding-email")).toBeVisible();
     await expect(page.getByTestId("onboarding-submit")).toBeVisible();
+  });
+
+  test("account tabs stay visible and highlight active route", async ({ page }) => {
+    await mockSharedCheckoutApis(page);
+
+    await page.route("**/api/account/profile", async (route) => {
+      await route.fulfill(ok(completedProfile));
+    });
+
+    await page.route("**/api/account/orders", async (route) => {
+      await route.fulfill(ok([]));
+    });
+
+    await page.route("**/api/account/addresses", async (route) => {
+      await route.fulfill(ok([defaultAddress]));
+    });
+
+    await page.goto("/account/orders", { waitUntil: "domcontentloaded" });
+
+    await expect(page.locator('[data-account-tab="/account"]')).toBeVisible();
+    await expect(page.locator('[data-account-tab="/account/orders"]')).toHaveAttribute("aria-current", "page");
+    await expect(page.locator('[data-account-tab="/account/addresses"]')).toBeVisible();
+
+    await page.locator('[data-account-tab="/account/addresses"]').click();
+    await expect(page).toHaveURL(/\/account\/addresses$/);
+    await expect(page.locator('[data-account-tab="/account/addresses"]')).toHaveAttribute("aria-current", "page");
+  });
+
+  test("recent orders deep-link opens matching order detail", async ({ page }) => {
+    await mockSharedCheckoutApis(page);
+
+    await page.route("**/api/account/profile", async (route) => {
+      await route.fulfill(ok(completedProfile));
+    });
+
+    await page.route("**/api/account/addresses", async (route) => {
+      await route.fulfill(ok([defaultAddress]));
+    });
+
+    await page.route("**/api/account/orders**", async (route) => {
+      const pathname = new URL(route.request().url()).pathname;
+      if (pathname.endsWith(`/api/account/orders/${accountOrderSummary.id}`)) {
+        await route.fulfill(ok(accountOrderDetail));
+        return;
+      }
+      await route.fulfill(ok([accountOrderSummary]));
+    });
+
+    await page.goto("/account", { waitUntil: "domcontentloaded" });
+    await page.locator(`[href="/account/orders?orderId=${accountOrderSummary.id}"]`).click();
+
+    await expect(page).toHaveURL(new RegExp(`/account/orders${escapedQuerySep}orderId=${accountOrderSummary.id}$`));
+    await expect(page.getByTestId(`account-order-detail-${accountOrderSummary.id}`)).toBeVisible();
+  });
+
+  test("account supports password change modal validation and submit", async ({ page }) => {
+    let payload: Record<string, string> | null = null;
+
+    await mockSharedCheckoutApis(page);
+
+    await page.route("**/api/account/profile", async (route) => {
+      await route.fulfill(ok(completedProfile));
+    });
+
+    await page.route("**/api/account/orders", async (route) => {
+      await route.fulfill(ok([]));
+    });
+
+    await page.route("**/api/account/addresses", async (route) => {
+      await route.fulfill(ok([defaultAddress]));
+    });
+
+    await page.route("**/api/auth/change-password", async (route) => {
+      payload = (route.request().postDataJSON() || {}) as Record<string, string>;
+      await route.fulfill(ok({ changed: true }));
+    });
+
+    await page.goto("/account", { waitUntil: "domcontentloaded" });
+    await page.getByTestId("account-change-password-trigger").click();
+
+    await page.locator("#account-old-password").fill("Password9");
+    await page.locator("#account-new-password").fill("Password10");
+    await page.locator("#account-new-password-confirm").fill("Password11");
+    await page.getByTestId("account-change-password-submit").click();
+
+    await expect(page.getByText("Mật khẩu xác nhận chưa khớp.")).toBeVisible();
+
+    await page.locator("#account-new-password-confirm").fill("Password10");
+    await page.getByTestId("account-change-password-submit").click();
+
+    await expect.poll(() => payload).toEqual({
+      old_password: "Password9",
+      new_password: "Password10"
+    });
+    await expect(page.getByText("Đổi mật khẩu thành công.")).toBeVisible();
   });
 
   for (const path of ["/login", "/signup", "/forgot-password"]) {

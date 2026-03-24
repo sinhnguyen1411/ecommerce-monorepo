@@ -27,6 +27,10 @@ import {
 
 import { AdminSectionHeader, selectClass } from "@/components/admin/AdminHelpers";
 import { formatCurrency } from "@/lib/format";
+import {
+  getAdminOrderStatusMeta,
+  getAdminPaymentStatusMeta,
+} from "@/lib/admin-status";
 import type {
   AdminCategory,
   AdminDashboard,
@@ -83,33 +87,6 @@ function EmptyChartState({
       </div>
     </div>
   );
-}
-
-function getOrderStatusTone(status: string) {
-  switch ((status || "").toLowerCase()) {
-    case "completed":
-      return "bg-emerald-100 text-emerald-700";
-    case "shipping":
-    case "confirmed":
-      return "bg-sky-100 text-sky-700";
-    case "cancelled":
-      return "bg-rose-100 text-rose-700";
-    default:
-      return "bg-amber-100 text-amber-700";
-  }
-}
-
-function getPaymentStatusTone(status: string) {
-  switch ((status || "").toLowerCase()) {
-    case "paid":
-      return "bg-emerald-100 text-emerald-700";
-    case "proof_submitted":
-      return "bg-blue-100 text-blue-700";
-    case "rejected":
-      return "bg-rose-100 text-rose-700";
-    default:
-      return "bg-slate-200 text-slate-700";
-  }
 }
 
 type AdminOverviewProps = {
@@ -174,39 +151,39 @@ export default function AdminOverview(props: AdminOverviewProps) {
 
   const rangeLabel =
     dashboardGrain === "month"
-      ? "12 thang gan nhat"
+      ? "12 tháng gần nhất"
       : dashboardGrain === "year"
-      ? "5 nam gan nhat"
-      : "30 ngay gan nhat";
+      ? "5 năm gần nhất"
+      : "30 ngày gần nhất";
 
   const metricCards = [
     {
-      label: "Don cho xu ly",
+      label: "Đơn chờ xử lý",
       value: numberFormatter.format(pendingOrders),
-      helper: pendingOrders > 0 ? "Can xu ly ngay trong ca lam viec" : "Khong co don tre",
+      helper: pendingOrders > 0 ? "Cần xử lý ngay trong ca làm việc" : "Không có đơn trễ",
       icon: ShoppingCart,
       tone: "amber",
     },
     {
-      label: "Thanh toan cho duyet",
+      label: "Thanh toán chờ duyệt",
       value: numberFormatter.format(pendingPayments),
-      helper: pendingPayments > 0 ? "Can doi soat chung tu" : "Khong co giao dich tre",
+      helper: pendingPayments > 0 ? "Cần đối soát chứng từ" : "Không có giao dịch trễ",
       icon: Wallet,
       tone: "sky",
     },
     {
-      label: "Doanh thu da thanh toan",
+      label: "Doanh thu đã thanh toán",
       value: formatCurrency(paidRevenue),
       helper: `AOV ${formatCurrency(averageOrderValue)} / ${numberFormatter.format(
         paidOrdersFromList
-      )} don paid`,
+      )} đơn đã thanh toán`,
       icon: Users,
       tone: "emerald",
     },
     {
-      label: "Luot xem website",
+      label: "Lượt xem website",
       value: formatCompactNumber(pageviews),
-      helper: `${formatCompactNumber(uniqueVisitors)} khach duy nhat / ${rangeLabel}`,
+      helper: `${formatCompactNumber(uniqueVisitors)} khách duy nhất / ${rangeLabel}`,
       icon: Eye,
       tone: "teal",
     },
@@ -215,30 +192,30 @@ export default function AdminOverview(props: AdminOverviewProps) {
   const quickActions = [
     {
       id: "orders",
-      label: "Xu ly don hang",
-      helper: `${numberFormatter.format(pendingOrders)} don can phan hoi`,
+      label: "Xử lý đơn hàng",
+      helper: `${numberFormatter.format(pendingOrders)} đơn cần phản hồi`,
       icon: ShoppingCart,
     },
     {
       id: "products",
-      label: "Cap nhat san pham",
-      helper: `${numberFormatter.format(products.length)} san pham / ${numberFormatter.format(
+      label: "Cập nhật sản phẩm",
+      helper: `${numberFormatter.format(products.length)} sản phẩm / ${numberFormatter.format(
         categories.length
-      )} danh muc`,
+      )} danh mục`,
       icon: Package,
     },
     {
       id: "posts",
-      label: "Noi dung ban hang",
-      helper: `${numberFormatter.format(posts.length)} bai viet / ${numberFormatter.format(
+      label: "Nội dung bán hàng",
+      helper: `${numberFormatter.format(posts.length)} bài viết / ${numberFormatter.format(
         qna.length
-      )} cau hoi`,
+      )} câu hỏi`,
       icon: FileText,
     },
     {
       id: "home",
-      label: "Toi uu trang chu",
-      helper: `${numberFormatter.format(activeBanners)} banner dang bat`,
+      label: "Tối ưu trang chủ",
+      helper: `${numberFormatter.format(activeBanners)} banner đang bật`,
       icon: Home,
     },
   ];
@@ -254,44 +231,44 @@ export default function AdminOverview(props: AdminOverviewProps) {
   if (pendingOrders > 0) {
     notices.push({
       tone: "warning",
-      title: "Don hang can xac nhan",
-      detail: `${numberFormatter.format(pendingOrders)} don dang o trang thai cho xu ly.`,
+      title: "Đơn hàng cần xác nhận",
+      detail: `${numberFormatter.format(pendingOrders)} đơn đang ở trạng thái chờ xử lý.`,
       actionId: "orders",
-      actionLabel: "Mo don hang",
+      actionLabel: "Mở đơn hàng",
     });
   }
   if (pendingPayments > 0) {
     notices.push({
       tone: "warning",
-      title: "Thanh toan can doi soat",
-      detail: `${numberFormatter.format(pendingPayments)} giao dich can kiem tra chung tu.`,
+      title: "Thanh toán cần đối soát",
+      detail: `${numberFormatter.format(pendingPayments)} giao dịch cần kiểm tra chứng từ.`,
       actionId: "payments",
-      actionLabel: "Mo thanh toan",
+      actionLabel: "Mở thanh toán",
     });
   }
   if (!settings) {
     notices.push({
       tone: "warning",
-      title: "Chua cau hinh thanh toan",
-      detail: "Kiem tra cau hinh thanh toan de tranh gian doan don hang.",
+      title: "Chưa cấu hình thanh toán",
+      detail: "Kiểm tra cấu hình thanh toán để tránh gián đoạn đơn hàng.",
       actionId: "payments",
-      actionLabel: "Cau hinh ngay",
+      actionLabel: "Cấu hình ngay",
     });
   }
   if (!contactSettings.phone || !contactSettings.address) {
     notices.push({
       tone: "warning",
-      title: "Thong tin lien he chua day du",
-      detail: "Cap nhat hotline va dia chi de khong mat lead.",
+      title: "Thông tin liên hệ chưa đầy đủ",
+      detail: "Cập nhật hotline và địa chỉ để không mất khách hàng tiềm năng.",
       actionId: "contact",
-      actionLabel: "Cap nhat lien he",
+      actionLabel: "Cập nhật liên hệ",
     });
   }
   if (notices.length === 0) {
     notices.push({
       tone: "success",
-      title: "Van hanh on dinh",
-      detail: "Khong co muc uu tien can xu ly ngay.",
+      title: "Vận hành ổn định",
+      detail: "Không có mục ưu tiên cần xử lý ngay.",
     });
   }
 
@@ -333,8 +310,8 @@ export default function AdminOverview(props: AdminOverviewProps) {
 
       <section className={`rounded-3xl border border-slate-200 bg-white ${cardPadding} shadow-sm`}>
         <AdminSectionHeader
-          title="Dashboard van hanh"
-          description="Theo doi don hang, doanh thu paid va trang thai van hanh tren cung mot man hinh."
+          title="Dashboard vận hành"
+          description="Theo dõi đơn hàng, doanh thu đã thanh toán và trạng thái vận hành trên cùng một màn hình."
           actions={
             <select
               className={`${selectClass} min-w-[180px] bg-slate-50`}
@@ -343,11 +320,11 @@ export default function AdminOverview(props: AdminOverviewProps) {
                 onDashboardGrainChange(event.target.value as AdminDashboardGrain)
               }
               data-testid="admin-overview-grain"
-              aria-label="Chon khoang thoi gian dashboard"
+              aria-label="Chọn khoảng thời gian dashboard"
             >
-              <option value="day">Theo ngay</option>
-              <option value="month">Theo thang</option>
-              <option value="year">Theo nam</option>
+              <option value="day">Theo ngày</option>
+              <option value="month">Theo tháng</option>
+              <option value="year">Theo năm</option>
             </select>
           }
         />
@@ -366,16 +343,16 @@ export default function AdminOverview(props: AdminOverviewProps) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  Don hang + doanh thu paid
+                  Đơn hàng + doanh thu đã thanh toán
                 </p>
                 <h3 className="mt-2 text-xl font-semibold text-slate-950">
-                  {numberFormatter.format(summary?.orders || 0)} don / {formatCurrency(paidRevenue)}
+                  {numberFormatter.format(summary?.orders || 0)} đơn / {formatCurrency(paidRevenue)}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">{rangeLabel}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Don hang</span>
-                <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-700">Doanh thu paid</span>
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Đơn hàng</span>
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-700">Doanh thu đã thanh toán</span>
               </div>
             </div>
 
@@ -418,7 +395,7 @@ export default function AdminOverview(props: AdminOverviewProps) {
                         name === "paid_revenue"
                           ? formatCurrency(Number(value))
                           : numberFormatter.format(Number(value)),
-                        name === "paid_revenue" ? "Doanh thu paid" : "Don hang",
+                        name === "paid_revenue" ? "Doanh thu đã thanh toán" : "Đơn hàng",
                       ]}
                       contentStyle={{
                         borderRadius: 16,
@@ -446,8 +423,8 @@ export default function AdminOverview(props: AdminOverviewProps) {
                 </ResponsiveContainer>
               ) : (
                 <EmptyChartState
-                  title="Chua co du lieu van hanh"
-                  description="Khi co don hang trong khoang da chon, bieu do se hien thi ngay tai day."
+                  title="Chưa có dữ liệu vận hành"
+                  description="Khi có đơn hàng trong khoảng đã chọn, biểu đồ sẽ hiển thị tại đây."
                 />
               )}
             </div>
@@ -459,15 +436,18 @@ export default function AdminOverview(props: AdminOverviewProps) {
               data-testid="admin-overview-order-status"
             >
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-slate-900">Trang thai don</h4>
+                <h4 className="text-sm font-semibold text-slate-900">Trạng thái đơn hàng</h4>
                 <BarChart3 className="h-4 w-4 text-slate-400" />
               </div>
               <div className="mt-3 space-y-2">
                 {(dashboard?.order_status_totals || []).length > 0 ? (
                   dashboard?.order_status_totals.map((item) => (
-                    <div key={`order-status-${item.status}`} className="flex items-center justify-between">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getOrderStatusTone(item.status)}`}>
-                        {item.status}
+                    <div key={`order-status-${item.status}`} className="flex items-center justify-between gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getAdminOrderStatusMeta(item.status).toneClass}`}
+                        aria-label={getAdminOrderStatusMeta(item.status).ariaLabel}
+                      >
+                        {getAdminOrderStatusMeta(item.status).label}
                       </span>
                       <span className="text-sm font-semibold text-slate-900">
                         {numberFormatter.format(item.count)}
@@ -475,7 +455,7 @@ export default function AdminOverview(props: AdminOverviewProps) {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-500">Chua co du lieu trang thai don.</p>
+                  <p className="text-sm text-slate-500">Chưa có dữ liệu trạng thái đơn hàng.</p>
                 )}
               </div>
             </section>
@@ -485,15 +465,18 @@ export default function AdminOverview(props: AdminOverviewProps) {
               data-testid="admin-overview-payment-status"
             >
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-slate-900">Trang thai thanh toan</h4>
+                <h4 className="text-sm font-semibold text-slate-900">Trạng thái thanh toán</h4>
                 <Wallet className="h-4 w-4 text-slate-400" />
               </div>
               <div className="mt-3 space-y-2">
                 {(dashboard?.payment_status_totals || []).length > 0 ? (
                   dashboard?.payment_status_totals.map((item) => (
-                    <div key={`payment-status-${item.status}`} className="flex items-center justify-between">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getPaymentStatusTone(item.status)}`}>
-                        {item.status}
+                    <div key={`payment-status-${item.status}`} className="flex items-center justify-between gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getAdminPaymentStatusMeta(item.status).toneClass}`}
+                        aria-label={getAdminPaymentStatusMeta(item.status).ariaLabel}
+                      >
+                        {getAdminPaymentStatusMeta(item.status).label}
                       </span>
                       <span className="text-sm font-semibold text-slate-900">
                         {numberFormatter.format(item.count)}
@@ -501,7 +484,7 @@ export default function AdminOverview(props: AdminOverviewProps) {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-500">Chua co du lieu thanh toan.</p>
+                  <p className="text-sm text-slate-500">Chưa có dữ liệu trạng thái thanh toán.</p>
                 )}
               </div>
             </section>
@@ -509,14 +492,14 @@ export default function AdminOverview(props: AdminOverviewProps) {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid items-start gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <section
           className={`rounded-3xl border border-slate-200 bg-white ${cardPadding} shadow-sm`}
           data-testid="admin-overview-top-products"
         >
           <AdminSectionHeader
-            title="Top san pham"
-            description="Top 5 san pham theo so luong ban trong khoang da chon."
+            title="Top sản phẩm"
+            description="Top 5 sản phẩm theo số lượng bán trong khoảng đã chọn."
           />
           {(dashboard?.top_products || []).length > 0 ? (
             <div className="mt-5 overflow-x-auto">
@@ -524,8 +507,8 @@ export default function AdminOverview(props: AdminOverviewProps) {
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-[0.18em] text-slate-400">
                     <th className="pb-3 pr-4">#</th>
-                    <th className="pb-3 pr-4">San pham</th>
-                    <th className="pb-3 pr-4 text-right">So luong</th>
+                    <th className="pb-3 pr-4">Sản phẩm</th>
+                    <th className="pb-3 pr-4 text-right">Số lượng</th>
                     <th className="pb-3 text-right">Doanh thu</th>
                   </tr>
                 </thead>
@@ -546,7 +529,7 @@ export default function AdminOverview(props: AdminOverviewProps) {
               </table>
             </div>
           ) : (
-            <p className="mt-5 text-sm text-slate-500">Chua co du lieu top san pham.</p>
+            <p className="mt-5 text-sm text-slate-500">Chưa có dữ liệu top sản phẩm.</p>
           )}
         </section>
 
@@ -555,11 +538,11 @@ export default function AdminOverview(props: AdminOverviewProps) {
           data-testid="admin-overview-recent-orders"
         >
           <AdminSectionHeader
-            title="Don gan day"
-            description="6 don moi nhat de xu ly nhanh trong ca lam viec."
+            title="Đơn gần đây"
+            description="6 đơn mới nhất để xử lý nhanh trong ca làm việc."
           />
           {(dashboard?.recent_orders || []).length > 0 ? (
-            <div className="mt-5 space-y-3">
+            <div className="mt-5 max-h-[460px] space-y-3 overflow-y-auto pr-1">
               {dashboard?.recent_orders.map((item) => (
                 <div
                   key={`recent-order-${item.id}`}
@@ -573,11 +556,14 @@ export default function AdminOverview(props: AdminOverviewProps) {
                     <p className="text-sm font-semibold text-slate-900">{formatCurrency(item.total)}</p>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getOrderStatusTone(item.status)}`}>
-                      {item.status}
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getAdminOrderStatusMeta(item.status).toneClass}`}
+                      aria-label={getAdminOrderStatusMeta(item.status).ariaLabel}
+                    >
+                      {getAdminOrderStatusMeta(item.status).label}
                     </span>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getPaymentStatusTone(item.payment_status)}`}>
-                      {item.payment_status}
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getAdminPaymentStatusMeta(item.payment_status).toneClass}`}>
+                      {getAdminPaymentStatusMeta(item.payment_status).label}
                     </span>
                     <span className="text-xs text-slate-500">{formatDateTime(item.created_at)}</span>
                   </div>
@@ -585,7 +571,7 @@ export default function AdminOverview(props: AdminOverviewProps) {
               ))}
             </div>
           ) : (
-            <p className="mt-5 text-sm text-slate-500">Chua co don hang gan day.</p>
+            <p className="mt-5 text-sm text-slate-500">Chưa có đơn hàng gần đây.</p>
           )}
         </section>
       </div>
@@ -593,8 +579,8 @@ export default function AdminOverview(props: AdminOverviewProps) {
       <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <section className={`rounded-3xl border border-slate-200 bg-white ${cardPadding} shadow-sm`}>
           <AdminSectionHeader
-            title="Quick actions"
-            description="Di chuyen nhanh toi cac khu vuc can xu ly."
+            title="Hành động nhanh"
+            description="Di chuyển nhanh tới các khu vực cần xử lý."
           />
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {quickActions.map((action) => {
@@ -627,8 +613,8 @@ export default function AdminOverview(props: AdminOverviewProps) {
           data-testid="admin-overview-visits-chart"
         >
           <AdminSectionHeader
-            title="Traffic (secondary)"
-            description="Theo doi pageviews va unique visitors cho storefront."
+            title="Lưu lượng truy cập (phụ)"
+            description="Theo dõi pageviews và unique visitors cho storefront."
           />
           <div className="mt-5" style={{ height: chartHeight }}>
             {dashboardLoading ? (
@@ -669,8 +655,8 @@ export default function AdminOverview(props: AdminOverviewProps) {
               </ResponsiveContainer>
             ) : (
               <EmptyChartState
-                title="Chua co du lieu traffic"
-                description="Du lieu se xuat hien sau khi storefront co pageview hop le."
+                title="Chưa có dữ liệu lưu lượng"
+                description="Dữ liệu sẽ xuất hiện sau khi storefront có pageview hợp lệ."
               />
             )}
           </div>
@@ -679,8 +665,8 @@ export default function AdminOverview(props: AdminOverviewProps) {
 
       <section className={`rounded-3xl border border-slate-200 bg-white ${cardPadding} shadow-sm`}>
         <AdminSectionHeader
-          title="Uu tien xu ly"
-          description="Danh sach canh bao rut gon de ra quyet dinh nhanh."
+          title="Ưu tiên xử lý"
+          description="Danh sách cảnh báo rút gọn để ra quyết định nhanh."
         />
         <div className="mt-5 grid gap-3">
           {notices.map((notice) => {

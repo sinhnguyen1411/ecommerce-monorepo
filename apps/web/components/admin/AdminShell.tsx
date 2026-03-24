@@ -44,11 +44,8 @@ type AdminShellProps = {
   profile?: AdminProfile | null;
   onLogout?: () => void;
   loggingOut?: boolean;
-  onRefresh?: () => void;
   navSort: AdminNavSortState;
   density: AdminDensityMode;
-  onDensityChange: (mode: AdminDensityMode) => void;
-  preferencesSaving?: boolean;
   children: React.ReactNode;
 };
 
@@ -169,7 +166,7 @@ const NavList = ({
                 <span
                   className={`rounded-full px-2 py-0.5 text-base font-semibold md:text-xs ${
                     isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
-                  } ${collapsed ? "absolute right-1 top-1 text-[10px] leading-none" : "ml-auto"}`}
+                  } ${collapsed ? "absolute right-1 top-1 text-xs leading-none" : "ml-auto"}`}
                 >
                   {badge}
                 </span>
@@ -302,11 +299,8 @@ export default function AdminShell({
   profile,
   onLogout,
   loggingOut,
-  onRefresh,
   navSort,
   density,
-  onDensityChange,
-  preferencesSaving = false,
   children
 }: AdminShellProps) {
   const profileName = useMemo(() => {
@@ -420,10 +414,6 @@ export default function AdminShell({
     };
   }, []);
 
-  const toggleDensity = () => {
-    onDensityChange(density === "compact" ? "comfortable" : "compact");
-  };
-
   return (
     <div className="relative flex min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
       {isRailHoverExpanded && !navSort.enabled ? (
@@ -494,7 +484,7 @@ export default function AdminShell({
             {compactSidebar ? profileName.charAt(0).toUpperCase() : profileName}
           </p>
           <p
-            className={`mt-1 font-semibold text-[var(--color-primary)] ${compactSidebar ? "text-[10px]" : "text-base md:text-xs"}`}
+            className={`mt-1 font-semibold text-[var(--color-primary)] ${compactSidebar ? "text-xs" : "text-base md:text-xs"}`}
           >
             {profileRole}
           </p>
@@ -550,26 +540,6 @@ export default function AdminShell({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleDensity}
-                disabled={preferencesSaving}
-                data-testid="admin-density-toggle"
-                className="normal-case border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
-              >
-                {density === "compact" ? "Mật độ: Gọn" : "Mật độ: Thoáng"}
-              </Button>
-              {onRefresh ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onRefresh}
-                  className="normal-case border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer"
-                >
-                  Làm mới dữ liệu
-                </Button>
-              ) : null}
               {onLogout ? (
                 <Button
                   variant="ghost"

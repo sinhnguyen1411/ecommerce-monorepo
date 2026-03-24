@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
+
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import AuthBrandStrip from "@/components/auth/AuthBrandStrip";
 import SectionTitle from "@/components/common/SectionTitle";
@@ -21,7 +22,7 @@ function isGmail(email: string) {
   );
 }
 
-export default function SignupPage() {
+function SignupPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -295,6 +296,13 @@ export default function SignupPage() {
         </div>
       </section>
     </div>
+  );
+}
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="section-shell pb-16 pt-6 text-sm text-ink/70">Loading...</div>}>
+      <SignupPageContent />
+    </Suspense>
   );
 }
 

@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 
 import { buildCompleteProfileHref, normalizeNextPath } from "@/lib/onboarding";
 
-export default function CompleteProfilePage() {
+function CompleteProfilePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = useMemo(
@@ -19,7 +19,15 @@ export default function CompleteProfilePage() {
 
   return (
     <div className="section-shell pb-16 pt-14">
-      <p className="text-sm text-ink/70">Đang chuyển về tài khoản của tôi...</p>
+      <p className="text-sm text-ink/70">Redirecting to your account...</p>
     </div>
+  );
+}
+
+export default function CompleteProfilePage() {
+  return (
+    <Suspense fallback={<div className="section-shell pb-16 pt-14 text-sm text-ink/70">Loading...</div>}>
+      <CompleteProfilePageContent />
+    </Suspense>
   );
 }

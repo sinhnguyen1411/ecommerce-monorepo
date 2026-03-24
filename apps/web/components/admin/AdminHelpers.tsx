@@ -6,6 +6,20 @@ export const textareaClass =
   "min-h-[120px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 md:text-sm";
 export const selectClass =
   "min-h-[44px] w-full rounded-lg border border-slate-200 bg-white px-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 md:text-sm";
+export const primaryActionClass =
+  "bg-[var(--color-primary)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer";
+export const secondaryActionClass =
+  "normal-case tracking-normal border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-base md:text-sm cursor-pointer";
+export const dangerActionClass =
+  "normal-case tracking-normal text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-base md:text-sm cursor-pointer";
+export const tertiaryActionClass =
+  "normal-case tracking-normal text-slate-600 hover:text-slate-900 text-base md:text-sm cursor-pointer";
+
+export function panelByDensity(density: "compact" | "comfortable") {
+  return density === "compact"
+    ? "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+    : "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm";
+}
 
 export function AdminField({
   label,
