@@ -3,34 +3,35 @@ import path from "node:path";
 import * as ts from "typescript";
 
 const root = path.resolve(process.cwd());
-const ignoreDirs = new Set([".next", "node_modules", "dist", "build", ".git"]);
-const includeExt = new Set([".ts", ".tsx", ".js", ".jsx", ".json", ".md"]);
+const repoRoot = path.resolve(root, "..", "..");
+const scanRoots = [
+  root,
+  path.join(repoRoot, "seed"),
+  path.join(repoRoot, "migrations")
+];
+const ignoreDirs = new Set([".next", "node_modules", "dist", "build", ".git", "uploads"]);
+const includeExt = new Set([".ts", ".tsx", ".js", ".jsx", ".json", ".md", ".sql"]);
 const scriptExt = new Set([".ts", ".tsx", ".js", ".jsx"]);
 const invisibleControlCharRegex = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 const mojibakeMarkers = [
-  "Ã",
-  "Ä",
-  "Å",
-  "Æ",
-  "Ãƒ",
-  "Ã‚",
-  "Ã„",
-  "Ã…",
-  "Ã†",
-  "Ã¡Â»",
-  "Ã¡Âº",
-  "á»",
-  "áº",
-  "Æ°",
-  "Ä‘",
-  "Å¸",
-  "\uFFFD",
-  "ï¿½"
+  "\u00C3",
+  "\u00C4",
+  "\u00C5",
+  "\u00C6",
+  "\u00C2",
+  "\u00E1\u00BB",
+  "\u00E1\u00BA",
+  "\u00C6\u00B0",
+  "\u00C4\u2018",
+  "\u00E2\u20AC",
+  "\u00EF\u00BF\u00BD",
+  "\uFFFD"
 ];
 const inlineBadRegex = /\p{L}\?\p{L}/u;
 
 const issues = [];
+const allowMojibakeMarkerFiles = new Set(["/lib/format.ts", "apps/web/lib/format.ts"]);
 
 async function walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -61,6 +62,11 @@ async function walk(dir) {
 }
 
 function checkFile(filePath, content) {
+  const normalizedPath = filePath.replace(/\\/g, "/");
+  const shouldAllowMarkers = [...allowMojibakeMarkerFiles].some((allowed) =>
+    normalizedPath.endsWith(allowed)
+  );
+
   const ext = path.extname(filePath);
   const controlMatch = content.match(invisibleControlCharRegex);
   if (controlMatch) {
@@ -116,7 +122,7 @@ function checkFile(filePath, content) {
   };
 
   const hasMojibake = (value) =>
-    mojibakeMarkers.some((marker) => value.includes(marker));
+    !shouldAllowMarkers && mojibakeMarkers.some((marker) => value.includes(marker));
 
   let reported = false;
   const visit = (node) => {
@@ -171,7 +177,16 @@ function checkFile(filePath, content) {
   visit(sourceFile);
 }
 
-await walk(root);
+for (const dir of scanRoots) {
+  try {
+    const entry = await stat(dir);
+    if (entry.isDirectory()) {
+      await walk(dir);
+    }
+  } catch {
+    // Ignore missing scan roots.
+  }
+}
 
 if (issues.length) {
   console.error("Mojibake check failed. Possible encoding issues detected:");

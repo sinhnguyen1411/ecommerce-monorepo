@@ -1,6 +1,6 @@
 # Project Context
 
-This document is an internal, implementation-driven onboarding reference for the `ecommerce-monorepo` repository. It is written for ChatGPT, Codex, OpenCode, or another code agent that needs to understand the codebase quickly without re-deriving the architecture from scratch.
+This document is an internal, implementation-driven onboarding reference for the `ecommerce-monorepo` repository. It is written for ChatGPT, Codex, or another code agent that needs to understand the codebase quickly without re-deriving the architecture from scratch.
 
 This file reflects repository state inspected on March 10, 2026. It is intentionally grounded in the current code first, then the local docs, then seed data. If this document disagrees with older prose docs, trust the current code in `apps/api`, `apps/web`, `migrations`, `seed`, and `infra`.
 
@@ -455,9 +455,10 @@ Current migration sequence:
 `apps/api/internal/seed/seed.go` has conditional behavior:
 
 - if no products exist, it applies all SQL seed files in lexical order
-- if products already exist, it only applies `003_promotions.sql` and `004_users.sql`
+- if products already exist, it skips reseeding by default
+- to refresh selected seed files on existing data, set `SEED_REFRESH_ON_START=true`
 
-That means reseeding an existing environment is intentionally partial and focused on coupons and buyer test users.
+This default avoids unintended content overwrite on service restart.
 
 ### Route registration
 
@@ -943,7 +944,7 @@ Error responses use:
 - Q&A entries
 - locations
 
-This seed is a mix of English demo content and Vietnamese content, and some strings in the repo show encoding artifacts.
+This seed is a mix of English demo content and Vietnamese content, with UTF-8 content quality checks enforced during seed execution.
 
 ### Payment settings seed
 

@@ -1,4 +1,4 @@
-# Tam Bo Ecommerce + Blog Monorepo
+# Ecommerce + Blog Monorepo
 
 Full-stack ecommerce + content platform (storefront + admin) with a Next.js web app, Go/Gin API, and MySQL.
 
@@ -54,7 +54,7 @@ Copy-Item infra\env\web.env.example infra\env\web.env
 ```
 
 Key variables:
-- API core: `DB_*`, `JWT_SECRET`, `OTP_SECRET`, `MIGRATE_ON_START`, `SEED_ON_START`
+- API core: `DB_*`, `JWT_SECRET`, `OTP_SECRET`, `MIGRATE_ON_START`, `SEED_ON_START`, `SEED_REFRESH_ON_START`
 - Auth/OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URL`, `AUTH_GMAIL_ONLY`
 - Business: `MIN_ORDER_AMOUNT`, `FREE_SHIPPING_THRESHOLD`, `SHIPPING_FEE_STANDARD`, `SHIPPING_FEE_EXPRESS`
 - Security/rate-limit: `LOGIN_*`, `REGISTER_RATE_LIMIT_*`, `ORDER_RATE_LIMIT_*`, `PROMO_VALIDATE_RATE_LIMIT_*`, `PAYMENT_PROOF_RATE_LIMIT_*`, `BUYER_WRITE_RATE_LIMIT_*`, `ADMIN_WRITE_RATE_LIMIT_*`, `AUTH_RATE_LIMIT_*`, `API_RATE_LIMIT_*`, `JSON_BODY_MAX_BYTES`, `UPLOAD_MAX_BYTES`
@@ -131,7 +131,8 @@ Ensure `NEXT_PUBLIC_API_URL=http://localhost:8080`.
 - Migrations run when `MIGRATE_ON_START=true`.
 - Seed behavior (`SEED_ON_START=true`):
   - Empty DB: all seed files run.
-  - Existing products: promotions/users/content-quality seed refresh.
+  - Existing products: no automatic refresh by default.
+  - To refresh selected seed files on an existing DB, set `SEED_REFRESH_ON_START=true`.
 - Sources: `migrations/`, `seed/`.
 
 Default seed includes:
@@ -142,6 +143,13 @@ Default seed includes:
 - Content quality normalization for products/posts/pages/Q&A/locations via `seed/005_content_quality.sql`
 
 Need a new admin password hash: use `tmp_bcrypt.go`.
+
+One-time mojibake repair command (for existing DB data):
+```powershell
+cd apps/api
+go run ./cmd/repair-mojibake --dry-run
+go run ./cmd/repair-mojibake --apply
+```
 
 ## Routes
 Canonical routes:
@@ -215,7 +223,8 @@ Notes:
 
 ## Encoding and Git Hooks
 - Repository text files are normalized to UTF-8 + LF via `.editorconfig` and `.gitattributes`.
-- Web build/commit protection uses:
+- Commit/build protection uses:
+  - `node scripts/check-mojibake-repo.mjs` (repo-wide mojibake/control-char guard)
   - `cd apps/web && npm run check:mojibake` (mojibake + invisible control-char guard)
   - `cd apps/web && npm run lint:errors` (parse/lint errors only)
 - Bootstrap scripts set repo-local Git config: `core.hooksPath=.githooks` and `core.autocrlf=false`.
@@ -231,58 +240,6 @@ sh/bash:
 ```sh
 ./scripts/setup-git-hooks.sh
 ```
-
-<!-- OPENCODE_WORKFLOW:START -->
-## OpenCode Rate-Limit Workflow
-- Default policy for code tasks: mandatory OpenCode wrapper lifecycle (`prepare -> code+verify -> complete`).
-- Workflow state/logs are repo-local under `.opencode/rate-limit/` and should stay git-ignored.
-
-One-time setup:
-
-PowerShell:
-```powershell
-.\scripts\setup-opencode-rate-limit.ps1
-```
-
-sh/bash:
-```sh
-./scripts/setup-opencode-rate-limit.sh
-```
-
-Defaults:
-- `cheapModel=opencode/gpt-5-nano`
-- `strongModel=opencode/big-pickle`
-- `gateWindow=5`
-- `maxExploreRuns=1` (second explore only for `runtime`/`security` or `--force`)
-
-Code task lifecycle:
-```powershell
-.\scripts\oc-task.ps1 -Action prepare -Tags "runtime,ui" -Goal "..." -Context "..."
-# implement + verify changes
-.\scripts\oc-task.ps1 -Action complete -Prompt "..." -Label "checkpoint"
-```
-
-Fail-open path:
-```powershell
-.\scripts\oc-task.ps1 -Action skip -Reason "opencode unavailable"
-```
-
-Status/reset:
-```powershell
-.\scripts\oc-task.ps1 -Action status
-.\scripts\oc-task.ps1 -Action reset
-```
-
-Enforcement roadmap:
-- Sprint 1-2 (soft): no CI blocking, task updates must include `OpenCode: used` or `OpenCode: skipped (reason)`.
-- After KPI stability (hard): add CI lifecycle checks (`prepare+complete` or `skip` with reason) for bootstrapped repos.
-
-Team weekly aggregate:
-```powershell
-$SkillDir = Join-Path $HOME ".codex\skills\opencode-cli"
-powershell -NoProfile -ExecutionPolicy Bypass -File "$SkillDir\scripts\weekly-aggregate.ps1"
-```
-<!-- OPENCODE_WORKFLOW:END -->
 
 ## Deployment
 See `docs/README_DEPLOY.md`.
@@ -312,8 +269,6 @@ Get-Content backup.sql | docker exec -i tambo_mysql mysql -u root -pYOUR_ROOT_PA
 - `docs/HANDOVER_GUIDE.md`: handover notes
 - `docs/CONTENT_QUALITY_CHECKLIST.md`: editorial/content-quality checklist
 - `apps/web/README_UI.md`: storefront UI summary
-
-
 
 
 

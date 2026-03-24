@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+run_node() {
+  if command -v cmd.exe >/dev/null 2>&1; then
+    cmd.exe /d /c node "$@"
+    return
+  fi
+
+  if command -v node >/dev/null 2>&1; then
+    node "$@"
+    return
+  fi
+
+  echo "[pre-commit] ERROR: node not found in PATH (tried cmd.exe /c node, node)." >&2
+  exit 1
+}
+
+run_npm() {
+  # GitHub Desktop runs hooks via bash on Windows; npm resolution there is
+  # more reliable through cmd.exe than invoking npm/npm.cmd directly.
+  if command -v cmd.exe >/dev/null 2>&1; then
+    cmd.exe /d /c npm "$@"
+    return
+  fi
+
+  if command -v npm >/dev/null 2>&1; then
+    npm "$@"
+    return
+  fi
+
+  echo "[pre-commit] ERROR: npm not found in PATH (tried cmd.exe /c npm, npm)." >&2
+  exit 1
+}
+
+echo "[pre-commit] Running repository mojibake check..."
+run_node scripts/check-mojibake-repo.mjs
+
+cd "$repo_root/apps/web"
+
+echo "[pre-commit] Running mojibake check..."
+run_npm run check:mojibake
+
+echo "[pre-commit] Running lint errors check..."
+run_npm run lint:errors

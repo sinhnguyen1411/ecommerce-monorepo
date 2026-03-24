@@ -32,12 +32,14 @@ curl http://localhost:3000
 ## Notes
 - Migrations run on API start (`MIGRATE_ON_START=true`).
 - Seed data loads on first start (`SEED_ON_START=true`).
+- Existing databases are not reseeded by default; set `SEED_REFRESH_ON_START=true` only when explicit refresh is needed.
 - Uploaded files are stored in the `api_uploads` volume.
 - Admin seed account (local): `admin@tambo.local` / `admin123`.
 - If SMTP is not configured, OTP emails are logged to the API console in non-production environments.
 
 ## Further Reading
 - Google OAuth + Gmail OTP setup: `docs/AUTH_GOOGLE_OTP_SETUP.md`
+- Unicode DB repair runbook: `docs/UNICODE_DB_REPAIR.md`
 
 ## Reset data
 

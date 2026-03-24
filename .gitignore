@@ -38,13 +38,10 @@ apps/web/tsconfig.tsbuildinfo
 # OS junk
 Thumbs.db
 Desktop.ini
-opencode.json
-.codex/skills/opencode-cli/scripts/opencode.ps1
-/.codex/skills/opencode-cli/agents
-/.codex/skills/opencode-cli
-/.opencode
 AGENTS.md
-.githooks/pre-commit
-scripts/oc-task.ps1
-scripts/oc-task.sh
-/scripts
+.githooks/*
+!.githooks/pre-commit
+/scripts/*
+!/scripts/check-mojibake-repo.mjs
+!/scripts/setup-git-hooks.ps1
+!/scripts/setup-git-hooks.sh
