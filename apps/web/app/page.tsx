@@ -37,17 +37,6 @@ const renderFeatureIcon = (index: number) => {
       <path d="M4 13a8 8 0 0 1 16 0" />
       <path d="M4 13v5a2 2 0 0 0 2 2h2v-6H6" />
       <path d="M20 13v5a2 2 0 0 1-2 2h-2v-6h2" />
-      <text
-        x="12"
-        y="16"
-        textAnchor="middle"
-        fontSize="6"
-        fontFamily="Arial, sans-serif"
-        fill="currentColor"
-        stroke="none"
-      >
-        24/7
-      </text>
     </svg>
   );
 };
@@ -120,85 +109,88 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section-home-banner">
+      <section className="section-home-banner" data-testid="home-spotlight-section">
         <div className="container">
-          {homeContent.spotlights.map((spotlight, index) => {
-            const isReverse = index % 2 === 1;
-            return (
-              <div
-                key={spotlight.id || `home-spotlight-${index + 1}`}
-                className={`banner-block ${isReverse ? "banner-right" : "banner-left"}`}
-              >
-                {isReverse ? (
-                  <>
-                    <div className="banner-block__left banner-block__info">
-                      <div className="info home-square-card">
-                        <h3 className="title">{spotlight.title}</h3>
-                        <p className="text">{spotlight.description}</p>
-                        {spotlight.bullets.length ? (
-                          <ul>
-                            {spotlight.bullets.map((item, bulletIndex) => (
-                              <li key={`${spotlight.id}-bullet-${bulletIndex}`}>{item}</li>
-                            ))}
-                          </ul>
+          <div className="spotlight3d-list">
+            {homeContent.spotlights.map((spotlight, index) => {
+              const isReverse = index % 2 === 1;
+              const hasForeground = Boolean(spotlight.foregroundImageSrc?.trim());
+              const ctaHref = spotlight.ctaHref || "/collections/all";
+
+              return (
+                <div
+                  key={spotlight.id || `home-spotlight-${index + 1}`}
+                  className={`spotlight3d-item ${isReverse ? "is-reverse" : ""}`}
+                  data-testid={`home-spotlight-${index}`}
+                >
+                  <div className="spotlight3d-item__media" data-testid={`home-spotlight-media-${index}`}>
+                    <div
+                      className={`spotlight3d-stage ${hasForeground ? "" : "spotlight3d-stage--no-foreground"}`}
+                    >
+                      <Link href={ctaHref} className="spotlight3d-stage__link">
+                        <Image
+                          src={spotlight.imageSrc}
+                          alt={spotlight.imageAlt || spotlight.title}
+                          width={760}
+                          height={640}
+                          className="spotlight3d-stage__bg"
+                          sizes="(max-width: 767px) 94vw, (max-width: 1023px) 88vw, 46vw"
+                        />
+                        <span className="spotlight3d-stage__veil" aria-hidden="true" />
+                        <span className="spotlight3d-stage__grain" aria-hidden="true" />
+                        <span
+                          className="spotlight3d-stage__shape spotlight3d-stage__shape--top"
+                          aria-hidden="true"
+                        />
+                        <span
+                          className="spotlight3d-stage__shape spotlight3d-stage__shape--bottom"
+                          aria-hidden="true"
+                        />
+                        {hasForeground ? (
+                          <span className="spotlight3d-stage__foreground" aria-hidden="true">
+                            <Image
+                              src={spotlight.foregroundImageSrc || ""}
+                              alt={spotlight.foregroundImageAlt || spotlight.title}
+                              width={520}
+                              height={620}
+                              className="spotlight3d-stage__foreground-image"
+                              sizes="(max-width: 767px) 64vw, (max-width: 1023px) 48vw, 30vw"
+                            />
+                          </span>
                         ) : null}
-                        <Link href={spotlight.ctaHref || "/collections/all"} className="button">
-                          {spotlight.ctaLabel || "Xem chi tiết"}
-                        </Link>
-                      </div>
+                      </Link>
                     </div>
-                    <div className="banner-block__right">
-                      <div className="home-square-media">
-                        <Link href={spotlight.ctaHref || "/collections/all"} className="image-use-effect3">
-                          <Image
-                            src={spotlight.imageSrc}
-                            alt={spotlight.imageAlt || spotlight.title}
-                            width={640}
-                            height={520}
-                            className="h-full w-full object-cover"
-                            sizes="(max-width: 768px) 90vw, 520px"
-                          />
-                        </Link>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="banner-block__left">
-                      <div className="home-square-media">
-                        <Link href={spotlight.ctaHref || "/collections/all"} className="image-use-effect3">
-                          <Image
-                            src={spotlight.imageSrc}
-                            alt={spotlight.imageAlt || spotlight.title}
-                            width={640}
-                            height={520}
-                            className="h-full w-full object-cover"
-                            sizes="(max-width: 768px) 90vw, 520px"
-                          />
-                        </Link>
-                      </div>
-                    </div>
-                    <div className="banner-block__right banner-block__info">
-                      <div className="info home-square-card">
-                        <h3 className="title">{spotlight.title}</h3>
-                        <p className="text">{spotlight.description}</p>
+                  </div>
+
+                  <div className="spotlight3d-item__content" data-testid={`home-spotlight-content-${index}`}>
+                    <article className="spotlight3d-card">
+                      <div className="spotlight3d-card__body">
+                        <h3 className="spotlight3d-card__title">{spotlight.title}</h3>
+                        <p className="spotlight3d-card__text">{spotlight.description}</p>
                         {spotlight.bullets.length ? (
-                          <ul>
-                            {spotlight.bullets.map((item, bulletIndex) => (
-                              <li key={`${spotlight.id}-bullet-${bulletIndex}`}>{item}</li>
-                            ))}
-                          </ul>
+                          <div className="spotlight3d-card__benefits">
+                            <p className="spotlight3d-card__label">Hiệu quả nổi bật</p>
+                            <ul className="spotlight3d-card__chips">
+                              {spotlight.bullets.slice(0, 3).map((item, bulletIndex) => (
+                                <li key={`${spotlight.id}-bullet-${bulletIndex}`}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
                         ) : null}
-                        <Link href={spotlight.ctaHref || "/collections/all"} className="button">
-                          {spotlight.ctaLabel || "Xem chi tiết"}
-                        </Link>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
+                      <Link
+                        href={ctaHref}
+                        className="button spotlight3d-card__cta"
+                        data-testid={`home-spotlight-cta-${index}`}
+                      >
+                        {spotlight.ctaLabel || "Xem chi tiết"}
+                      </Link>
+                    </article>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -305,3 +297,5 @@ export default async function HomePage() {
     </main>
   );
 }
+
+
