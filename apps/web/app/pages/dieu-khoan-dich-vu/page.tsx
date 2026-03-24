@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Điều khoản dịch vụ | Nông Dược Tam Bố",
   description: "Quy định đặt hàng, thanh toán và giao hàng."
@@ -28,9 +30,7 @@ export default function TermsOfServicePage() {
           <div className="breadcrumb-list">
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
-                <a href="/" target="_self">
-                  Trang chủ
-                </a>
+                <Link href="/">Trang chủ</Link>
               </li>
               <li className="active">
                 <strong>Điều khoản dịch vụ</strong>

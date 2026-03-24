@@ -14,14 +14,15 @@ export const metadata = {
 };
 
 type BlogDetailPageProps = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 };
 
 export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
+  const { slug } = await params;
   const [post, posts] = await Promise.all([
-    getPost(params.slug).catch(() => null),
+    getPost(slug).catch(() => null),
     getPosts()
   ]);
 

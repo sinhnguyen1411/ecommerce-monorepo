@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { siteConfig } from "@/lib/site";
 import { getPage } from "@/lib/api";
 import { resolveAboutContent } from "@/lib/content";
@@ -19,9 +20,7 @@ export default async function AboutUsPage() {
           <div className="breadcrumb-list">
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
-                <a href="/" target="_self">
-                  Trang chủ
-                </a>
+                <Link href="/">Trang chủ</Link>
               </li>
               <li className="active">
                 <strong>Giới thiệu</strong>
@@ -38,26 +37,6 @@ export default async function AboutUsPage() {
               <p className="about-eyebrow">{content.hero.eyebrow}</p>
               <h1>{content.hero.title}</h1>
               <p className="about-lead">{content.hero.lead}</p>
-              <div className="about-hero-actions">
-                <a className="button" href={content.hero.ctaHref || "/pages/lien-he"}>
-                  {content.hero.ctaLabel || "Liên hệ tư vấn"}
-                </a>
-                <a
-                  className="about-ghost"
-                  href={content.hero.secondaryHref || "/pages/hoi-dap-cung-nha-nong"}
-                >
-                  {content.hero.secondaryLabel || "Hỏi đáp kỹ thuật"}
-                </a>
-              </div>
-              {content.hero.pills?.length ? (
-                <div className="about-pill-list">
-                  {content.hero.pills.map((pill) => (
-                    <span key={pill} className="about-pill">
-                      {pill}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
             </div>
             <div className="about-hero-media">
               <img
@@ -85,63 +64,49 @@ export default async function AboutUsPage() {
         </div>
       </section>
 
-      <section className="about-scroll">
+      <section className="about-pillars">
         <div className="container">
-          <div className="about-storyline">
-            {content.slides.map((slide, index) => {
-              const tag = slide.tag?.trim() || `Chặng ${(index + 1).toString().padStart(2, "0")}`;
+          <div className="about-section-header">
+            <p className="about-eyebrow">Trọng tâm</p>
+            <h2>3 trụ cột phát triển</h2>
+            <p className="about-section-lead">
+              Tóm tắt những giá trị cốt lõi đang dẫn dắt hành trình và hệ thống
+              sản phẩm/dịch vụ của chúng tôi.
+            </p>
+          </div>
+          <div className="about-pillar-grid">
+            {content.slides.slice(0, 3).map((slide, index) => {
+              const tag = slide.tag?.trim() || `Trụ cột ${(index + 1).toString().padStart(2, "0")}`;
               return (
-                <article
-                  key={slide.id || `${slide.title}-${index}`}
-                  className={`about-slide ${index % 2 === 1 ? "about-slide--reverse" : ""}`}
-                >
-                  <div className="about-slide-media">
+                <article key={slide.id || `${slide.title}-${index}`} className="about-pillar-card">
+                  <div className="about-pillar-media">
                     <img
                       src={slide.image}
                       alt={slide.imageAlt || slide.title}
                       loading="lazy"
                       decoding="async"
                     />
-                    <span className="about-slide-step">{tag}</span>
-                    <span className="about-slide-grass" aria-hidden="true" />
+                    <span className="about-pillar-tag">{tag}</span>
                   </div>
-                  <div className="about-slide-content">
-                    <span className="about-slide-tag">{tag}</span>
-                    <h2>{slide.title}</h2>
+                  <div className="about-pillar-body">
+                    <h3>{slide.title}</h3>
                     <p>{slide.description}</p>
                     {slide.bullets?.length ? (
-                      <ul className="about-slide-bullets">
-                        {slide.bullets.map((item, bulletIndex) => (
+                      <ul className="about-pillar-bullets">
+                        {slide.bullets.slice(0, 3).map((item, bulletIndex) => (
                           <li key={`${slide.id}-${bulletIndex}`}>{item}</li>
                         ))}
                       </ul>
                     ) : null}
-                    <div className="about-slide-actions">
-                      <a className="button" href={slide.ctaHref || content.hero.ctaHref || "/pages/lien-he"}>
-                        {slide.ctaLabel || "Liên hệ tư vấn"}
+                    {slide.ctaLabel ? (
+                      <a className="about-pillar-cta" href={slide.ctaHref || "/pages/lien-he"}>
+                        {slide.ctaLabel}
                       </a>
-                      <a className="about-slide-link" href="/collections/all">
-                        Xem sản phẩm
-                      </a>
-                    </div>
+                    ) : null}
                   </div>
                 </article>
               );
             })}
-            {content.storyHtml ? (
-              <article className="about-slide about-slide--full">
-                <div className="about-slide-content">
-                  <span className="about-slide-tag">Hành trình</span>
-                  <h2>Hành trình & định hướng</h2>
-                  <div
-                    className="content-pageDetail typeList-style"
-                    dangerouslySetInnerHTML={{
-                      __html: content.storyHtml
-                    }}
-                  />
-                </div>
-              </article>
-            ) : null}
           </div>
         </div>
       </section>

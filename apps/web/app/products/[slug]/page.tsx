@@ -15,15 +15,16 @@ export const metadata = {
 };
 
 type ProductDetailPageProps = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 };
 
 export default async function ProductDetailPage({
   params
 }: ProductDetailPageProps) {
-  const product = await getProduct(params.slug).catch(() => null);
+  const { slug } = await params;
+  const product = await getProduct(slug).catch(() => null);
 
   if (!product) {
     notFound();

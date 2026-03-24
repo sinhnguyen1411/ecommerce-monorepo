@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Chính sách đổi trả | Nông Dược Tam Bố",
   description: "Quy định đổi trả sản phẩm tại Tam Bố."
@@ -31,9 +33,7 @@ export default function ReturnPolicyPage() {
           <div className="breadcrumb-list">
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
-                <a href="/" target="_self">
-                  Trang chủ
-                </a>
+                <Link href="/">Trang chủ</Link>
               </li>
               <li className="active">
                 <strong>Chính sách đổi trả</strong>

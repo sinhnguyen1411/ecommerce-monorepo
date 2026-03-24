@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 export default async function LocationsPage() {
-  const locations = await getLocations();
+  const locations = await getLocations().catch(() => []);
 
   return (
     <div>

@@ -19,6 +19,27 @@ const sortOptions = [
   { value: "quantity-descending", label: "Tồn kho giảm dần" }
 ];
 
+const HOT_PROMOTION_TAGS = ["hot", "sale", "flash-sale", "khuyen-mai", "khuyenmai", "giam-gia"];
+
+function getDiscountPercent(product: Product) {
+  if (typeof product.compare_at_price !== "number" || product.compare_at_price <= product.price) {
+    return 0;
+  }
+  return Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100);
+}
+
+function isHotPromotionProduct(product: Product) {
+  const discountPercent = getDiscountPercent(product);
+  if (discountPercent <= 0) {
+    return false;
+  }
+  const normalizedTags = (product.tags || []).map((tag) => tag.toLowerCase());
+  const hasHotTag = normalizedTags.some((tag) =>
+    HOT_PROMOTION_TAGS.some((keyword) => tag.includes(keyword))
+  );
+  return discountPercent >= 10 || Boolean(product.featured) || hasHotTag;
+}
+
 type ProductsClientProps = {
   categories: Category[];
   products: Product[];
@@ -28,8 +49,7 @@ type ProductsClientProps = {
   initialMinPrice?: string;
   initialMaxPrice?: string;
   initialVendor?: string;
-  initialColors?: string;
-  initialSizes?: string;
+  initialPromotion?: string;
 };
 
 type FilterState = {
@@ -39,8 +59,7 @@ type FilterState = {
   priceMin: string;
   priceMax: string;
   vendors: string[];
-  colors: string[];
-  sizes: string[];
+  promotionOnly: boolean;
 };
 
 export default function ProductsClient({
@@ -52,8 +71,7 @@ export default function ProductsClient({
   initialMinPrice,
   initialMaxPrice,
   initialVendor,
-  initialColors,
-  initialSizes
+  initialPromotion
 }: ProductsClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -62,15 +80,17 @@ export default function ProductsClient({
   const [activeCategory, setActiveCategory] = useState(initialCategory || "all");
   const [sort, setSort] = useState(initialSort || "created-descending");
   const [query, setQuery] = useState(initialQuery || "");
+  const [queryInput, setQueryInput] = useState(initialQuery || "");
   const [priceMin, setPriceMin] = useState(initialMinPrice || "");
   const [priceMax, setPriceMax] = useState(initialMaxPrice || "");
+  const [priceMinInput, setPriceMinInput] = useState(initialMinPrice || "");
+  const [priceMaxInput, setPriceMaxInput] = useState(initialMaxPrice || "");
   const [activeVendors, setActiveVendors] = useState(
     initialVendor ? initialVendor.split(",") : []
   );
-  const [activeColors, setActiveColors] = useState(
-    initialColors ? initialColors.split(",") : []
+  const [promotionOnly, setPromotionOnly] = useState(
+    ["1", "true", "hot"].includes((initialPromotion || "").toLowerCase())
   );
-  const [activeSizes, setActiveSizes] = useState(initialSizes ? initialSizes.split(",") : []);
   const [page, setPage] = useState(1);
   const [sortOpen, setSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement | null>(null);
@@ -93,40 +113,6 @@ export default function ProductsClient({
     ) as string[];
   }, [products]);
 
-  const colorOptions = useMemo(() => {
-    const values = new Set<string>();
-    products.forEach((product) => {
-      product.options?.forEach((option) => {
-        if (option.name.toLowerCase().includes("mau") || option.name.toLowerCase().includes("color")) {
-          option.values.forEach((value) => values.add(value));
-        }
-      });
-      product.tags?.forEach((tag) => {
-        if (tag.toLowerCase().startsWith("mau_")) {
-          values.add(tag.replace("mau_", ""));
-        }
-      });
-    });
-    return Array.from(values);
-  }, [products]);
-
-  const sizeOptions = useMemo(() => {
-    const values = new Set<string>();
-    products.forEach((product) => {
-      product.options?.forEach((option) => {
-        if (option.name.toLowerCase().includes("size") || option.name.toLowerCase().includes("kich")) {
-          option.values.forEach((value) => values.add(value));
-        }
-      });
-      product.tags?.forEach((tag) => {
-        if (tag.toLowerCase().startsWith("size_")) {
-          values.add(tag.replace("size_", ""));
-        }
-      });
-    });
-    return Array.from(values);
-  }, [products]);
-
   const buildParams = useCallback((overrides?: Partial<FilterState>) => {
     const state: FilterState = {
       category: activeCategory,
@@ -135,8 +121,7 @@ export default function ProductsClient({
       priceMin,
       priceMax,
       vendors: activeVendors,
-      colors: activeColors,
-      sizes: activeSizes,
+      promotionOnly,
       ...overrides
     };
     const params = new URLSearchParams();
@@ -158,14 +143,11 @@ export default function ProductsClient({
     if (state.vendors.length) {
       params.set("vendor", state.vendors.join(","));
     }
-    if (state.colors.length) {
-      params.set("color", state.colors.join(","));
-    }
-    if (state.sizes.length) {
-      params.set("size", state.sizes.join(","));
+    if (state.promotionOnly) {
+      params.set("promo", "hot");
     }
     return params;
-  }, [activeCategory, sort, query, priceMin, priceMax, activeVendors, activeColors, activeSizes]);
+  }, [activeCategory, sort, query, priceMin, priceMax, activeVendors, promotionOnly]);
 
   const updateRoute = useCallback((overrides?: Partial<FilterState>) => {
     const params = buildParams(overrides);
@@ -206,34 +188,8 @@ export default function ProductsClient({
       list = list.filter((product) => product.price <= max);
     }
 
-    if (activeColors.length) {
-      list = list.filter((product) => {
-        const tags = product.tags || [];
-        const options = product.options || [];
-        return activeColors.some((color) => {
-          return (
-            tags.some((tag) => tag.toLowerCase().includes(color.toLowerCase())) ||
-            options.some((option) =>
-              option.values.some((value) => value.toLowerCase() === color.toLowerCase())
-            )
-          );
-        });
-      });
-    }
-
-    if (activeSizes.length) {
-      list = list.filter((product) => {
-        const tags = product.tags || [];
-        const options = product.options || [];
-        return activeSizes.some((size) => {
-          return (
-            tags.some((tag) => tag.toLowerCase().includes(size.toLowerCase())) ||
-            options.some((option) =>
-              option.values.some((value) => value.toLowerCase() === size.toLowerCase())
-            )
-          );
-        });
-      });
+    if (promotionOnly) {
+      list = list.filter(isHotPromotionProduct);
     }
 
     switch (sort) {
@@ -277,9 +233,23 @@ export default function ProductsClient({
     priceMin,
     priceMax,
     activeVendors,
-    activeColors,
-    activeSizes
+    promotionOnly
   ]);
+
+  const hotPromotionCount = useMemo(
+    () => products.filter((product) => isHotPromotionProduct(product)).length,
+    [products]
+  );
+  const hasActiveFilters = useMemo(
+    () =>
+      Boolean(query) ||
+      activeCategory !== "all" ||
+      activeVendors.length > 0 ||
+      Boolean(priceMin) ||
+      Boolean(priceMax) ||
+      promotionOnly,
+    [query, activeCategory, activeVendors, priceMin, priceMax, promotionOnly]
+  );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -293,6 +263,7 @@ export default function ProductsClient({
         value: query,
         onRemove: () => {
           setQuery("");
+          setQueryInput("");
           setPage(1);
           updateRoute({ query: "" });
         }
@@ -338,40 +309,24 @@ export default function ProductsClient({
         onRemove: () => {
           setPriceMin("");
           setPriceMax("");
+          setPriceMinInput("");
+          setPriceMaxInput("");
           setPage(1);
           updateRoute({ priceMin: "", priceMax: "" });
         }
       });
     }
-    if (activeColors.length) {
-      activeColors.forEach((color) =>
-        tags.push({
-          key: `color-${color}`,
-          label: "Màu sắc",
-          value: color,
-          onRemove: () => {
-            const next = activeColors.filter((item) => item !== color);
-            setActiveColors(next);
-            setPage(1);
-            updateRoute({ colors: next });
-          }
-        })
-      );
-    }
-    if (activeSizes.length) {
-      activeSizes.forEach((size) =>
-        tags.push({
-          key: `size-${size}`,
-          label: "Size",
-          value: size,
-          onRemove: () => {
-            const next = activeSizes.filter((item) => item !== size);
-            setActiveSizes(next);
-            setPage(1);
-            updateRoute({ sizes: next });
-          }
-        })
-      );
+    if (promotionOnly) {
+      tags.push({
+        key: "promo",
+        label: "Khuyến mãi",
+        value: "Giảm sâu",
+        onRemove: () => {
+          setPromotionOnly(false);
+          setPage(1);
+          updateRoute({ promotionOnly: false });
+        }
+      });
     }
     return tags;
   }, [
@@ -380,8 +335,7 @@ export default function ProductsClient({
     activeVendors,
     priceMin,
     priceMax,
-    activeColors,
-    activeSizes,
+    promotionOnly,
     categories,
     updateRoute
   ]);
@@ -390,11 +344,13 @@ export default function ProductsClient({
     setActiveCategory("all");
     setSort("created-descending");
     setQuery("");
+    setQueryInput("");
     setPriceMin("");
     setPriceMax("");
+    setPriceMinInput("");
+    setPriceMaxInput("");
     setActiveVendors([]);
-    setActiveColors([]);
-    setActiveSizes([]);
+    setPromotionOnly(false);
     setPage(1);
     updateRoute({
       category: "all",
@@ -403,10 +359,40 @@ export default function ProductsClient({
       priceMin: "",
       priceMax: "",
       vendors: [],
-      colors: [],
-      sizes: []
+      promotionOnly: false
     });
   };
+
+  const applyPriceFilter = useCallback(() => {
+    const min = priceMinInput.trim();
+    const max = priceMaxInput.trim();
+    if (min !== priceMinInput) {
+      setPriceMinInput(min);
+    }
+    if (max !== priceMaxInput) {
+      setPriceMaxInput(max);
+    }
+    if (min === priceMin && max === priceMax) {
+      return;
+    }
+    setPriceMin(min);
+    setPriceMax(max);
+    setPage(1);
+    updateRoute({ priceMin: min, priceMax: max });
+  }, [priceMinInput, priceMaxInput, priceMin, priceMax, updateRoute]);
+
+  const applyQueryFilter = useCallback(() => {
+    const normalizedQuery = queryInput.trim();
+    if (normalizedQuery !== queryInput) {
+      setQueryInput(normalizedQuery);
+    }
+    if (normalizedQuery === query) {
+      return;
+    }
+    setQuery(normalizedQuery);
+    setPage(1);
+    updateRoute({ query: normalizedQuery });
+  }, [queryInput, query, updateRoute]);
 
   const FilterPanel = (
     <div className="filter-inner">
@@ -414,6 +400,64 @@ export default function ProductsClient({
         <p>Bộ lọc</p>
       </div>
       <div className="filter-options">
+        <div className="filter_group filter_group_block filter_group-search">
+          <div className="filter_group-subtitle">
+            <span>Tìm kiếm</span>
+          </div>
+          <div className="filter_group-content">
+            <div className="filter-search">
+              <input
+                className="field"
+                value={queryInput}
+                onChange={(event) => setQueryInput(event.target.value)}
+                placeholder="Tìm sản phẩm..."
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    applyQueryFilter();
+                  }
+                }}
+              />
+              <p className="filter-note">Nhấn Enter để tìm sản phẩm.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="filter_group filter_group_block">
+          <div className="filter_group-subtitle">
+            <span>Khuyến mãi nổi bật</span>
+          </div>
+          <div className="filter_group-content">
+            <button
+              type="button"
+              className={`promo-highlight ${promotionOnly ? "active" : ""}`}
+              onClick={() => {
+                if (hotPromotionCount === 0) {
+                  return;
+                }
+                const next = !promotionOnly;
+                setPromotionOnly(next);
+                setPage(1);
+                updateRoute({ promotionOnly: next });
+              }}
+              disabled={hotPromotionCount === 0}
+            >
+              <span className="promo-highlight__badge">HOT</span>
+              <span className="promo-highlight__status">
+                {promotionOnly ? "Đang áp dụng" : "Chưa áp dụng"}
+              </span>
+              <span className="promo-highlight__title">Khuyến mãi giảm sâu</span>
+              <span className="promo-highlight__meta">
+                {hotPromotionCount === 0
+                  ? "Chưa có sản phẩm giảm giá nổi bật"
+                  : `${hotPromotionCount} sản phẩm đang ưu đãi`}
+              </span>
+            </button>
+            <p className="promo-highlight__note">
+              Xem nhanh các sản phẩm đang giảm giá tốt hôm nay.
+            </p>
+          </div>
+        </div>
+
         <div className="filter_group filter_group_block">
           <div className="filter_group-subtitle">
             <span>Danh mục sản phẩm</span>
@@ -495,134 +539,43 @@ export default function ProductsClient({
             <div className="filter-price">
               <input
                 className="field"
-                value={priceMin}
-                onChange={(event) => setPriceMin(event.target.value)}
+                value={priceMinInput}
+                inputMode="numeric"
+                onChange={(event) => setPriceMinInput(event.target.value.replace(/[^\d]/g, ""))}
                 placeholder="Giá từ"
-              />
-              <input
-                className="field"
-                value={priceMax}
-                onChange={(event) => setPriceMax(event.target.value)}
-                placeholder="Giá đến"
-              />
-              <button
-                className="btn-filter btn-filter-apply"
-                type="button"
-                onClick={() => {
-                  setPage(1);
-                  updateRoute({ priceMin, priceMax });
-                }}
-              >
-                Áp dụng
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="filter_group filter_group_block">
-          <div className="filter_group-subtitle">
-            <span>Màu sắc</span>
-          </div>
-          <div className="filter_group-content">
-            {colorOptions.length === 0 ? (
-              <p className="filter-empty">Đang cập nhật.</p>
-            ) : (
-              <ul className="filter-list">
-                {colorOptions.map((color) => (
-                  <li key={color}>
-                    <label className="filter-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={activeColors.includes(color)}
-                        onChange={() => {
-                          const next = activeColors.includes(color)
-                            ? activeColors.filter((item) => item !== color)
-                            : [...activeColors, color];
-                          setActiveColors(next);
-                          setPage(1);
-                          updateRoute({ colors: next });
-                        }}
-                      />
-                      <span>{color}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        <div className="filter_group filter_group_block">
-          <div className="filter_group-subtitle">
-            <span>Size</span>
-          </div>
-          <div className="filter_group-content">
-            {sizeOptions.length === 0 ? (
-              <p className="filter-empty">Đang cập nhật.</p>
-            ) : (
-              <ul className="filter-list">
-                {sizeOptions.map((size) => (
-                  <li key={size}>
-                    <label className="filter-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={activeSizes.includes(size)}
-                        onChange={() => {
-                          const next = activeSizes.includes(size)
-                            ? activeSizes.filter((item) => item !== size)
-                            : [...activeSizes, size];
-                          setActiveSizes(next);
-                          setPage(1);
-                          updateRoute({ sizes: next });
-                        }}
-                      />
-                      <span>{size}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        <div className="filter_group filter_group_block">
-          <div className="filter_group-subtitle">
-            <span>Tìm kiếm</span>
-          </div>
-          <div className="filter_group-content">
-            <div className="filter-search">
-              <input
-                className="field"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Tìm sản phẩm..."
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
-                    setPage(1);
-                    updateRoute({ query });
+                    applyPriceFilter();
+                  }
+                }}
+              />
+              <input
+                className="field"
+                value={priceMaxInput}
+                inputMode="numeric"
+                onChange={(event) => setPriceMaxInput(event.target.value.replace(/[^\d]/g, ""))}
+                placeholder="Giá đến"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    applyPriceFilter();
                   }
                 }}
               />
               <button
                 className="btn-filter btn-filter-apply"
                 type="button"
-                onClick={() => {
-                  setPage(1);
-                  updateRoute({ query });
-                }}
+                onClick={applyPriceFilter}
               >
                 Áp dụng
               </button>
             </div>
           </div>
         </div>
+
       </div>
       <div className="filter-footer">
-        <button type="button" className="btn-filter btn-filter-clear" onClick={clearFilters}>
-          Hủy
-        </button>
-        <button type="button" className="btn-filter btn-filter-apply" onClick={() => updateRoute()}>
-          Áp dụng
+        <button type="button" className="btn-filter btn-filter-clear btn-filter-reset" onClick={clearFilters}>
+          Xóa bộ lọc
         </button>
       </div>
     </div>
@@ -637,34 +590,34 @@ export default function ProductsClient({
         <div className="row">
           <div className="col-lg-3 col-md-12 col-12 sidebar sidebar-left">
             <div className="filter-wrapper">
-              <div className="filter-current">
-                <div className="widget-title">
-                  <div className="filter-subtitle">Bạn đang xem</div>
-                </div>
-                <div className="list-tags">
-                  {activeTags.map((tag) => (
-                    <div key={tag.key} className="filter_tags">
-                      {tag.label}: <b>{tag.value}</b>
-                      <button
-                        type="button"
-                        className="filter_tags_remove"
-                        onClick={tag.onRemove}
-                        aria-label={`Xóa ${tag.label}`}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          xmlnsXlink="http://www.w3.org/1999/xlink"
-                          viewBox="0 0 50 50"
+              {hasActiveFilters ? (
+                <div className="filter-current">
+                  <div className="widget-title">
+                    <div className="filter-subtitle">Bạn đang xem</div>
+                  </div>
+                  <div className="list-tags">
+                    {activeTags.map((tag) => (
+                      <div key={tag.key} className="filter_tags">
+                        {tag.label}: <b>{tag.value}</b>
+                        <button
+                          type="button"
+                          className="filter_tags_remove"
+                          onClick={tag.onRemove}
+                          aria-label={`Xóa ${tag.label}`}
                         >
-                          <path
-                            fill="#333"
-                            d="M9.016 40.837a1.001 1.001 0 0 0 1.415-.001l14.292-14.309 14.292 14.309a1 1 0 1 0 1.416-1.413L26.153 25.129 40.43 10.836a1 1 0 1 0-1.415-1.413L24.722 23.732 10.43 9.423a1 1 0 1 0-1.415 1.413l14.276 14.293L9.015 39.423a1 1 0 0 0 .001 1.414z"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                  {activeTags.length ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            xmlnsXlink="http://www.w3.org/1999/xlink"
+                            viewBox="0 0 50 50"
+                          >
+                            <path
+                              fill="#333"
+                              d="M9.016 40.837a1.001 1.001 0 0 0 1.415-.001l14.292-14.309 14.292 14.309a1 1 0 1 0 1.416-1.413L26.153 25.129 40.43 10.836a1 1 0 1 0-1.415-1.413L24.722 23.732 10.43 9.423a1 1 0 1 0-1.415 1.413l14.276 14.293L9.015 39.423a1 1 0 0 0 .001 1.414z"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
                     <button
                       type="button"
                       className="filter_tags filter_tags_remove_all"
@@ -672,10 +625,12 @@ export default function ProductsClient({
                     >
                       <span>Xóa hết</span>
                     </button>
-                  ) : null}
+                  </div>
                 </div>
+              ) : null}
+              <div className={`filter-content ${hasActiveFilters ? "with-current" : "without-current"}`}>
+                {FilterPanel}
               </div>
-              <div className="filter-content">{FilterPanel}</div>
             </div>
           </div>
 

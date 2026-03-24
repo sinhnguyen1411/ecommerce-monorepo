@@ -9,14 +9,15 @@ export const metadata = {
 };
 
 type SearchPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     q?: string;
     type?: string;
-  };
+  }>;
 };
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const query = searchParams?.q?.trim() || "";
+  const resolvedSearchParams = await searchParams;
+  const query = resolvedSearchParams?.q?.trim() || "";
   const products = await getProducts({ q: query });
   const filtered = query
     ? products.filter(
@@ -34,9 +35,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <div className="breadcrumb-list">
               <ol className="breadcrumb breadcrumb-arrows">
                 <li>
-                  <a href="/" target="_self">
-                    Trang chủ
-                  </a>
+                  <Link href="/">Trang chủ</Link>
                 </li>
                 <li className="active">
                   <strong>Tìm kiếm</strong>
@@ -80,3 +79,4 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     </div>
   );
 }
+

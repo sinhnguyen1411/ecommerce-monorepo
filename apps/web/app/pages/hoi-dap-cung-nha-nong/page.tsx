@@ -15,6 +15,36 @@ const fallbackItems = [
       "Thu hoạch đúng độ chín, đóng gói trong ngày và bảo quản ở nhiệt độ phù hợp giúp giảm thất thoát và giữ chất lượng ổn định."
   },
   {
+    question: "Mưa kéo dài, nên phun phòng nấm vào thời điểm nào?",
+    answer:
+      "Ưu tiên phun phòng trước các đợt mưa lớn 1-2 ngày, chọn thời điểm ráo lá và luân phiên hoạt chất để hạn chế kháng thuốc."
+  },
+  {
+    question: "Bao lâu nên bón hữu cơ để cải tạo đất vườn cà phê?",
+    answer:
+      "Nên duy trì định kỳ theo đầu và cuối mùa mưa, kết hợp che phủ gốc để tăng mùn và giữ ẩm ổn định cho vùng rễ."
+  },
+  {
+    question: "Cây sầu riêng suy rễ sau mưa cần xử lý gì trước?",
+    answer:
+      "Cần thoát nước nhanh, giảm bón đạm, sau đó phục hồi rễ bằng hữu cơ hoai mục và vi sinh để tránh sốc cây."
+  },
+  {
+    question: "Bón phân qua lá cho cây có múi lúc nào hiệu quả?",
+    answer:
+      "Phun vào sáng sớm hoặc chiều mát, tránh nắng gắt và mưa gần kề để tăng hấp thu và hạn chế cháy lá."
+  },
+  {
+    question: "Lịch bón cho rau ăn lá ngắn ngày nên chia thế nào?",
+    answer:
+      "Nên chia 2-3 lần bón nhẹ theo từng giai đoạn sinh trưởng, ưu tiên cân đối đạm-kali và giảm đạm trước thu hoạch."
+  },
+  {
+    question: "Nhà kính bị ẩm cao, giảm bệnh bằng cách nào?",
+    answer:
+      "Tăng thông gió chủ động, tưới vào đầu ngày, hạn chế đọng nước trên lá và vệ sinh tàn dư thường xuyên."
+  },
+  {
     question: "Cửa hàng có giao hàng ngoài tỉnh không?",
     answer:
       "Có. Chúng tôi giao qua đối tác vận chuyển, thời gian nhận hàng tùy khu vực và được xác nhận trước khi gửi."
@@ -41,19 +71,142 @@ const fallbackItems = [
   }
 ];
 
-const topicTags = [
-  "Dinh dưỡng cây trồng",
-  "Phòng trừ sâu bệnh",
-  "Cải tạo đất",
-  "Quy trình bón phân",
-  "Bảo quản nông sản"
+type QnATopic = {
+  slug:
+    | "huu-co-cai-tao-dat"
+    | "dinh-duong-cay-trong"
+    | "phong-tru-sau-benh"
+    | "quy-trinh-bon-phan"
+    | "bao-quan-nong-san";
+  label: string;
+  keywords: string[];
+};
+
+type QnAPageProps = {
+  searchParams?: Promise<{
+    topic?: string;
+    page?: string;
+  }>;
+};
+
+const ITEMS_PER_PAGE = 6;
+const pageBasePath = "/pages/hoi-dap-cung-nha-nong";
+
+const topics: QnATopic[] = [
+  {
+    slug: "huu-co-cai-tao-dat",
+    label: "Hữu cơ & cải tạo đất",
+    keywords: [
+      "huu co",
+      "cai tao dat",
+      "vi sinh dat",
+      "do phi dat",
+      "mun",
+      "re",
+      "thoat nuoc"
+    ]
+  },
+  {
+    slug: "dinh-duong-cay-trong",
+    label: "Dinh dưỡng cây trồng",
+    keywords: [
+      "dinh duong",
+      "phan bon la",
+      "vi luong",
+      "cay co mui",
+      "rau an la",
+      "sau rieng",
+      "ca phe"
+    ]
+  },
+  {
+    slug: "phong-tru-sau-benh",
+    label: "Phòng trừ sâu bệnh",
+    keywords: [
+      "sau benh",
+      "nam benh",
+      "ruoi vang",
+      "bo tri",
+      "thoi re",
+      "phun phong",
+      "khang thuoc"
+    ]
+  },
+  {
+    slug: "quy-trinh-bon-phan",
+    label: "Quy trình bón phân",
+    keywords: [
+      "quy trinh bon",
+      "lich bon",
+      "chia lan",
+      "bon goc",
+      "bon qua la",
+      "tuoi phan"
+    ]
+  },
+  {
+    slug: "bao-quan-nong-san",
+    label: "Bảo quản nông sản",
+    keywords: [
+      "bao quan",
+      "sau thu hoach",
+      "dong goi",
+      "chuoi lanh",
+      "van chuyen",
+      "do tuoi"
+    ]
+  }
 ];
 
-export default async function QnAPage() {
+function normalizeText(input: string) {
+  return input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function classifyTopic(question: string, answer: string) {
+  const haystack = normalizeText(`${question} ${answer}`);
+  const matched = topics.find((topic) =>
+    topic.keywords.some((keyword) => haystack.includes(normalizeText(keyword)))
+  );
+  return matched?.slug || null;
+}
+
+function buildQnALink(topic?: string, page?: number) {
+  const search = new URLSearchParams();
+  if (topic) {
+    search.set("topic", topic);
+  }
+  if (page && page > 1) {
+    search.set("page", String(page));
+  }
+  const suffix = search.toString();
+  return suffix ? `${pageBasePath}?${suffix}` : pageBasePath;
+}
+
+export default async function QnAPage({ searchParams }: QnAPageProps) {
+  const resolvedSearchParams = await searchParams;
   const items = await getQnA();
   const resolvedItems = items.length > 0 ? items : fallbackItems;
   const phoneDigits = siteConfig.phone.replace(/[^0-9+]/g, "");
-  const formatIndex = (index: number) => String(index + 1).padStart(2, "0");
+
+  const activeTopic = topics.some((topic) => topic.slug === resolvedSearchParams?.topic)
+    ? resolvedSearchParams?.topic
+    : "";
+
+  const filteredItems = activeTopic
+    ? resolvedItems.filter((item) => classifyTopic(item.question, item.answer) === activeTopic)
+    : resolvedItems;
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
+  const requestedPage = Number.parseInt(resolvedSearchParams?.page || "1", 10);
+  const normalizedPage = Number.isFinite(requestedPage) ? requestedPage : 1;
+  const currentPage = Math.min(Math.max(normalizedPage, 1), totalPages);
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageItems = filteredItems.slice(pageStart, pageStart + ITEMS_PER_PAGE);
+
+  const formatIndex = (index: number) => String(pageStart + index + 1).padStart(2, "0");
 
   return (
     <div className="layout-pageDetail qna-page">
@@ -62,9 +215,7 @@ export default async function QnAPage() {
           <div className="breadcrumb-list">
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
-                <a href="/" target="_self">
-                  Trang chủ
-                </a>
+                <Link href="/">Trang chủ</Link>
               </li>
               <li className="active">
                 <strong>Hỏi đáp cùng nhà nông</strong>
@@ -99,16 +250,28 @@ export default async function QnAPage() {
                     </a>
                   </div>
                   <div className="qna-tags">
-                    {topicTags.map((tag) => (
-                      <span key={tag} className="qna-tag">
-                        {tag}
-                      </span>
+                    <Link
+                      href={buildQnALink(undefined, 1)}
+                      className={`qna-tag ${activeTopic ? "" : "is-active"}`}
+                      data-testid="qna-topic-link-all"
+                    >
+                      Tất cả chủ đề
+                    </Link>
+                    {topics.map((topic) => (
+                      <Link
+                        key={topic.slug}
+                        href={buildQnALink(topic.slug, 1)}
+                        className={`qna-tag ${activeTopic === topic.slug ? "is-active" : ""}`}
+                        data-testid={`qna-topic-link-${topic.slug}`}
+                      >
+                        {topic.label}
+                      </Link>
                     ))}
                   </div>
                 </div>
                 <div className="qna-hero-panel">
                   <div className="qna-stat">
-                    <span className="qna-stat-value">{resolvedItems.length}</span>
+                    <span className="qna-stat-value">{filteredItems.length}</span>
                     <span className="qna-stat-label">Câu hỏi nổi bật</span>
                   </div>
                   <div className="qna-stat">
@@ -127,14 +290,19 @@ export default async function QnAPage() {
                   bạn.
                 </p>
                 <div className="qna-toolbar-actions">
+                  {activeTopic ? (
+                    <Link className="about-link" href={buildQnALink(undefined, 1)}>
+                      Bỏ lọc chủ đề
+                    </Link>
+                  ) : null}
                   <a className="about-link" href={`mailto:${siteConfig.email}`}>
                     Gửi câu hỏi qua email
                   </a>
                 </div>
               </div>
               <div className="content-pageDetail qna-list">
-                {resolvedItems.map((item, index) => (
-                  <article key={`${item.question}-${index}`} className="qna-card">
+                {pageItems.map((item, index) => (
+                  <article key={`${item.question}-${index}`} className="qna-card" data-testid="qna-card">
                     <div className="qna-card-header">
                       <span className="qna-index">{formatIndex(index)}</span>
                       <h3>{item.question}</h3>
@@ -142,7 +310,33 @@ export default async function QnAPage() {
                     <p className="qna-answer">{item.answer}</p>
                   </article>
                 ))}
+                {pageItems.length === 0 ? (
+                  <article className="qna-card" data-testid="qna-card">
+                    <div className="qna-card-header">
+                      <span className="qna-index">00</span>
+                      <h3>Chưa có câu hỏi phù hợp với chủ đề này</h3>
+                    </div>
+                    <p className="qna-answer">
+                      Bạn có thể chọn chủ đề khác hoặc liên hệ đội ngũ kỹ thuật để nhận tư vấn theo
+                      vườn.
+                    </p>
+                  </article>
+                ) : null}
               </div>
+              {totalPages > 1 ? (
+                <nav className="qna-pagination" aria-label="Phân trang hỏi đáp">
+                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                    <Link
+                      key={page}
+                      href={buildQnALink(activeTopic || undefined, page)}
+                      className={`qna-page-link ${page === currentPage ? "is-active" : ""}`}
+                      data-testid={`qna-page-link-${page}`}
+                    >
+                      {page}
+                    </Link>
+                  ))}
+                </nav>
+              ) : null}
             </div>
           </div>
           <div className="col-lg-3 col-md-4 col-12 column-right mg-page">
@@ -166,11 +360,24 @@ export default async function QnAPage() {
               <div className="qna-aside-card card-surface">
                 <h2>Chủ đề phổ biến</h2>
                 <ul className="qna-topic-list">
-                  <li>Hữu cơ & cải tạo đất</li>
-                  <li>Dinh dưỡng cây trồng</li>
-                  <li>Phòng trừ sâu bệnh</li>
-                  <li>Quy trình bón phân</li>
-                  <li>Bảo quản nông sản</li>
+                  <li>
+                    <Link
+                      href={buildQnALink(undefined, 1)}
+                      className={`qna-topic-link ${activeTopic ? "" : "is-active"}`}
+                    >
+                      Tất cả chủ đề
+                    </Link>
+                  </li>
+                  {topics.map((topic) => (
+                    <li key={topic.slug}>
+                      <Link
+                        href={buildQnALink(topic.slug, 1)}
+                        className={`qna-topic-link ${activeTopic === topic.slug ? "is-active" : ""}`}
+                      >
+                        {topic.label}
+                      </Link>
+                    </li>
+                  ))}
                 </ul>
               </div>
               <div className="qna-aside-card card-surface">
@@ -194,3 +401,4 @@ export default async function QnAPage() {
     </div>
   );
 }
+

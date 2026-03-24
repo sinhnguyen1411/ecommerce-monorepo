@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Chính sách bảo mật | Nông Dược Tam Bố",
   description: "Quy định bảo mật thông tin khách hàng tại Tam Bố."
@@ -11,9 +13,7 @@ export default function PrivacyPolicyPage() {
           <div className="breadcrumb-list">
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
-                <a href="/" target="_self">
-                  Trang chủ
-                </a>
+                <Link href="/">Trang chủ</Link>
               </li>
               <li className="active">
                 <strong>Chính sách bảo mật</strong>

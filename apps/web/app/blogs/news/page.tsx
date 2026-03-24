@@ -1,9 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 
+import NewsPagination from "@/components/blog/NewsPagination";
 import PostCard from "@/components/blog/PostCard";
 import PostSidebar from "@/components/blog/PostSidebar";
-import { getPosts } from "@/lib/api";
+import { getPosts, getPostsPage } from "@/lib/api";
 import { stripHtml } from "@/lib/format";
 
 export const metadata = {
@@ -13,15 +14,47 @@ export const metadata = {
 };
 
 type NewsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     tag?: string;
-  };
+    page?: string;
+  }>;
 };
 
+const NEWS_PAGE_SIZE = 7;
+
+function getNormalizedPage(value?: string) {
+  const parsed = Number.parseInt((value || "1").trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 1;
+  }
+  return parsed;
+}
+
+function buildNewsLink(tag?: string, page = 1) {
+  const search = new URLSearchParams();
+  if (tag) {
+    search.set("tag", tag);
+  }
+  search.set("page", String(page));
+  return `/blogs/news?${search.toString()}`;
+}
+
 export default async function NewsPage({ searchParams }: NewsPageProps) {
-  const activeTag = searchParams?.tag?.trim() || "";
-  const allPosts = await getPosts();
-  const posts = activeTag ? await getPosts({ tag: activeTag }) : allPosts;
+  const resolvedSearchParams = await searchParams;
+  const activeTag = resolvedSearchParams?.tag?.trim() || "";
+  const requestedPage = getNormalizedPage(resolvedSearchParams?.page);
+  const [allPosts, paginated] = await Promise.all([
+    getPosts(),
+    getPostsPage({
+      tag: activeTag || undefined,
+      page: requestedPage,
+      limit: NEWS_PAGE_SIZE
+    })
+  ]);
+
+  const posts = paginated.items;
+  const currentPage = paginated.pagination.page;
+  const totalPages = paginated.pagination.total_pages;
   const featured = posts[0];
   const rest = posts.slice(1);
   const featuredExcerpt = featured
@@ -51,14 +84,6 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
             <p className="news-hero__desc">
               {"C\u1EADp nh\u1EADt b\u00E0i vi\u1EBFt m\u1EDBi, kinh nghi\u1EC7m th\u1EF1c ti\u1EC5n v\u00E0 gi\u1EA3i ph\u00E1p k\u1EF9 thu\u1EADt cho n\u00F4ng nghi\u1EC7p h\u1EEFu c\u01A1."}
             </p>
-            <div className="news-hero__actions">
-              <Link href="/blogs/news" className="button">
-                {"Xem b\u00E0i m\u1EDBi nh\u1EA5t"}
-              </Link>
-              <Link href="/pages/hoi-dap-cung-nha-nong" className="button btnlight">
-                {"G\u1EEDi c\u00E2u h\u1ECFi"}
-              </Link>
-            </div>
           </div>
         </div>
 
@@ -102,7 +127,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
             ) : null}
 
             <div className="row blog-posts news-grid">
-              {rest.length === 0 ? (
+              {posts.length === 0 ? (
                 <div className="blog-empty">
                   {"Ch\u01B0a c\u00F3 b\u00E0i vi\u1EBFt."}
                 </div>
@@ -110,6 +135,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                 rest.map((post) => <PostCard key={post.id} post={post} />)
               )}
             </div>
+            <NewsPagination page={currentPage} totalPages={totalPages} />
             <div className="news-cta">
               <div className="news-cta__card">
                 <div>
@@ -136,7 +162,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                 </div>
                 <div className="news-topic-chips">
                   <Link
-                    href="/blogs/news"
+                    href={buildNewsLink(undefined, 1)}
                     className={`news-topic-chip ${activeTag ? "" : "is-active"}`}
                   >
                     {"T\u1EA5t c\u1EA3"}
@@ -157,7 +183,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                     topics.map((topic) => (
                       <Link
                         key={topic}
-                        href={`/blogs/news?tag=${encodeURIComponent(topic)}`}
+                        href={buildNewsLink(topic, 1)}
                         className={`news-topic-chip ${activeTag === topic ? "is-active" : ""}`}
                       >
                         {topic}
@@ -174,6 +200,17 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
               </div>
               <div className="sidebar-blogs blogs-sticky">
                 <PostSidebar posts={posts.slice(0, 5)} />
+                <div className="news-sidebar__ask">
+                  <p className="news-sidebar__ask-title">
+                    {"C\u1EA7n chuy\u00EAn gia t\u01B0 v\u1EA5n theo v\u01B0\u1EDDn?"}
+                  </p>
+                  <p className="news-sidebar__ask-text">
+                    {"G\u1EEDi c\u00E2u h\u1ECFi cho \u0111\u1ED9i ng\u0169 k\u1EF9 thu\u1EADt \u0111\u1EC3 nh\u1EADn h\u01B0\u1EDBng d\u1EABn th\u1EF1c t\u1EBF."}
+                  </p>
+                  <Link href="/pages/hoi-dap-cung-nha-nong" className="button">
+                    {"G\u1EEDi c\u00E2u h\u1ECFi"}
+                  </Link>
+                </div>
               </div>
             </aside>
           </div>

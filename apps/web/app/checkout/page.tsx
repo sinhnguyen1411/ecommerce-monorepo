@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -72,11 +73,11 @@ const vnPrefixes = new Set([
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
-const normalizeVNPhone = (input: string) => {
+function normalizeVNPhone(input: string) {
   const digits = input.replace(/\D/g, "");
   let national = "";
   if (digits.startsWith("84") && digits.length === 11) {
-    national = "0" + digits.slice(2);
+    national = `0${digits.slice(2)}`;
   } else if (digits.startsWith("0") && digits.length === 10) {
     national = digits;
   } else {
@@ -93,15 +94,18 @@ const normalizeVNPhone = (input: string) => {
   }
 
   return national;
-};
+}
 
-const isValidEmail = (value: string) => emailRegex.test(value.trim());
+function isValidEmail(value: string) {
+  return emailRegex.test(value.trim());
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
   const items = useCartStore((state) => state.items);
   const promoCode = useCartStore((state) => state.promoCode);
   const note = useCartStore((state) => state.note);
+  const setNote = useCartStore((state) => state.setNote);
   const deliveryTime = useCartStore((state) => state.deliveryTime);
   const storedShipping = useCartStore((state) => state.shippingMethod);
   const setStoredShipping = useCartStore((state) => state.setShippingMethod);
@@ -114,13 +118,16 @@ export default function CheckoutPage() {
   const [addressLine, setAddressLine] = useState("");
   const [province, setProvince] = useState("");
   const [district, setDistrict] = useState("");
+
   const [shippingMethod, setShippingMethod] = useState(storedShipping || "standard");
   const [paymentMethod, setPaymentMethod] = useState("cod");
+
   const [invoiceEnabled, setInvoiceEnabled] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [taxCode, setTaxCode] = useState("");
   const [invoiceEmail, setInvoiceEmail] = useState("");
   const [invoiceAddress, setInvoiceAddress] = useState("");
+
   const [error, setError] = useState("");
   const [promoFeedback, setPromoFeedback] = useState("");
   const [promoDiscount, setPromoDiscount] = useState(0);
@@ -129,6 +136,7 @@ export default function CheckoutPage() {
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
   const [checkoutConfig, setCheckoutConfig] = useState<CheckoutConfig | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [provinces, setProvinces] = useState<GeoProvince[]>([]);
@@ -139,8 +147,7 @@ export default function CheckoutPage() {
 
   const subtotal = getCartSubtotal(items);
   const minOrderAmount = checkoutConfig?.min_order_amount ?? siteConfig.minOrderAmount;
-  const freeShippingThreshold =
-    checkoutConfig?.free_shipping_threshold ?? siteConfig.freeShippingThreshold;
+  const freeShippingThreshold = checkoutConfig?.free_shipping_threshold ?? siteConfig.freeShippingThreshold;
   const shippingFeeStandard = checkoutConfig?.shipping_fee_standard ?? 30000;
   const shippingFeeExpress = checkoutConfig?.shipping_fee_express ?? 50000;
   const meetsMinOrder = minOrderAmount === 0 || subtotal >= minOrderAmount;
@@ -154,11 +161,14 @@ export default function CheckoutPage() {
     if (!paymentSettings) {
       return paymentOptions;
     }
-    const bankTransferEnabled =
-      paymentSettings.bank_transfer_enabled || paymentSettings.bank_qr_enabled;
+    const bankTransferEnabled = paymentSettings.bank_transfer_enabled || paymentSettings.bank_qr_enabled;
     return paymentOptions.filter((option) => {
-      if (option.value === "cod") return paymentSettings.cod_enabled;
-      if (option.value === "bank_transfer") return bankTransferEnabled;
+      if (option.value === "cod") {
+        return paymentSettings.cod_enabled;
+      }
+      if (option.value === "bank_transfer") {
+        return bankTransferEnabled;
+      }
       return false;
     });
   }, [paymentSettings]);
@@ -257,23 +267,21 @@ export default function CheckoutPage() {
       return;
     }
 
-    const selected = provinces.find((item) => item.name === province);
-    if (!selected) {
+    const selectedProvince = provinces.find((item) => item.name === province);
+    if (!selectedProvince) {
       setDistricts([]);
       setDistrict("");
       return;
     }
 
-    getGeoDistricts(selected.code)
-      .then((data) => {
-        setDistricts(data);
-        if (district && !data.some((item) => item.name === district)) {
+    getGeoDistricts(selectedProvince.code)
+      .then((nextDistricts) => {
+        setDistricts(nextDistricts);
+        if (district && !nextDistricts.some((item) => item.name === district)) {
           setDistrict("");
         }
       })
-      .catch(() => {
-        setDistricts([]);
-      });
+      .catch(() => setDistricts([]));
   }, [province, provinces, district]);
 
   useEffect(() => {
@@ -292,8 +300,8 @@ export default function CheckoutPage() {
   }, [promoCode, subtotal]);
 
   const handleApplyPromo = async () => {
-    const trimmed = promoCode.trim();
-    if (!trimmed) {
+    const trimmedCode = promoCode.trim();
+    if (!trimmedCode) {
       setPromoFeedback("Vui lòng nhập mã khuyến mãi.");
       return;
     }
@@ -301,7 +309,7 @@ export default function CheckoutPage() {
     setIsApplyingPromo(true);
     setPromoFeedback("");
     try {
-      const result = await validatePromoCode({ code: trimmed, subtotal });
+      const result = await validatePromoCode({ code: trimmedCode, subtotal });
       setPromoCode(result.promo_code);
       setPromoDiscount(result.discount_total);
       setPromoApplied(true);
@@ -374,12 +382,10 @@ export default function CheckoutPage() {
       setError("Đơn hàng chưa đạt giá trị tối thiểu.");
       return;
     }
-
     if (items.length === 0) {
       setError("Giỏ hàng đang trống.");
       return;
     }
-
     if (!validateForm()) {
       return;
     }
@@ -388,8 +394,7 @@ export default function CheckoutPage() {
 
     try {
       const phoneNormalized = normalizeVNPhone(phone) || phone.trim();
-      const addressParts = [addressLine.trim(), district, province].filter(Boolean);
-      const fullAddress = addressParts.join(", ");
+      const fullAddress = [addressLine.trim(), district, province].filter(Boolean).join(", ");
       const paymentMethodForOrder =
         paymentMethod === "bank_transfer" &&
         paymentSettings &&
@@ -397,6 +402,14 @@ export default function CheckoutPage() {
         paymentSettings.bank_qr_enabled
           ? "bank_qr"
           : paymentMethod;
+
+      const customerNote = note.trim();
+      const invoiceNote = invoiceEnabled
+        ? `Thông tin hóa đơn: ${companyName} | ${taxCode} | ${invoiceEmail} | ${invoiceAddress}`
+        : "";
+      const orderNote = [customerNote ? `Ghi chú khách: ${customerNote}` : "", invoiceNote]
+        .filter(Boolean)
+        .join("\n");
 
       const response = await createOrder({
         customer_name: customerName.trim(),
@@ -406,14 +419,7 @@ export default function CheckoutPage() {
         address_line: addressLine.trim(),
         district,
         province,
-        note: [
-          note,
-          invoiceEnabled
-            ? `Hóa đơn: ${companyName} | ${taxCode} | ${invoiceEmail} | ${invoiceAddress}`
-            : ""
-        ]
-          .filter(Boolean)
-          .join(" - "),
+        note: orderNote,
         delivery_time: deliveryTime || shippingMethod,
         shipping_method: shippingMethod,
         payment_method: paymentMethodForOrder,
@@ -428,6 +434,10 @@ export default function CheckoutPage() {
         "ttc_last_order",
         JSON.stringify({
           ...response,
+          order_ref: response.order_ref || response.order_number,
+          order_lookup_token: response.order_lookup_token,
+          order_access_token: response.order_access_token,
+          order_access_expires_at: response.order_access_expires_at,
           customer_name: customerName,
           email,
           phone: phoneNormalized,
@@ -436,7 +446,7 @@ export default function CheckoutPage() {
         })
       );
       clear();
-      router.push(`/checkout/thank-you?order_id=${response.id}`);
+      router.push(`/checkout/thank-you?order_ref=${encodeURIComponent(response.order_ref || response.order_number)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Thanh toán thất bại.");
     } finally {
@@ -451,9 +461,7 @@ export default function CheckoutPage() {
           <div className="breadcrumb-list">
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
-                <a href="/" target="_self">
-                  Trang chủ
-                </a>
+                <Link href="/">Trang chủ</Link>
               </li>
               <li className="active">
                 <strong>Thanh toán</strong>
@@ -466,7 +474,7 @@ export default function CheckoutPage() {
       <section className="section-shell pb-16 pt-6">
         <div className="checkout-heading">
           <h1>Hoàn tất đơn hàng</h1>
-          <p>Điền thông tin giao hàng và chọn phương thức thanh toán.</p>
+          <p>Điền thông tin giao hàng và chọn phương thức thanh toán phù hợp.</p>
         </div>
 
         <div className="checkout-layout">
@@ -484,13 +492,13 @@ export default function CheckoutPage() {
                       onChange={(event) => {
                         const nextId = event.target.value;
                         setSelectedAddressId(nextId);
-                        const selected = addresses.find((item) => String(item.id) === nextId);
-                        if (selected) {
-                          setCustomerName(selected.full_name || "");
-                          setPhone(selected.phone || "");
-                          setAddressLine(selected.address_line || "");
-                          setProvince(selected.province || "");
-                          setDistrict(selected.district || "");
+                        const selectedAddress = addresses.find((item) => String(item.id) === nextId);
+                        if (selectedAddress) {
+                          setCustomerName(selectedAddress.full_name || "");
+                          setPhone(selectedAddress.phone || "");
+                          setAddressLine(selectedAddress.address_line || "");
+                          setProvince(selectedAddress.province || "");
+                          setDistrict(selectedAddress.district || "");
                         }
                       }}
                     >
@@ -518,10 +526,9 @@ export default function CheckoutPage() {
                     }}
                     placeholder="Họ và tên"
                   />
-                  {fieldErrors.customerName ? (
-                    <p className="mt-1 text-xs text-clay">{fieldErrors.customerName}</p>
-                  ) : null}
+                  {fieldErrors.customerName ? <p className="mt-1 text-xs text-clay">{fieldErrors.customerName}</p> : null}
                 </div>
+
                 <div>
                   <input
                     className="field"
@@ -535,10 +542,9 @@ export default function CheckoutPage() {
                     placeholder="Email"
                     type="email"
                   />
-                  {fieldErrors.email ? (
-                    <p className="mt-1 text-xs text-clay">{fieldErrors.email}</p>
-                  ) : null}
+                  {fieldErrors.email ? <p className="mt-1 text-xs text-clay">{fieldErrors.email}</p> : null}
                 </div>
+
                 <div>
                   <input
                     className="field"
@@ -551,10 +557,9 @@ export default function CheckoutPage() {
                     }}
                     placeholder="Số điện thoại"
                   />
-                  {fieldErrors.phone ? (
-                    <p className="mt-1 text-xs text-clay">{fieldErrors.phone}</p>
-                  ) : null}
+                  {fieldErrors.phone ? <p className="mt-1 text-xs text-clay">{fieldErrors.phone}</p> : null}
                 </div>
+
                 <div>
                   <input
                     className="field"
@@ -567,10 +572,9 @@ export default function CheckoutPage() {
                     }}
                     placeholder="Địa chỉ (số nhà, đường, thôn/xóm)"
                   />
-                  {fieldErrors.addressLine ? (
-                    <p className="mt-1 text-xs text-clay">{fieldErrors.addressLine}</p>
-                  ) : null}
+                  {fieldErrors.addressLine ? <p className="mt-1 text-xs text-clay">{fieldErrors.addressLine}</p> : null}
                 </div>
+
                 <div>
                   <select
                     className="field"
@@ -589,10 +593,9 @@ export default function CheckoutPage() {
                       </option>
                     ))}
                   </select>
-                  {fieldErrors.province ? (
-                    <p className="mt-1 text-xs text-clay">{fieldErrors.province}</p>
-                  ) : null}
+                  {fieldErrors.province ? <p className="mt-1 text-xs text-clay">{fieldErrors.province}</p> : null}
                 </div>
+
                 <div>
                   <select
                     className="field"
@@ -612,9 +615,7 @@ export default function CheckoutPage() {
                       </option>
                     ))}
                   </select>
-                  {fieldErrors.district ? (
-                    <p className="mt-1 text-xs text-clay">{fieldErrors.district}</p>
-                  ) : null}
+                  {fieldErrors.district ? <p className="mt-1 text-xs text-clay">{fieldErrors.district}</p> : null}
                 </div>
               </div>
 
@@ -627,6 +628,7 @@ export default function CheckoutPage() {
                 />
                 <label htmlFor="invoice">Xuất hóa đơn doanh nghiệp</label>
               </div>
+
               {invoiceEnabled ? (
                 <div className="checkout-grid">
                   <div>
@@ -641,9 +643,7 @@ export default function CheckoutPage() {
                       }}
                       placeholder="Tên công ty"
                     />
-                    {invoiceErrors.companyName ? (
-                      <p className="mt-1 text-xs text-clay">{invoiceErrors.companyName}</p>
-                    ) : null}
+                    {invoiceErrors.companyName ? <p className="mt-1 text-xs text-clay">{invoiceErrors.companyName}</p> : null}
                   </div>
                   <div>
                     <input
@@ -657,9 +657,7 @@ export default function CheckoutPage() {
                       }}
                       placeholder="Mã số thuế"
                     />
-                    {invoiceErrors.taxCode ? (
-                      <p className="mt-1 text-xs text-clay">{invoiceErrors.taxCode}</p>
-                    ) : null}
+                    {invoiceErrors.taxCode ? <p className="mt-1 text-xs text-clay">{invoiceErrors.taxCode}</p> : null}
                   </div>
                   <div>
                     <input
@@ -673,9 +671,7 @@ export default function CheckoutPage() {
                       }}
                       placeholder="Email nhận hóa đơn"
                     />
-                    {invoiceErrors.invoiceEmail ? (
-                      <p className="mt-1 text-xs text-clay">{invoiceErrors.invoiceEmail}</p>
-                    ) : null}
+                    {invoiceErrors.invoiceEmail ? <p className="mt-1 text-xs text-clay">{invoiceErrors.invoiceEmail}</p> : null}
                   </div>
                   <div>
                     <input
@@ -689,9 +685,7 @@ export default function CheckoutPage() {
                       }}
                       placeholder="Địa chỉ công ty"
                     />
-                    {invoiceErrors.invoiceAddress ? (
-                      <p className="mt-1 text-xs text-clay">{invoiceErrors.invoiceAddress}</p>
-                    ) : null}
+                    {invoiceErrors.invoiceAddress ? <p className="mt-1 text-xs text-clay">{invoiceErrors.invoiceAddress}</p> : null}
                   </div>
                 </div>
               ) : null}
@@ -713,7 +707,20 @@ export default function CheckoutPage() {
                   </label>
                 ))}
               </div>
-              {promoFeedback ? <p className="mt-2 text-sm text-ink/60">{promoFeedback}</p> : null}
+            </div>
+
+            <div className="checkout-box">
+              <h2>Ghi chú đơn hàng</h2>
+              <textarea
+                className="field min-h-[120px] resize-y"
+                placeholder="Ví dụ: gọi trước khi giao, giờ nhận hàng phù hợp..."
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                maxLength={500}
+              />
+              <p className="mt-2 text-xs text-ink/60">
+                Ghi chú này sẽ chuyển cho quản trị viên. Bạn cũng có thể cập nhật lại trong mục Đơn hàng của tôi khi đơn còn ở trạng thái chờ xử lý.
+              </p>
             </div>
 
             <div className="checkout-box">
@@ -774,6 +781,7 @@ export default function CheckoutPage() {
                   ))
                 )}
               </div>
+
               <div className="checkout-totals">
                 <div className="row">
                   <span>Số lượng sản phẩm</span>
@@ -798,17 +806,21 @@ export default function CheckoutPage() {
                   <span>{formatCurrency(total)}</span>
                 </div>
               </div>
-              {minOrderAmount > 0 ? (
-                <p className="checkout-note">
-                  Đơn hàng tối thiểu {formatCurrency(minOrderAmount)}
-                </p>
+
+              {note.trim() ? (
+                <div className="mt-3 rounded-xl border border-forest/10 bg-forest/5 px-3 py-2 text-xs text-ink/70">
+                  <p className="font-semibold text-ink">Ghi chú đơn hàng</p>
+                  <p className="mt-1 whitespace-pre-line break-words">{note.trim()}</p>
+                </div>
               ) : null}
+
+              {minOrderAmount > 0 ? (
+                <p className="checkout-note">Đơn hàng tối thiểu {formatCurrency(minOrderAmount)}</p>
+              ) : null}
+
               {error ? <p className="checkout-error">{error}</p> : null}
-              <Button
-                className="checkout-submit"
-                onClick={handleSubmit}
-                disabled={isSubmitting || !meetsMinOrder}
-              >
+
+              <Button className="checkout-submit" onClick={handleSubmit} disabled={isSubmitting || !meetsMinOrder}>
                 {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
               </Button>
             </div>

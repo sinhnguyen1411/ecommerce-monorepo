@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ContactInfoPanel from "@/components/contact/ContactInfoPanel";
 import ContactMap from "@/components/contact/ContactMap";
 import { siteConfig } from "@/lib/site";
@@ -15,9 +16,7 @@ export default function ContactPage() {
           <div className="breadcrumb-list">
             <ol className="breadcrumb breadcrumb-arrows">
               <li>
-                <a href="/" target="_self">
-                  {"Trang chủ"}
-                </a>
+                <Link href="/">{"Trang chủ"}</Link>
               </li>
               <li className="active">
                 <strong>{"Liên hệ"}</strong>
