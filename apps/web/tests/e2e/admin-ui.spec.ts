@@ -317,99 +317,90 @@ test.describe("Admin UI data flows", () => {
     await expect(createDialog.locator("input").first()).toHaveValue("");
   });
 
-  test("supports spotlight CRUD and reorder with manual save", async ({ page }) => {
+  test("supports spotlight edit with autosave draft and publish", async ({ page }) => {
     await mockAdminApi(page);
     await page.goto("/admin", { waitUntil: "domcontentloaded" });
 
     await clickAdminNav(page, 1024, "home");
     const main = page.getByRole("main");
-    await main.getByTestId("admin-home-tab-spotlights").click();
+    await main.getByTestId("admin-home-edit-spotlight-content-0").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByTestId("admin-spotlight-select").selectOption("0");
 
-    const cards = main.getByTestId("admin-spotlight-card");
-    await expect(cards).toHaveCount(2);
-
-    const secondTitle = await cards.nth(1).locator("input").first().inputValue();
-
-    await main.getByTestId("admin-spotlight-add").click();
-    await expect(cards).toHaveCount(3);
-    const clonedTitleInput = cards.nth(2).locator("input").first();
-    await expect(clonedTitleInput).toHaveValue(/B.*sao/);
-
-    await clonedTitleInput.fill("Block clone test");
-    await expect(clonedTitleInput).toHaveValue("Block clone test");
-    await main
-      .getByTestId("admin-spotlight-foreground-src-2")
-      .fill("https://cdn.example.com/organic-master-foreground.png");
-
-    await main.getByTestId("admin-spotlight-move-up-2").click();
-    await expect(cards.nth(1).locator("input").first()).toHaveValue("Block clone test");
-
-    page.once("dialog", (dialog) => {
-      void dialog.accept();
-    });
-    await main.getByTestId("admin-spotlight-delete-2").click();
-    await expect(cards).toHaveCount(2);
-
-    page.once("dialog", (dialog) => {
-      void dialog.accept();
-    });
-    await main.getByTestId("admin-spotlight-delete-0").click();
-    await expect(cards).toHaveCount(1);
-
-    await expect(main.getByTestId("admin-spotlight-delete-0")).toBeDisabled();
-
-    const saveRequestPromise = page.waitForRequest((request) => {
+    const draftRequestPromise = page.waitForRequest((request) => {
       if (request.method() !== "PATCH") {
         return false;
       }
       const pathname = new URL(request.url()).pathname;
-      return /\/api\/admin\/pages\/\d+$/.test(pathname);
+      if (!/\/api\/admin\/pages\/\d+$/.test(pathname)) {
+        return false;
+      }
+      const payload = (request.postDataJSON() || {}) as { save_mode?: string };
+      return payload.save_mode === "draft";
     });
 
-    await main.getByTestId("admin-spotlight-save").click();
+    await dialog.getByTestId("admin-spotlight-title-input").fill("Block clone test");
+    await draftRequestPromise;
+    await page.keyboard.press("Escape");
 
-    const saveRequest = await saveRequestPromise;
-    const payload = (saveRequest.postDataJSON() || {}) as { content?: string };
+    const publishRequestPromise = page.waitForRequest((request) => {
+      if (request.method() !== "PATCH") {
+        return false;
+      }
+      const pathname = new URL(request.url()).pathname;
+      if (!/\/api\/admin\/pages\/\d+$/.test(pathname)) {
+        return false;
+      }
+      const payload = (request.postDataJSON() || {}) as { save_mode?: string };
+      return payload.save_mode === "publish";
+    });
+
+    await main.getByTestId("admin-home-publish").click();
+    const saveRequest = await publishRequestPromise;
+    const payload = (saveRequest.postDataJSON() || {}) as {
+      content?: string;
+      save_mode?: string;
+    };
     expect(payload.content).toBeTruthy();
+    expect(payload.save_mode).toBe("publish");
 
     const parsed = JSON.parse(payload.content || "{}") as {
       spotlights?: Array<{
         title?: string;
-        accentText?: string;
-        foregroundImageSrc?: string;
       }>;
     };
     expect(Array.isArray(parsed.spotlights)).toBeTruthy();
-    expect(parsed.spotlights?.length).toBe(1);
     expect(parsed.spotlights?.[0]?.title).toBe("Block clone test");
-    expect(parsed.spotlights?.[0]).not.toHaveProperty("accentText");
-    expect(parsed.spotlights?.[0]?.foregroundImageSrc).toBe(
-      "https://cdn.example.com/organic-master-foreground.png"
-    );
   });
 
-  test("saves dual intro CTA configuration", async ({ page }) => {
+  test("publishes dual intro CTA configuration", async ({ page }) => {
     await mockAdminApi(page);
     await page.goto("/admin", { waitUntil: "domcontentloaded" });
 
     await clickAdminNav(page, 1024, "home");
     const main = page.getByRole("main");
-    await main.getByTestId("admin-home-tab-intro").click();
+    await main.getByTestId("admin-home-edit-intro").click();
+    const dialog = page.getByRole("dialog");
 
-    await main.getByTestId("admin-intro-secondary-cta-label").fill("Tim hieu them moi");
-    await main.getByTestId("admin-intro-secondary-cta-link").fill("/pages/about-us");
-    await main.getByTestId("admin-intro-primary-cta-label").fill("Dat hang ngay moi");
-    await main.getByTestId("admin-intro-primary-cta-link").fill("/collections/all");
+    await dialog.getByTestId("admin-intro-secondary-cta-label").fill("Tim hieu them moi");
+    await dialog.getByTestId("admin-intro-secondary-cta-link").selectOption("/pages/about-us");
+    await dialog.getByTestId("admin-intro-primary-cta-label").fill("Dat hang ngay moi");
+    await dialog.getByTestId("admin-intro-primary-cta-link").selectOption("/collections/all");
+    await page.keyboard.press("Escape");
 
     const saveRequestPromise = page.waitForRequest((request) => {
       if (request.method() !== "PATCH") {
         return false;
       }
       const pathname = new URL(request.url()).pathname;
-      return /\/api\/admin\/pages\/\d+$/.test(pathname);
+      if (!/\/api\/admin\/pages\/\d+$/.test(pathname)) {
+        return false;
+      }
+      const payload = (request.postDataJSON() || {}) as { save_mode?: string };
+      return payload.save_mode === "publish";
     });
 
-    await main.getByTestId("admin-home-save-intro").click();
+    await main.getByTestId("admin-home-publish").click();
 
     const saveRequest = await saveRequestPromise;
     const payload = (saveRequest.postDataJSON() || {}) as { content?: string };
@@ -427,6 +418,243 @@ test.describe("Admin UI data flows", () => {
     expect(parsed.intro?.secondaryCtaHref).toBe("/pages/about-us");
     expect(parsed.intro?.primaryCtaLabel).toBe("Dat hang ngay moi");
     expect(parsed.intro?.primaryCtaHref).toBe("/collections/all");
+  });
+
+  test("uses separated banner desktop/mobile images on publish", async ({ page }) => {
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    await clickAdminNav(page, 1024, "home");
+    const main = page.getByRole("main");
+    await main.getByTestId("admin-home-edit-banners-0").click();
+    const dialog = page.getByRole("dialog");
+
+    await expect(dialog.getByTestId("admin-banner-image-desktop-url")).toHaveCount(1);
+    await dialog.getByTestId("admin-banner-image-desktop-url").fill(
+      "https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=1200&q=80"
+    );
+    await dialog.getByTestId("admin-banner-image-desktop-apply-url").click();
+    await dialog.getByTestId("admin-banner-image-mobile-url").fill(
+      "https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=720&q=80"
+    );
+    await dialog.getByTestId("admin-banner-image-mobile-apply-url").click();
+    await page.keyboard.press("Escape");
+
+    const saveRequestPromise = page.waitForRequest((request) => {
+      if (request.method() !== "PATCH") {
+        return false;
+      }
+      const pathname = new URL(request.url()).pathname;
+      if (!/\/api\/admin\/pages\/\d+$/.test(pathname)) {
+        return false;
+      }
+      const payload = (request.postDataJSON() || {}) as { save_mode?: string };
+      return payload.save_mode === "publish";
+    });
+
+    await main.getByTestId("admin-home-publish").click();
+    const saveRequest = await saveRequestPromise;
+    const payload = (saveRequest.postDataJSON() || {}) as { content?: string };
+    const parsed = JSON.parse(payload.content || "{}") as {
+      banners?: Array<{ desktopSrc?: string; mobileSrc?: string }>;
+    };
+    expect(parsed.banners?.[0]?.desktopSrc).toBeTruthy();
+    expect(parsed.banners?.[0]?.mobileSrc).toBeTruthy();
+    expect(parsed.banners?.[0]?.desktopSrc).not.toBe(parsed.banners?.[0]?.mobileSrc);
+  });
+
+  test("localizes home editor labels and warns when eyebrow duplicates badge", async ({ page }) => {
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    await clickAdminNav(page, 1024, "home");
+    const main = page.getByRole("main");
+
+    await expect(main.getByTestId("admin-home-edit-contact")).toContainText("Topbar & Liên hệ");
+    await expect(main.getByText("Topbar & Lien he")).toHaveCount(0);
+
+    await expect(main.getByTestId("admin-home-edit-banner-content")).toHaveCount(0);
+    await expect(main.locator("[data-testid^='admin-home-edit-banner-content-']")).toHaveCount(0);
+    await main.getByTestId("admin-home-edit-banners-0").click();
+    const dialog = page.getByRole("dialog");
+
+    await expect(dialog).toContainText("Sửa banner");
+    await expect(dialog).toContainText("Chỉnh nội dung theo block và lưu nháp tự động.");
+    await expect(dialog.getByText(/^Banner 1$/)).toBeVisible();
+    await expect(dialog.getByText("Tiêu đề")).toBeVisible();
+    await expect(dialog.getByText("Mô tả")).toBeVisible();
+    await expect(dialog.getByText("Nhãn CTA")).toBeVisible();
+    await expect(dialog.getByText("Liên kết CTA")).toBeVisible();
+    await expect(dialog.getByText(/^Ảnh desktop$/)).toBeVisible();
+    await expect(dialog.getByText(/^Ảnh mobile$/)).toBeVisible();
+    await expect(dialog.getByText("Tieu de")).toHaveCount(0);
+    await expect(dialog.getByText("Mo ta")).toHaveCount(0);
+    await expect(dialog.getByTestId("admin-banner-select")).toHaveCount(0);
+    await expect(dialog.getByText("Để trống sẽ fallback về ảnh desktop.")).toBeVisible();
+    await expect(dialog.getByText("De trong se fallback ve anh desktop.")).toHaveCount(0);
+
+    const duplicateIdentity = "CÔNG TY CỔ PHẦN NÔNG DƯỢC TAM BỐ";
+    await dialog.getByTestId("admin-banner-eyebrow-input").fill(duplicateIdentity);
+    await dialog.getByTestId("admin-banner-badge-input").fill(duplicateIdentity);
+    await dialog.getByTestId("admin-banner-badge-input").blur();
+    await expect(
+      dialog.getByText(
+        "Eyebrow đang trùng Badge. Nên dùng Eyebrow như thông điệp ngắn khác với định danh công ty."
+      )
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+
+  });
+
+  test("locks banner preview to the selected banner while the editor is open", async ({
+    page
+  }) => {
+    const previewBanners = [
+      {
+        id: "banner-preview-1",
+        eyebrow: "CÔNG TY CỔ PHẦN NÔNG DƯỢC TAM BỐ",
+        badge: "Banner 1",
+        title: "Nông Dược Tam Bố",
+        description: "Giải pháp sinh học đồng hành cùng nhà nông bền vững.",
+        ctaLabel: "Khám phá sản phẩm",
+        ctaHref: "/collections/all",
+        desktopSrc:
+          "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=1400&q=80",
+        mobileSrc:
+          "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=720&q=80",
+        alt: "Nông Dược Tam Bố",
+        order: 1,
+        isActive: true
+      },
+      {
+        id: "banner-preview-2",
+        eyebrow: "CÔNG TY CỔ PHẦN NÔNG DƯỢC TAM BỐ",
+        badge: "Banner 2",
+        title: "Giải pháp sinh học",
+        description: "Tối ưu dinh dưỡng và cải thiện năng suất canh tác.",
+        ctaLabel: "Xem giải pháp",
+        ctaHref: "/collections/all",
+        desktopSrc:
+          "https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1400&q=80",
+        mobileSrc:
+          "https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=720&q=80",
+        alt: "Giải pháp sinh học",
+        order: 2,
+        isActive: true
+      },
+      {
+        id: "banner-preview-3",
+        eyebrow: "CÔNG TY CỔ PHẦN NÔNG DƯỢC TAM BỐ",
+        badge: "Banner 3",
+        title: "Đồng hành cùng nhà nông",
+        description: "Tư vấn kỹ thuật tại vườn và hỗ trợ vận hành 24/7.",
+        ctaLabel: "Liên hệ tư vấn",
+        ctaHref: "/pages/lien-he",
+        desktopSrc:
+          "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1400&q=80",
+        mobileSrc:
+          "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=720&q=80",
+        alt: "Đồng hành cùng nhà nông",
+        order: 3,
+        isActive: true
+      }
+    ];
+
+    await mockAdminApi(page, {
+      pages: [
+        {
+          id: 6,
+          title: "Trang chủ",
+          slug: "home",
+          content: JSON.stringify({ banners: previewBanners }),
+          draft_content: JSON.stringify({ banners: previewBanners }),
+          updated_at: "2024-06-01T08:00:00Z"
+        }
+      ]
+    });
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    await clickAdminNav(page, 1024, "home");
+    const main = page.getByRole("main");
+
+    const bannerEditButtons = main.locator("[data-testid^='admin-home-edit-banners-']");
+    await expect(bannerEditButtons).toHaveCount(3);
+    await bannerEditButtons.nth(1).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText(/^Banner 2$/)).toBeVisible();
+    await expect(dialog.getByTestId("admin-banner-title-input")).toHaveValue("Giải pháp sinh học");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+
+    const track = main.locator(".home-slider__track");
+    const initialScrollLeft = await track.evaluate((node) =>
+      Math.round((node as HTMLDivElement).scrollLeft)
+    );
+    expect(initialScrollLeft).toBeGreaterThan(0);
+
+    const trackLockState = await track.evaluate((node) => {
+      const styles = window.getComputedStyle(node as HTMLElement);
+      return {
+        overflowX: styles.overflowX,
+        pointerEvents: styles.pointerEvents
+      };
+    });
+    expect(trackLockState.overflowX).toBe("hidden");
+    expect(trackLockState.pointerEvents).toBe("none");
+  });
+
+  test("blocks storefront navigation inside admin home canvas and removes legacy tabs", async ({ page }) => {
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    await clickAdminNav(page, 1024, "home");
+    const main = page.getByRole("main");
+
+    await expect(main.locator("[data-testid^='admin-home-tab-']")).toHaveCount(0);
+    await expect(page).toHaveURL(/\/admin$/);
+
+    await main
+      .locator(".footer-main a[href='/pages/about-us']")
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/admin$/);
+  });
+
+  test("autosaves footer contact into home draft payload", async ({ page }) => {
+    await mockAdminApi(page);
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    await clickAdminNav(page, 1024, "home");
+    const main = page.getByRole("main");
+    const contactBox = main.getByTestId("admin-home-footer-contact");
+
+    const draftRequestPromise = page.waitForRequest((request) => {
+      if (request.method() !== "PATCH") {
+        return false;
+      }
+      const pathname = new URL(request.url()).pathname;
+      if (!/\/api\/admin\/pages\/\d+$/.test(pathname)) {
+        return false;
+      }
+      const payload = (request.postDataJSON() || {}) as { save_mode?: string };
+      return payload.save_mode === "draft";
+    });
+
+    await contactBox.getByTestId("admin-home-footer-phone").click();
+    const phoneInput = contactBox.getByTestId("admin-home-footer-phone-input");
+    await phoneInput.fill("0909 000 111");
+    await phoneInput.blur();
+
+    const draftRequest = await draftRequestPromise;
+    const payload = (draftRequest.postDataJSON() || {}) as { content?: string };
+    const parsed = JSON.parse(payload.content || "{}") as {
+      contactSettings?: { phone?: string };
+    };
+    expect(parsed.contactSettings?.phone).toBe("0909 000 111");
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await clickAdminNav(page, 1024, "home");
+    await expect(page.getByRole("main").getByTestId("admin-home-footer-phone")).toContainText("0909 000 111");
   });
 
   test("shows error when admin data load fails", async ({ page }) => {
@@ -450,8 +678,12 @@ test.describe("Admin UI data flows", () => {
       "aria-label",
       /chi/i
     );
-    await expect(main.getByTestId("admin-order-quick-payment-20")).toHaveClass(/border-blue-300|border-amber-300|border-emerald-300|border-rose-300|border-slate-300/);
-    await expect(main.getByTestId("admin-order-quick-status-20")).toHaveClass(/border-blue-300|border-amber-300|border-emerald-300|border-rose-300|border-sky-300|border-slate-300/);
+    await expect(main.getByTestId("admin-order-quick-payment-20")).toHaveClass(
+      /border-green-200|border-amber-200|border-red-200|border-slate-200/
+    );
+    await expect(main.getByTestId("admin-order-quick-status-20")).toHaveClass(
+      /border-green-200|border-blue-200|border-amber-200|border-red-200|border-slate-200/
+    );
 
     const quickStatusRequestPromise = page.waitForRequest((request) => {
       if (request.method() !== "PATCH") {
@@ -459,7 +691,8 @@ test.describe("Admin UI data flows", () => {
       }
       return /\/api\/admin\/orders\/20$/.test(new URL(request.url()).pathname);
     });
-    await main.getByTestId("admin-order-quick-status-20").selectOption("confirmed");
+    await main.getByTestId("admin-order-quick-status-20").click();
+    await page.getByRole("option", { name: "Đã xác nhận" }).click();
     const quickStatusRequest = await quickStatusRequestPromise;
     const quickStatusPayload = (quickStatusRequest.postDataJSON() || {}) as {
       status?: string;

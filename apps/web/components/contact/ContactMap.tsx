@@ -1,9 +1,15 @@
 "use client";
 
 import { useContactSettings } from "@/lib/client-content";
+import type { ContactSettings } from "@/lib/content";
 
-export default function ContactMap() {
-  const settings = useContactSettings();
+export default function ContactMap({
+  contactSettings
+}: {
+  contactSettings?: ContactSettings;
+}) {
+  const liveSettings = useContactSettings();
+  const settings = contactSettings || liveSettings;
 
   return (
     <iframe

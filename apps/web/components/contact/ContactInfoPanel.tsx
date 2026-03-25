@@ -1,9 +1,15 @@
 "use client";
 
 import { useContactSettings } from "@/lib/client-content";
+import type { ContactSettings } from "@/lib/content";
 
-export default function ContactInfoPanel() {
-  const settings = useContactSettings();
+export default function ContactInfoPanel({
+  contactSettings
+}: {
+  contactSettings?: ContactSettings;
+}) {
+  const liveSettings = useContactSettings();
+  const settings = contactSettings || liveSettings;
   const phoneLabel = `${settings.phone} - ${settings.fax}`;
 
   return (

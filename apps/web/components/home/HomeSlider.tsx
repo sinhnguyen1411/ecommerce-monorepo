@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
 import type { HomeBanner } from "@/lib/content";
@@ -8,9 +8,20 @@ import type { HomeBanner } from "@/lib/content";
 type HomeSliderProps = {
   slides: HomeBanner[];
   intervalMs?: number;
+  disableNavigation?: boolean;
+  activeIndex?: number;
+  disableAutoplay?: boolean;
+  lockInteraction?: boolean;
 };
 
-export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProps) {
+export default function HomeSlider({
+  slides,
+  intervalMs = 5000,
+  disableNavigation = false,
+  activeIndex,
+  disableAutoplay = false,
+  lockInteraction = false
+}: HomeSliderProps) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [active, setActive] = useState(0);
   const isDragging = useRef(false);
@@ -23,36 +34,56 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
       .sort((a, b) => a.order - b.order);
   }, [slides]);
 
+  const controlledActiveIndex =
+    typeof activeIndex === "number" && activeSlides.length > 0
+      ? Math.min(Math.max(activeIndex, 0), activeSlides.length - 1)
+      : null;
+  const isInteractionLocked = lockInteraction || controlledActiveIndex !== null;
+
+  const scrollToSlide = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
+    const track = trackRef.current;
+    if (!track) {
+      return;
+    }
+    track.scrollTo({ left: track.clientWidth * index, behavior });
+  }, []);
+
   useEffect(() => {
-    if (!activeSlides.length) {
+    if (!activeSlides.length || disableAutoplay || controlledActiveIndex !== null) {
       return;
     }
 
     const id = window.setInterval(() => {
       setActive((prev) => {
         const next = (prev + 1) % activeSlides.length;
-        const track = trackRef.current;
-        if (track) {
-          track.scrollTo({ left: track.clientWidth * next, behavior: "smooth" });
-        }
+        scrollToSlide(next);
         return next;
       });
     }, intervalMs);
 
     return () => window.clearInterval(id);
-  }, [activeSlides.length, intervalMs]);
+  }, [activeSlides.length, controlledActiveIndex, disableAutoplay, intervalMs, scrollToSlide]);
 
   useEffect(() => {
-    setActive(0);
-    const track = trackRef.current;
-    if (track) {
-      track.scrollTo({ left: 0 });
+    if (controlledActiveIndex !== null) {
+      setActive(controlledActiveIndex);
+      scrollToSlide(controlledActiveIndex, "auto");
+      return;
     }
-  }, [activeSlides.length]);
+    setActive(0);
+    scrollToSlide(0, "auto");
+  }, [activeSlides.length, controlledActiveIndex, scrollToSlide]);
 
   const handleScroll = () => {
     const track = trackRef.current;
     if (!track) {
+      return;
+    }
+    if (controlledActiveIndex !== null) {
+      const expectedLeft = track.clientWidth * controlledActiveIndex;
+      if (Math.abs(track.scrollLeft - expectedLeft) > 1) {
+        scrollToSlide(controlledActiveIndex, "auto");
+      }
       return;
     }
     const next = Math.round(track.scrollLeft / track.clientWidth);
@@ -63,11 +94,14 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     const track = trackRef.current;
-    if (!track) {
+    if (!track || isInteractionLocked) {
       return;
     }
     const target = event.target as HTMLElement | null;
-    if (target?.closest("a, button, input, textarea, select, [role='button']")) {
+    if (
+      !disableNavigation &&
+      target?.closest("a, button, input, textarea, select, [role='button']")
+    ) {
       return;
     }
     isDragging.current = true;
@@ -91,14 +125,16 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
       return;
     }
     isDragging.current = false;
-    track.releasePointerCapture(event.pointerId);
+    if (track.hasPointerCapture(event.pointerId)) {
+      track.releasePointerCapture(event.pointerId);
+    }
   };
 
   const handleDotClick = (index: number) => {
-    const track = trackRef.current;
-    if (track) {
-      track.scrollTo({ left: track.clientWidth * index, behavior: "smooth" });
+    if (isInteractionLocked) {
+      return;
     }
+    scrollToSlide(index);
     setActive(index);
   };
 
@@ -106,8 +142,9 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
     <section className="section-home-slider">
       <div className="home-slider">
         <div
-          className="home-slider__track"
+          className={`home-slider__track ${isInteractionLocked ? "pointer-events-none" : ""}`}
           ref={trackRef}
+          style={isInteractionLocked ? { overflowX: "hidden", touchAction: "none" } : undefined}
           onScroll={handleScroll}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -115,23 +152,21 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
           onPointerLeave={handlePointerUp}
         >
           {activeSlides.map((slide, index) => {
-            const label = slide.ctaLabel?.toLowerCase() || "";
-            const normalizedLabel = label
-              .normalize("NFD")
-              .replace(/\p{Diacritic}/gu, "");
-            const rawHref = slide.ctaHref || "";
-            const isHero3 = slide.id === "banner-hero-3";
-            const isContactLabel =
-              normalizedLabel.includes("lien he") ||
-              normalizedLabel.includes("lienhe");
-            const isContactHref = rawHref.includes("lien-he");
-            const ctaHref =
-              isHero3 || isContactLabel || isContactHref
-                ? "/pages/lien-he"
-                : rawHref || "/";
+            const ctaHref = slide.ctaHref || "/";
+            const eyebrow = slide.eyebrow?.trim() || slide.badge?.trim() || "";
             return (
               <div key={`${slide.desktopSrc}-${index}`} className="home-slide">
-                <Link href={ctaHref} className="home-slide__link">
+                <Link
+                  href={ctaHref}
+                  className="home-slide__link"
+                  onClick={(event) => {
+                    if (!disableNavigation) {
+                      return;
+                    }
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                >
                   <picture>
                     <source media="(min-width: 768px)" srcSet={slide.desktopSrc} />
                     <source media="(max-width: 767px)" srcSet={slide.mobileSrc} />
@@ -142,7 +177,7 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
                   <div className="pointer-events-none absolute inset-0 flex items-end md:items-center">
                     <div className="mx-auto w-full max-w-5xl px-6 pb-8 md:px-10 md:pb-0">
                       <div className="home-slider__card pointer-events-auto max-w-lg p-5 sm:p-6">
-                        <p className="home-slider__eyebrow">TAM BO AGRICULTURAL PHARMACEUTICALS JSC</p>
+                        {eyebrow ? <p className="home-slider__eyebrow">{eyebrow}</p> : null}
                         {slide.badge ? (
                           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
                             {slide.badge}
@@ -162,6 +197,13 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
                           <Link
                             href={ctaHref}
                             className="home-slider__cta mt-4 inline-flex items-center justify-center rounded-full bg-[var(--color-cta)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#ea580c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-cta)]/40"
+                            onClick={(event) => {
+                              if (!disableNavigation) {
+                                return;
+                              }
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }}
                           >
                             {slide.ctaLabel}
                           </Link>
@@ -181,6 +223,7 @@ export default function HomeSlider({ slides, intervalMs = 5000 }: HomeSliderProp
               type="button"
               className={index === active ? "is-active" : undefined}
               onClick={() => handleDotClick(index)}
+              disabled={isInteractionLocked}
               aria-label={`Chuyển đến banner ${index + 1}`}
             />
           ))}

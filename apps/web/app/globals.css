@@ -87,6 +87,39 @@ body.admin-mode .social-floating {
   display: none !important;
 }
 
+body.admin-mode .admin-home-canvas-shell .topbar,
+body.admin-mode .admin-home-canvas-shell .mainHeader--height,
+body.admin-mode .admin-home-canvas-shell .footer-main,
+body.admin-mode .admin-home-canvas-shell .footer-bottom {
+  display: block !important;
+}
+
+body.admin-mode .admin-home-canvas-shell .social-floating {
+  display: none !important;
+}
+
+.admin-home-canvas-shell {
+  isolation: isolate;
+}
+
+.admin-home-canvas-shell .home-main {
+  background: var(--shop-color-bg);
+  padding-bottom: 1.5rem;
+}
+
+.admin-home-canvas-section {
+  position: relative;
+  transition: box-shadow 0.2s ease;
+}
+
+.admin-home-canvas-section:hover {
+  box-shadow: inset 0 0 0 2px rgba(16, 185, 129, 0.25);
+}
+
+.admin-home-canvas-section--selected {
+  box-shadow: inset 0 0 0 2px rgba(16, 185, 129, 0.65);
+}
+
 a {
   color: var(--shop-color-text);
   text-decoration: none;

@@ -13,6 +13,7 @@ const contactStorageKey = "admin_contact_settings_v1";
 const demoBanners = [
   {
     id: "banner-demo-1",
+    eyebrow: "TAM BO AGRICULTURAL PHARMACEUTICALS JSC",
     badge: "Banner nổi bật",
     title: "Nông Dược Tam Bố",
     description: "Giải pháp sinh học đồng hành cùng nhà nông bền vững.",
@@ -66,6 +67,7 @@ type MockAdminPage = MockAdminRecord & {
   title: string;
   slug: string;
   content: string;
+  draft_content?: string;
   updated_at: string;
 };
 
@@ -497,6 +499,7 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
       title: "Giới thiệu",
       slug: "about-us",
       content: "{}",
+      draft_content: "{}",
       updated_at: "2024-06-01T08:00:00Z"
     },
     {
@@ -529,6 +532,9 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
             }
           ]
         }
+      }),
+      draft_content: JSON.stringify({
+        banners: demoBanners
       }),
       updated_at: "2024-06-01T08:00:00Z"
     }
@@ -599,7 +605,9 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
         id: nextId,
         title: String(payload.title || "Trang chủ"),
         slug: String(payload.slug || "home"),
-        content: String(payload.content || "{}"),
+        content:
+          payload.save_mode === "draft" ? "{}" : String(payload.content || "{}"),
+        draft_content: String(payload.content || "{}"),
         updated_at: new Date().toISOString()
       };
       mutablePages.unshift(created);
@@ -609,15 +617,19 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
       const payload = (route.request().postDataJSON() || {}) as Record<string, unknown>;
       const index = mutablePages.findIndex((item) => Number(item.id) === pageId);
       if (index >= 0) {
+        const nextContent =
+          typeof payload.content === "string"
+            ? payload.content
+            : mutablePages[index].content;
+        const saveMode = String(payload.save_mode || "publish");
         mutablePages[index] = {
           ...mutablePages[index],
           title:
             typeof payload.title === "string" ? payload.title : mutablePages[index].title,
           slug: typeof payload.slug === "string" ? payload.slug : mutablePages[index].slug,
           content:
-            typeof payload.content === "string"
-              ? payload.content
-              : mutablePages[index].content,
+            saveMode === "draft" ? mutablePages[index].content : nextContent,
+          draft_content: nextContent,
           updated_at: new Date().toISOString()
         };
       }

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import ContactInfoPanel from "@/components/contact/ContactInfoPanel";
 import ContactMap from "@/components/contact/ContactMap";
+import { getPage } from "@/lib/api";
+import { resolveHomePageContent } from "@/lib/content";
 import { siteConfig } from "@/lib/site";
 
 export const metadata = {
@@ -8,7 +10,10 @@ export const metadata = {
   description: `Thông tin liên hệ và hỗ trợ từ ${siteConfig.name}.`
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const homePage = await getPage("home").catch(() => null);
+  const homeContent = resolveHomePageContent(homePage?.content);
+
   return (
     <div className="layout-pageContact">
       <div className="breadcrumb-shop">
@@ -28,7 +33,7 @@ export default function ContactPage() {
       <div className="contact-inner">
         <div className="contact-map">
           <div className="map">
-            <ContactMap />
+            <ContactMap contactSettings={homeContent.contactSettings} />
           </div>
         </div>
         <div className="contact-body pb-16 pt-6">
@@ -71,7 +76,7 @@ export default function ContactPage() {
               </div>
               <div className="col-lg-6 col-md-12 col-12 column-right">
                 <h2>{"Thông tin liên hệ"}</h2>
-                <ContactInfoPanel />
+                <ContactInfoPanel contactSettings={homeContent.contactSettings} />
               </div>
             </div>
           </div>

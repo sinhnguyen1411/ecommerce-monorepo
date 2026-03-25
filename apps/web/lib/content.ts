@@ -2,6 +2,7 @@ import { siteConfig } from "@/lib/site";
 
 export type HomeBanner = {
   id: string;
+  eyebrow: string;
   badge: string;
   title: string;
   description: string;
@@ -17,6 +18,7 @@ export type HomeBanner = {
 export const defaultHomeBanners: HomeBanner[] = [
   {
     id: "banner-hero-1",
+    eyebrow: "Giải pháp sinh học cho nông nghiệp bền vững",
     badge: "CÔNG TY CỔ PHẦN NÔNG DƯỢC TAM BỐ",
     title: "Nông Dược Tam Bố",
     description: "Giải pháp sinh học đồng hành cùng nhà nông bền vững.",
@@ -32,6 +34,7 @@ export const defaultHomeBanners: HomeBanner[] = [
   },
   {
     id: "banner-hero-2",
+    eyebrow: "Tối ưu dinh dưỡng và cải thiện năng suất canh tác",
     badge: "CÔNG TY CỔ PHẦN NÔNG DƯỢC TAM BỐ",
     title: "Giải pháp sinh học",
     description: "Tối ưu dinh dưỡng và cải thiện năng suất canh tác.",
@@ -47,6 +50,7 @@ export const defaultHomeBanners: HomeBanner[] = [
   },
   {
     id: "banner-hero-3",
+    eyebrow: "Đồng hành kỹ thuật tại vườn và hỗ trợ 24/7",
     badge: "CÔNG TY CỔ PHẦN NÔNG DƯỢC TAM BỐ",
     title: "Đồng hành cùng nhà nông",
     description: "Tư vấn kỹ thuật tại vườn và hỗ trợ vận hành 24/7.",
@@ -414,6 +418,7 @@ export type HomePageContent = {
   spotlights: HomeSpotlightBlock[];
   features: HomeFeatureBlock[];
   aboutTeaser: HomeAboutTeaser;
+  contactSettings: ContactSettings;
   promoPopup: PromoPopupSettings;
   notifications: NotificationSettings;
 };
@@ -503,6 +508,7 @@ export const defaultHomePageContent: HomePageContent = {
     secondaryCtaLabel: "Tìm hiểu thêm",
     secondaryCtaHref: "/pages/locations"
   },
+  contactSettings: { ...defaultContactSettings },
   promoPopup: {
     ...defaultPromoPopupSettings,
     programs: [...defaultPromoPopupSettings.programs],
@@ -523,6 +529,7 @@ export function cloneHomePageContent(content: HomePageContent): HomePageContent 
     })),
     features: content.features.map((item) => ({ ...item })),
     aboutTeaser: { ...content.aboutTeaser },
+    contactSettings: { ...content.contactSettings },
     promoPopup: {
       ...content.promoPopup,
       programs: content.promoPopup.programs.map((item) => ({ ...item })),
@@ -557,6 +564,12 @@ const normalizeHomeBannerList = (input: unknown, fallback: HomeBanner[]) => {
     const orderValue = Number(source.order);
     return {
       id: source.id || `home-banner-${index + 1}`,
+      eyebrow:
+        typeof source.eyebrow === "string"
+          ? source.eyebrow
+          : typeof source.badge === "string"
+            ? source.badge
+            : base.eyebrow,
       badge: typeof source.badge === "string" ? source.badge : base.badge,
       title: typeof source.title === "string" ? source.title : base.title,
       description:
@@ -780,6 +793,33 @@ const normalizeAboutTeaser = (input: unknown, fallback: HomeAboutTeaser): HomeAb
   };
 };
 
+const normalizeEmbeddedContactSettings = (
+  input: unknown,
+  fallback: ContactSettings
+): ContactSettings => {
+  const source =
+    input && typeof input === "object"
+      ? (input as Partial<ContactSettings>)
+      : {};
+  return {
+    ...fallback,
+    phone: typeof source.phone === "string" ? source.phone : fallback.phone,
+    mobilePhone:
+      typeof source.mobilePhone === "string" ? source.mobilePhone : fallback.mobilePhone,
+    fax: typeof source.fax === "string" ? source.fax : fallback.fax,
+    email: typeof source.email === "string" ? source.email : fallback.email,
+    address: typeof source.address === "string" ? source.address : fallback.address,
+    businessHours:
+      typeof source.businessHours === "string"
+        ? source.businessHours
+        : fallback.businessHours,
+    mapUrl: typeof source.mapUrl === "string" ? source.mapUrl : fallback.mapUrl,
+    facebookUrl:
+      typeof source.facebookUrl === "string" ? source.facebookUrl : fallback.facebookUrl,
+    zaloUrl: typeof source.zaloUrl === "string" ? source.zaloUrl : fallback.zaloUrl
+  };
+};
+
 export function resolveHomePageContent(
   raw?: string | null | Partial<HomePageContent>
 ): HomePageContent {
@@ -798,6 +838,10 @@ export function resolveHomePageContent(
     spotlights: normalizeSpotlights(parsed.spotlights, fallback.spotlights),
     features: normalizeFeatures(parsed.features, fallback.features),
     aboutTeaser: normalizeAboutTeaser(parsed.aboutTeaser, fallback.aboutTeaser),
+    contactSettings: normalizeEmbeddedContactSettings(
+      parsed.contactSettings,
+      fallback.contactSettings
+    ),
     promoPopup: normalizePromoPopup(parsed.promoPopup, fallback.promoPopup),
     notifications: normalizeNotifications(parsed.notifications, fallback.notifications)
   };

@@ -1,132 +1,199 @@
 package handlers
 
 import (
-  "database/sql"
-  "net/http"
-  "strconv"
-  "strings"
+	"database/sql"
+	"net/http"
+	"strconv"
+	"strings"
 
-  "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 type AdminPage struct {
-  ID        int    `json:"id"`
-  Title     string `json:"title"`
-  Slug      string `json:"slug"`
-  Content   string `json:"content"`
-  UpdatedAt string `json:"updated_at"`
+	ID           int    `json:"id"`
+	Title        string `json:"title"`
+	Slug         string `json:"slug"`
+	Content      string `json:"content"`
+	DraftContent string `json:"draft_content"`
+	UpdatedAt    string `json:"updated_at"`
 }
 
 type AdminPageInput struct {
-  Title   string `json:"title"`
-  Slug    string `json:"slug"`
-  Content string `json:"content"`
+	Title    string `json:"title"`
+	Slug     string `json:"slug"`
+	Content  string `json:"content"`
+	SaveMode string `json:"save_mode"`
+}
+
+type adminPageSaveMode string
+
+const (
+	adminPageSaveModeDraft   adminPageSaveMode = "draft"
+	adminPageSaveModePublish adminPageSaveMode = "publish"
+)
+
+func normalizeAdminPageSaveMode(raw string) (adminPageSaveMode, bool) {
+	value := strings.ToLower(strings.TrimSpace(raw))
+	if value == "" {
+		return adminPageSaveModePublish, true
+	}
+	switch adminPageSaveMode(value) {
+	case adminPageSaveModeDraft:
+		return adminPageSaveModeDraft, true
+	case adminPageSaveModePublish:
+		return adminPageSaveModePublish, true
+	default:
+		return "", false
+	}
 }
 
 func (s *Server) AdminListPages(c *gin.Context) {
-  rows, err := s.DB.Query(`
-    SELECT id, title, slug, IFNULL(content, ''), updated_at
+	rows, err := s.DB.Query(`
+    SELECT id, title, slug, IFNULL(content, ''), IFNULL(draft_content, ''), updated_at
     FROM pages
     ORDER BY updated_at DESC, id DESC
   `)
-  if err != nil {
-    respondError(c, http.StatusInternalServerError, "db_error", "Failed to load pages")
-    return
-  }
-  defer rows.Close()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load pages")
+		return
+	}
+	defer rows.Close()
 
-  items := make([]AdminPage, 0)
-  for rows.Next() {
-    var page AdminPage
-    if err := rows.Scan(&page.ID, &page.Title, &page.Slug, &page.Content, &page.UpdatedAt); err != nil {
-      respondError(c, http.StatusInternalServerError, "db_error", "Failed to parse pages")
-      return
-    }
-    items = append(items, page)
-  }
+	items := make([]AdminPage, 0)
+	for rows.Next() {
+		var page AdminPage
+		if err := rows.Scan(
+			&page.ID,
+			&page.Title,
+			&page.Slug,
+			&page.Content,
+			&page.DraftContent,
+			&page.UpdatedAt,
+		); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to parse pages")
+			return
+		}
+		items = append(items, page)
+	}
 
-  respondOK(c, items)
+	respondOK(c, items)
 }
 
 func (s *Server) AdminCreatePage(c *gin.Context) {
-  var input AdminPageInput
-  if err := c.ShouldBindJSON(&input); err != nil {
-    respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid page payload")
-    return
-  }
+	var input AdminPageInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid page payload")
+		return
+	}
 
-  if strings.TrimSpace(input.Title) == "" || strings.TrimSpace(input.Slug) == "" {
-    respondError(c, http.StatusBadRequest, "missing_fields", "Title and slug are required")
-    return
-  }
+	if strings.TrimSpace(input.Title) == "" || strings.TrimSpace(input.Slug) == "" {
+		respondError(c, http.StatusBadRequest, "missing_fields", "Title and slug are required")
+		return
+	}
 
-  result, err := s.DB.Exec(`
-    INSERT INTO pages (title, slug, content)
-    VALUES (?, ?, ?)
-  `, input.Title, input.Slug, input.Content)
-  if err != nil {
-    respondError(c, http.StatusInternalServerError, "db_error", "Failed to create page")
-    return
-  }
+	mode, ok := normalizeAdminPageSaveMode(input.SaveMode)
+	if !ok {
+		respondError(c, http.StatusBadRequest, "invalid_save_mode", "Invalid save_mode")
+		return
+	}
 
-  id, _ := result.LastInsertId()
-  s.adminGetPageByID(c, int(id))
+	content := input.Content
+	draftContent := input.Content
+	if mode == adminPageSaveModeDraft {
+		content = ""
+	}
+
+	result, err := s.DB.Exec(`
+    INSERT INTO pages (title, slug, content, draft_content)
+    VALUES (?, ?, ?, ?)
+  `, input.Title, input.Slug, content, draftContent)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to create page")
+		return
+	}
+
+	id, _ := result.LastInsertId()
+	s.adminGetPageByID(c, int(id))
 }
 
 func (s *Server) AdminGetPage(c *gin.Context) {
-  parsed, err := strconv.Atoi(c.Param("id"))
-  if err != nil {
-    respondError(c, http.StatusBadRequest, "invalid_page", "Invalid page ID")
-    return
-  }
-  s.adminGetPageByID(c, parsed)
+	parsed, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_page", "Invalid page ID")
+		return
+	}
+	s.adminGetPageByID(c, parsed)
 }
 
 func (s *Server) adminGetPageByID(c *gin.Context, id int) {
-  row := s.DB.QueryRow(`
-    SELECT id, title, slug, IFNULL(content, ''), updated_at
+	row := s.DB.QueryRow(`
+    SELECT id, title, slug, IFNULL(content, ''), IFNULL(draft_content, ''), updated_at
     FROM pages WHERE id = ?
   `, id)
 
-  var page AdminPage
-  if err := row.Scan(&page.ID, &page.Title, &page.Slug, &page.Content, &page.UpdatedAt); err != nil {
-    if err == sql.ErrNoRows {
-      respondError(c, http.StatusNotFound, "not_found", "Page not found")
-      return
-    }
-    respondError(c, http.StatusInternalServerError, "db_error", "Failed to load page")
-    return
-  }
+	var page AdminPage
+	if err := row.Scan(
+		&page.ID,
+		&page.Title,
+		&page.Slug,
+		&page.Content,
+		&page.DraftContent,
+		&page.UpdatedAt,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			respondError(c, http.StatusNotFound, "not_found", "Page not found")
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load page")
+		return
+	}
 
-  respondOK(c, page)
+	respondOK(c, page)
 }
 
 func (s *Server) AdminUpdatePage(c *gin.Context) {
-  id, err := strconv.Atoi(c.Param("id"))
-  if err != nil {
-    respondError(c, http.StatusBadRequest, "invalid_page", "Invalid page ID")
-    return
-  }
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_page", "Invalid page ID")
+		return
+	}
 
-  var input AdminPageInput
-  if err := c.ShouldBindJSON(&input); err != nil {
-    respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid page payload")
-    return
-  }
+	var input AdminPageInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid page payload")
+		return
+	}
 
-  if strings.TrimSpace(input.Title) == "" || strings.TrimSpace(input.Slug) == "" {
-    respondError(c, http.StatusBadRequest, "missing_fields", "Title and slug are required")
-    return
-  }
+	if strings.TrimSpace(input.Title) == "" || strings.TrimSpace(input.Slug) == "" {
+		respondError(c, http.StatusBadRequest, "missing_fields", "Title and slug are required")
+		return
+	}
 
-  if _, err := s.DB.Exec(`
+	mode, ok := normalizeAdminPageSaveMode(input.SaveMode)
+	if !ok {
+		respondError(c, http.StatusBadRequest, "invalid_save_mode", "Invalid save_mode")
+		return
+	}
+
+	if mode == adminPageSaveModeDraft {
+		if _, err := s.DB.Exec(`
     UPDATE pages
-    SET title = ?, slug = ?, content = ?
+    SET title = ?, slug = ?, draft_content = ?
     WHERE id = ?
   `, input.Title, input.Slug, input.Content, id); err != nil {
-    respondError(c, http.StatusInternalServerError, "db_error", "Failed to update page")
-    return
-  }
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to update page")
+			return
+		}
+	} else {
+		if _, err := s.DB.Exec(`
+    UPDATE pages
+    SET title = ?, slug = ?, content = ?, draft_content = ?
+    WHERE id = ?
+  `, input.Title, input.Slug, input.Content, input.Content, id); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to update page")
+			return
+		}
+	}
 
-  s.adminGetPageByID(c, id)
+	s.adminGetPageByID(c, id)
 }

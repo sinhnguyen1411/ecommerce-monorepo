@@ -48,6 +48,7 @@ const sanitizeHomeBanners = (input: HomeBanner[] | null) => {
     const updated: HomeBanner = { ...banner };
     const fields = [
       "id",
+      "eyebrow",
       "badge",
       "title",
       "description",
@@ -215,6 +216,7 @@ const normalizeHomeBanners = (input: HomeBanner[] | null): HomeBanner[] => {
     const order = Number.isFinite(banner.order) ? Number(banner.order) : index + 1;
     return {
       id: banner.id || `banner-${order}`,
+      eyebrow: banner.eyebrow || banner.badge || fallback?.eyebrow || "",
       badge: banner.badge || fallback?.badge || "Banner nổi bật",
       title: banner.title || fallback?.title || "Banner",
       description: banner.description || fallback?.description || "",

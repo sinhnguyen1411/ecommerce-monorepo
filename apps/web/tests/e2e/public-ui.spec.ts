@@ -322,13 +322,14 @@ for (const viewport of viewports) {
       );
     });
 
-    test("contact shows seeded information", async ({ page }) => {
-      await seedContentStorage(page);
+    test("contact shows published information", async ({ page }) => {
       await page.goto("/pages/lien-he", { waitUntil: "domcontentloaded" });
 
       const contactPanel = page.locator(".contact-info");
       await expect(contactPanel).toBeVisible();
-      await expect(contactPanel.getByText("0900 111 222")).toBeVisible();
+      await expect(contactPanel.getByText(/Dien thoai|Điện thoại/i)).toBeVisible();
+      const phoneBlock = contactPanel.locator(".contact-info__item").nth(1);
+      await expect(phoneBlock).toContainText(/[0-9]{3,}/);
     });
 
     test("qna supports pagination, topic filter via URL and no horizontal overflow", async ({

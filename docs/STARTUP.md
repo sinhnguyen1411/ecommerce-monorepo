@@ -15,7 +15,14 @@ Recommended local runtime
 1. Start the full stack:
    - `cd infra`
    - `docker compose up -d --build`
-2. Verify:
+2. Restart web with fresh code (rebuild only web service):
+   - `powershell -ExecutionPolicy Bypass -File .\infra\restart-web.ps1`
+   - manual equivalent:
+     - `docker compose -f infra/docker-compose.yml up -d --build web`
+     - `docker compose -f infra/docker-compose.yml ps`
+     - `curl.exe http://localhost:3000`
+     - `curl.exe http://localhost:8080/healthz`
+3. Verify:
    - `http://localhost:8080/healthz`
    - `http://localhost:3000`
 

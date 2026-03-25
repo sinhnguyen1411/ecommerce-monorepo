@@ -7,8 +7,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { isAuthOnlyPath } from "@/lib/auth-route";
 import { PROMO_POPUP_OPEN_EVENT, useContactSettings } from "@/lib/client-content";
 import {
+  ContactSettings,
   NotificationSettings,
   PromoPopupSettings,
+  defaultContactSettings,
   defaultNotificationSettings,
   defaultPromoPopupSettings
 } from "@/lib/content";
@@ -16,11 +18,13 @@ import {
 type TopbarProps = {
   promoSettings?: PromoPopupSettings;
   notificationSettings?: NotificationSettings;
+  contactSettings?: ContactSettings;
 };
 
 export default function Topbar({
   promoSettings = defaultPromoPopupSettings,
-  notificationSettings = defaultNotificationSettings
+  notificationSettings = defaultNotificationSettings,
+  contactSettings
 }: TopbarProps) {
   const pathname = usePathname();
   type TopbarNotification =
@@ -38,7 +42,8 @@ export default function Topbar({
         type: "link";
       };
 
-  const settings = useContactSettings();
+  const liveSettings = useContactSettings();
+  const settings = contactSettings || liveSettings || defaultContactSettings;
   if (isAuthOnlyPath(pathname)) {
     return null;
   }

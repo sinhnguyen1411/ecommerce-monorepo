@@ -13,8 +13,6 @@ import {
   FileImage,
   HelpCircle,
   Home,
-  GripVertical,
-  Image as ImageIcon,
   Layers,
   LayoutDashboard,
   Loader2,
@@ -29,6 +27,8 @@ import {
 
 import AdminShell, { AdminNavItem } from "@/components/admin/AdminShell";
 import AdminOverview from "@/components/admin/AdminOverview";
+import AdminHomeVisualEditor from "@/components/admin/AdminHomeVisualEditor";
+import type { AdminLinkOption } from "@/components/admin/AdminLinkPicker";
 import {
   AdminField,
   AdminPagination,
@@ -56,11 +56,20 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { AdminDialogContent } from "@/components/admin/AdminDialog";
 import { formatCurrency } from "@/lib/format";
 import {
   ADMIN_ORDER_STATUS_OPTIONS,
   ADMIN_PAYMENT_STATUS_OPTIONS,
+  formatPaymentMethodLabel,
+  formatShippingMethodLabel,
   getAdminOrderStatusMeta,
   getAdminPaymentStatusMeta,
 } from "@/lib/admin-status";
@@ -71,6 +80,7 @@ import {
   AdminDensityMode,
   AdminOrder,
   AdminOrderColumnId,
+  AdminPage,
   AdminPost,
   AdminProduct,
   AdminProfile,
@@ -114,28 +124,17 @@ import type {
   ContactSettings,
   HomeBanner,
   HomePageContent,
-  NotificationItem,
   NotificationSettings,
-  PromoCoupon,
   PromoPopupSettings,
-  PromoProgram
 } from "@/lib/content";
 import {
   cloneAboutContent,
   cloneHomePageContent,
   defaultAboutContent,
-  defaultContactSettings,
   defaultHomePageContent,
   resolveAboutContent,
   resolveHomePageContent
 } from "@/lib/content";
-import {
-  HOME_BANNERS_STORAGE_KEY,
-  NOTIFICATION_SETTINGS_STORAGE_KEY,
-  PROMO_POPUP_STORAGE_KEY,
-  loadContactSettings,
-  saveContactSettings,
-} from "@/lib/client-content";
 
 const sectionLabels: Record<string, string> = {
   overview: "Tổng quan",
@@ -277,10 +276,10 @@ type HomeGroupKey =
   | "spotlights"
   | "features"
   | "aboutTeaser"
+  | "contactSettings"
   | "promoPopup"
   | "notifications";
 
-const LEGACY_HOME_BANNERS_V1_KEY = "admin_home_banners_v1";
 const MIN_SPOTLIGHT_BLOCKS = 1;
 
 type HomeSpotlightItem = HomePageContent["spotlights"][number];
@@ -312,7 +311,7 @@ const cloneLastSpotlightBlock = (
   return {
     ...base,
     id: createHomeSpotlightId(),
-    title: baseTitle ? `${baseTitle} (Bản sao)` : "Block mới (Bản sao)",
+    title: baseTitle ? `${baseTitle} (Báº£n sao)` : "Block mới (Bản sao)",
     bullets: [...base.bullets]
   };
 };
@@ -336,36 +335,19 @@ const reorderList = <T,>(items: T[], fromIndex: number, toIndex: number): T[] =>
   return next;
 };
 
-const createHomeDirtyMap = (): Record<HomeGroupKey, boolean> => ({
-  banners: false,
-  intro: false,
-  spotlights: false,
-  features: false,
-  aboutTeaser: false,
-  promoPopup: false,
-  notifications: false
+const createHomeDirtyMap = (
+  value = false
+): Record<HomeGroupKey, boolean> => ({
+  banners: value,
+  intro: value,
+  spotlights: value,
+  features: value,
+  aboutTeaser: value,
+  contactSettings: value,
+  promoPopup: value,
+  notifications: value
 });
 
-const createHomeSavedAtMap = (
-  savedAt: string | null = null
-): Record<HomeGroupKey, string | null> => ({
-  banners: savedAt,
-  intro: savedAt,
-  spotlights: savedAt,
-  features: savedAt,
-  aboutTeaser: savedAt,
-  promoPopup: savedAt,
-  notifications: savedAt
-});
-
-const parseStorageJson = <T,>(raw: string | null): T | null => {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-};
 export default function AdminDashboardPage() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
@@ -408,16 +390,18 @@ export default function AdminDashboardPage() {
   const [homeDirtyMap, setHomeDirtyMap] = useState<Record<HomeGroupKey, boolean>>(
     createHomeDirtyMap()
   );
-  const [homeSavedAtMap, setHomeSavedAtMap] = useState<Record<HomeGroupKey, string | null>>(
-    createHomeSavedAtMap()
-  );
-  const [contactDraft, setContactDraft] = useState<ContactSettings>(defaultContactSettings);
+  const [homeDraftSaveState, setHomeDraftSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [homeDraftSaveError, setHomeDraftSaveError] = useState("");
+  const [homeDraftSavedAt, setHomeDraftSavedAt] = useState<string | null>(null);
+  const [homeHistoryPast, setHomeHistoryPast] = useState<HomePageContent[]>([]);
+  const [homeHistoryFuture, setHomeHistoryFuture] = useState<HomePageContent[]>([]);
+  const [pages, setPages] = useState<AdminPage[]>([]);
   const [aboutPageId, setAboutPageId] = useState<number | null>(null);
   const [aboutDraft, setAboutDraft] = useState<AboutPageContent>(cloneAboutContent(defaultAboutContent));
   const [aboutDirty, setAboutDirty] = useState(false);
   const [aboutSavedAt, setAboutSavedAt] = useState<string | null>(null);
-  const [contactDirty, setContactDirty] = useState(false);
-  const [contactSavedAt, setContactSavedAt] = useState<string | null>(null);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const refreshInFlightRef = useRef(false);
   const refreshPausedRef = useRef(false);
@@ -425,80 +409,12 @@ export default function AdminDashboardPage() {
   const loadDashboardRef = useRef<(grain: AdminDashboardGrain) => Promise<void>>(async () => {});
   const activeSectionRef = useRef(activeSection);
   const dashboardGrainRef = useRef(dashboardGrain);
-
-  useEffect(() => {
-    setContactDraft(loadContactSettings());
-  }, []);
-
-  const readLegacyHomeContent = useCallback((): HomePageContent => {
-    if (typeof window === "undefined") {
-      return cloneHomePageContent(defaultHomePageContent);
-    }
-
-    const legacyBanners =
-      parseStorageJson<HomeBanner[]>(window.localStorage.getItem(HOME_BANNERS_STORAGE_KEY)) ||
-      parseStorageJson<HomeBanner[]>(
-        window.localStorage.getItem(LEGACY_HOME_BANNERS_V1_KEY)
-      );
-    const legacyPopup = parseStorageJson<PromoPopupSettings>(
-      window.localStorage.getItem(PROMO_POPUP_STORAGE_KEY)
-    );
-    const legacyNotifications = parseStorageJson<NotificationSettings>(
-      window.localStorage.getItem(NOTIFICATION_SETTINGS_STORAGE_KEY)
-    );
-
-    const merged: Partial<HomePageContent> = {
-      ...defaultHomePageContent,
-      ...(Array.isArray(legacyBanners) ? { banners: legacyBanners } : {}),
-      ...(legacyPopup ? { promoPopup: legacyPopup } : {}),
-      ...(legacyNotifications ? { notifications: legacyNotifications } : {})
-    };
-
-    return resolveHomePageContent(JSON.stringify(merged));
-  }, []);
-
-  const mergeHomeGroup = (
-    base: HomePageContent,
-    source: HomePageContent,
-    group: HomeGroupKey
-  ): HomePageContent => {
-    switch (group) {
-      case "banners":
-        return { ...base, banners: source.banners.map((item) => ({ ...item })) };
-      case "intro":
-        return { ...base, intro: { ...source.intro } };
-      case "spotlights":
-        return {
-          ...base,
-          spotlights: source.spotlights.map((item) => ({
-            ...item,
-            bullets: [...item.bullets]
-          }))
-        };
-      case "features":
-        return { ...base, features: source.features.map((item) => ({ ...item })) };
-      case "aboutTeaser":
-        return { ...base, aboutTeaser: { ...source.aboutTeaser } };
-      case "promoPopup":
-        return {
-          ...base,
-          promoPopup: {
-            ...source.promoPopup,
-            programs: source.promoPopup.programs.map((item) => ({ ...item })),
-            coupons: source.promoPopup.coupons.map((item) => ({ ...item }))
-          }
-        };
-      case "notifications":
-        return {
-          ...base,
-          notifications: {
-            items: source.notifications.items.map((item) => ({ ...item }))
-          }
-        };
-      default:
-        return base;
-    }
-  };
+  const homeDraftRef = useRef<HomePageContent>(cloneHomePageContent(defaultHomePageContent));
+  const homeDirtyMapRef = useRef<Record<HomeGroupKey, boolean>>(createHomeDirtyMap());
+  const homePageIdRef = useRef<number | null>(null);
+  const homeDraftSaveTimerRef = useRef<number | null>(null);
+  const homeDraftSaveInFlightRef = useRef(false);
+  const homeDraftSaveQueuedRef = useRef(false);
 
   const loadAll = useCallback(async () => {
     setError("");
@@ -527,6 +443,7 @@ export default function AdminDashboardPage() {
       setQnA(qnaData);
       setOrders(orderData);
       setSettings(paymentData);
+      setPages(pageData);
 
       const aboutPage = pageData.find((item) => item.slug === "about-us");
       setAboutPageId(aboutPage?.id ?? null);
@@ -540,28 +457,34 @@ export default function AdminDashboardPage() {
       const hasUnsavedHomeChanges = Object.values(homeDirtyMap).some(Boolean);
       let homePage = pageData.find((item) => item.slug === "home");
       if (!homePage) {
-        const migrated = readLegacyHomeContent();
         homePage = await createAdminPage({
           title: "Trang chủ",
           slug: "home",
-          content: JSON.stringify(migrated)
+          content: JSON.stringify(defaultHomePageContent)
         });
       }
 
       setHomePageId(homePage.id);
       if (!hasUnsavedHomeChanges) {
-        const resolvedHome = resolveHomePageContent(homePage.content);
-        setHomeSnapshot(cloneHomePageContent(resolvedHome));
-        setHomeDraft(cloneHomePageContent(resolvedHome));
+        const resolvedPublishedHome = resolveHomePageContent(homePage.content);
+        const resolvedDraftHome = resolveHomePageContent(
+          homePage.draft_content || homePage.content
+        );
+        setHomeSnapshot(cloneHomePageContent(resolvedPublishedHome));
+        setHomeDraft(cloneHomePageContent(resolvedDraftHome));
         setHomeDirtyMap(createHomeDirtyMap());
-        setHomeSavedAtMap(createHomeSavedAtMap(homePage.updated_at || null));
+        setHomeDraftSaveState("idle");
+        setHomeDraftSaveError("");
+        setHomeDraftSavedAt(homePage.updated_at || null);
+        setHomeHistoryPast([]);
+        setHomeHistoryFuture([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể tải dữ liệu quản trị.");
     } finally {
       setLoading(false);
     }
-  }, [aboutDirty, homeDirtyMap, readLegacyHomeContent]);
+  }, [aboutDirty, homeDirtyMap]);
 
   const loadDashboard = useCallback(async (grain: AdminDashboardGrain) => {
     setDashboardLoading(true);
@@ -640,6 +563,18 @@ export default function AdminDashboardPage() {
   }, [dashboardGrain]);
 
   useEffect(() => {
+    homeDraftRef.current = homeDraft;
+  }, [homeDraft]);
+
+  useEffect(() => {
+    homeDirtyMapRef.current = homeDirtyMap;
+  }, [homeDirtyMap]);
+
+  useEffect(() => {
+    homePageIdRef.current = homePageId;
+  }, [homePageId]);
+
+  useEffect(() => {
     const isFormField = (element: EventTarget | null): element is HTMLElement => {
       return (
         element instanceof HTMLElement &&
@@ -690,34 +625,174 @@ export default function AdminDashboardPage() {
     group: HomeGroupKey,
     updater: (prev: HomePageContent) => HomePageContent
   ) => {
-    setHomeDraft((prev) => updater(prev));
-    setHomeDirtyMap((prev) => ({ ...prev, [group]: true }));
+    setHomeDraft((prev) => {
+      const next = updater(prev);
+      if (JSON.stringify(prev) !== JSON.stringify(next)) {
+        setHomeHistoryPast((past) => [...past.slice(-49), cloneHomePageContent(prev)]);
+        setHomeHistoryFuture([]);
+      }
+      return next;
+    });
+    setHomeDraftSaveState("idle");
+    setHomeDraftSaveError("");
+    setHomeDirtyMap((prev) => {
+      const next = { ...prev, [group]: true };
+      homeDirtyMapRef.current = next;
+      return next;
+    });
   };
 
-  const saveHomeGroup = async (group: HomeGroupKey) => {
-    setError("");
+  const persistHomeDraft = useCallback(async () => {
+    if (!Object.values(homeDirtyMapRef.current).some(Boolean)) {
+      return;
+    }
+    if (homeDraftSaveInFlightRef.current) {
+      homeDraftSaveQueuedRef.current = true;
+      return;
+    }
+    homeDraftSaveInFlightRef.current = true;
+    setHomeDraftSaveState("saving");
+    setHomeDraftSaveError("");
     try {
-      const merged = mergeHomeGroup(homeSnapshot, homeDraft, group);
       const payload = {
         title: "Trang chủ",
         slug: "home",
-        content: JSON.stringify(merged)
+        content: JSON.stringify(homeDraftRef.current),
+        save_mode: "draft" as const
       };
-      const saved = homePageId
-        ? await updateAdminPage(homePageId, payload)
+      const saved = homePageIdRef.current
+        ? await updateAdminPage(homePageIdRef.current, payload)
         : await createAdminPage(payload);
-      const resolved = resolveHomePageContent(saved.content);
       setHomePageId(saved.id);
-      setHomeSnapshot(cloneHomePageContent(resolved));
-      setHomeDraft((prev) => mergeHomeGroup(prev, resolved, group));
-      setHomeDirtyMap((prev) => ({ ...prev, [group]: false }));
-      setHomeSavedAtMap((prev) => ({
-        ...prev,
-        [group]: saved.updated_at || new Date().toLocaleString("vi-VN")
-      }));
+      const savedAt = saved.updated_at || new Date().toLocaleString("vi-VN");
+      setHomeDraftSavedAt(savedAt);
+      setHomeDirtyMap(createHomeDirtyMap());
+      homeDirtyMapRef.current = createHomeDirtyMap();
+      setHomeDraftSaveState("saved");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể lưu nội dung trang chủ.");
+      setHomeDraftSaveState("error");
+      setHomeDraftSaveError(
+        err instanceof Error ? err.message : "Không thể lưu nháp trang chủ."
+      );
+    } finally {
+      homeDraftSaveInFlightRef.current = false;
+      if (homeDraftSaveQueuedRef.current) {
+        homeDraftSaveQueuedRef.current = false;
+        void persistHomeDraft();
+      }
     }
+  }, []);
+
+  const scheduleHomeDraftSave = useCallback(() => {
+    if (homeDraftSaveTimerRef.current) {
+      window.clearTimeout(homeDraftSaveTimerRef.current);
+    }
+    homeDraftSaveTimerRef.current = window.setTimeout(() => {
+      homeDraftSaveTimerRef.current = null;
+      void persistHomeDraft();
+    }, 800);
+  }, [persistHomeDraft]);
+
+  const flushHomeDraftSave = useCallback(() => {
+    if (homeDraftSaveTimerRef.current) {
+      window.clearTimeout(homeDraftSaveTimerRef.current);
+      homeDraftSaveTimerRef.current = null;
+    }
+    void persistHomeDraft();
+  }, [persistHomeDraft]);
+
+  const publishHomeDraft = async () => {
+    if (homeDraftSaveTimerRef.current) {
+      window.clearTimeout(homeDraftSaveTimerRef.current);
+      homeDraftSaveTimerRef.current = null;
+    }
+    setError("");
+    setHomeDraftSaveError("");
+    try {
+      const payload = {
+        title: "Trang chủ",
+        slug: "home",
+        content: JSON.stringify(homeDraftRef.current),
+        save_mode: "publish" as const
+      };
+      const saved = homePageIdRef.current
+        ? await updateAdminPage(homePageIdRef.current, payload)
+        : await createAdminPage(payload);
+      setHomePageId(saved.id);
+      const resolvedPublished = resolveHomePageContent(saved.content);
+      const resolvedDraft = resolveHomePageContent(saved.draft_content || saved.content);
+      const nextDraft = cloneHomePageContent(resolvedDraft);
+      setHomeSnapshot(cloneHomePageContent(resolvedPublished));
+      setHomeDraft(nextDraft);
+      homeDraftRef.current = nextDraft;
+      setHomeDirtyMap(createHomeDirtyMap());
+      homeDirtyMapRef.current = createHomeDirtyMap();
+      setHomeDraftSavedAt(saved.updated_at || null);
+      setHomeDraftSaveState("saved");
+      setHomeHistoryPast([]);
+      setHomeHistoryFuture([]);
+    } catch (err) {
+      setHomeDraftSaveState("error");
+      setHomeDraftSaveError(
+        err instanceof Error ? err.message : "Không thể publish trang chủ."
+      );
+    }
+  };
+
+  const revertHomeDraft = () => {
+    const reverted = cloneHomePageContent(homeSnapshot);
+    setHomeDraft(reverted);
+    homeDraftRef.current = reverted;
+    setHomeHistoryPast([]);
+    setHomeHistoryFuture([]);
+    const dirtyAll = createHomeDirtyMap(true);
+    setHomeDirtyMap(dirtyAll);
+    homeDirtyMapRef.current = dirtyAll;
+    setHomeDraftSaveState("idle");
+    setHomeDraftSaveError("");
+    void persistHomeDraft();
+  };
+
+  const undoHomeDraft = () => {
+    setHomeHistoryPast((past) => {
+      if (!past.length) {
+        return past;
+      }
+      const previous = cloneHomePageContent(past[past.length - 1] as HomePageContent);
+      setHomeHistoryFuture((future) => [
+        cloneHomePageContent(homeDraftRef.current),
+        ...future
+      ].slice(0, 50));
+      setHomeDraft(previous);
+      homeDraftRef.current = previous;
+      const dirtyAll = createHomeDirtyMap(true);
+      setHomeDirtyMap(dirtyAll);
+      homeDirtyMapRef.current = dirtyAll;
+      setHomeDraftSaveState("idle");
+      setHomeDraftSaveError("");
+      return past.slice(0, -1);
+    });
+  };
+
+  const redoHomeDraft = () => {
+    setHomeHistoryFuture((future) => {
+      if (!future.length) {
+        return future;
+      }
+      const next = cloneHomePageContent(future[0] as HomePageContent);
+      setHomeHistoryPast((past) => [
+        ...past.slice(-49),
+        cloneHomePageContent(homeDraftRef.current)
+      ]);
+      setHomeDraft(next);
+      homeDraftRef.current = next;
+      const dirtyAll = createHomeDirtyMap(true);
+      setHomeDirtyMap(dirtyAll);
+      homeDirtyMapRef.current = dirtyAll;
+      setHomeDraftSaveState("idle");
+      setHomeDraftSaveError("");
+      return future.slice(1);
+    });
   };
 
   const handleHomeBannersChange = (next: HomeBanner[]) => {
@@ -793,7 +868,7 @@ export default function AdminDashboardPage() {
     }
 
     const label = target.title.trim() || `Block ${index + 1}`;
-    const confirmed = window.confirm(`Xóa block "${label}"?`);
+    const confirmed = window.confirm(`XÃ³a block "${label}"?`);
     if (!confirmed) {
       return;
     }
@@ -826,15 +901,15 @@ export default function AdminDashboardPage() {
     }));
   };
 
-  const handleContactChange = (patch: Partial<ContactSettings>) => {
-    setContactDraft((prev) => ({ ...prev, ...patch }));
-    setContactDirty(true);
+  const handleHomeContactChange = (patch: Partial<ContactSettings>) => {
+    updateHomeGroup("contactSettings", (prev) => ({
+      ...prev,
+      contactSettings: { ...prev.contactSettings, ...patch }
+    }));
   };
 
   const handleContactSave = () => {
-    saveContactSettings(contactDraft);
-    setContactDirty(false);
-    setContactSavedAt(new Date().toLocaleString("vi-VN"));
+    flushHomeDraftSave();
   };
 
   const handlePromoPopupChange = (patch: Partial<PromoPopupSettings>) => {
@@ -886,6 +961,26 @@ export default function AdminDashboardPage() {
     }));
   };
 
+  useEffect(() => {
+    if (!Object.values(homeDirtyMap).some(Boolean)) {
+      return;
+    }
+    scheduleHomeDraftSave();
+  }, [homeDirtyMap, homeDraft, scheduleHomeDraftSave]);
+
+  useEffect(() => {
+    return () => {
+      if (homeDraftSaveTimerRef.current) {
+        window.clearTimeout(homeDraftSaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  const homeHasUnpublishedChanges = useMemo(
+    () => JSON.stringify(homeDraft) !== JSON.stringify(homeSnapshot),
+    [homeDraft, homeSnapshot]
+  );
+
   const pendingOrders = useMemo(
     () => orders.filter((order) => order.status === "pending").length,
     [orders]
@@ -921,7 +1016,8 @@ export default function AdminDashboardPage() {
       navOrderSaving ||
       uiPreferencesSaving ||
       aboutDirty ||
-      contactDirty ||
+      homeHasUnpublishedChanges ||
+      homeDraftSaveState === "saving" ||
       Object.values(homeDirtyMap).some(Boolean),
     [
       navOrderDirty,
@@ -929,7 +1025,8 @@ export default function AdminDashboardPage() {
       navOrderSaving,
       uiPreferencesSaving,
       aboutDirty,
-      contactDirty,
+      homeHasUnpublishedChanges,
+      homeDraftSaveState,
       homeDirtyMap
     ]
   );
@@ -1079,6 +1176,59 @@ export default function AdminDashboardPage() {
     void persistUIPreferences({ orders_columns: normalizedColumns });
   };
 
+  const homeEditorLinkOptions = useMemo<AdminLinkOption[]>(() => {
+    const presets: AdminLinkOption[] = [
+      { value: "/", label: "Trang chủ", group: "Preset" },
+      { value: "/collections/all", label: "Tất cả sản phẩm", group: "Preset" },
+      { value: "/pages/lien-he", label: "Trang liên hệ", group: "Preset" },
+      { value: "/pages/about-us", label: "Trang giới thiệu", group: "Preset" },
+      { value: "/blogs/news", label: "Blog tin tức", group: "Preset" },
+      { value: "/pages/hoi-dap-cung-nha-nong", label: "Hỏi đáp cùng nhà nông", group: "Preset" }
+    ];
+
+    const pageOptions = pages
+      .filter((item) => item.slug && item.slug !== "home")
+      .map((item) => ({
+        value: `/pages/${item.slug}`,
+        label: item.title || item.slug,
+        group: "Pages"
+      }));
+
+    const productOptions = products
+      .filter((item) => item.slug)
+      .map((item) => ({
+        value: `/products/${item.slug}`,
+        label: item.name || item.slug,
+        group: "Products"
+      }));
+
+    const postOptions = posts
+      .filter((item) => item.slug)
+      .map((item) => ({
+        value: `/blogs/news/${item.slug}`,
+        label: item.title || item.slug,
+        group: "Posts"
+      }));
+
+    const categoryOptions = categories
+      .filter((item) => item.slug)
+      .map((item) => ({
+        value: `/collections/${item.slug}`,
+        label: item.name || item.slug,
+        group: "Categories"
+      }));
+
+    const deduped = new Map<string, AdminLinkOption>();
+    [...presets, ...pageOptions, ...productOptions, ...postOptions, ...categoryOptions].forEach(
+      (item) => {
+        if (!deduped.has(item.value)) {
+          deduped.set(item.value, item);
+        }
+      }
+    );
+    return Array.from(deduped.values());
+  }, [categories, pages, posts, products]);
+
   const navItems = useMemo<AdminNavItem[]>(
     () => buildOrderedAdminNavItems(navOrderDraft),
     [navOrderDraft]
@@ -1197,7 +1347,7 @@ export default function AdminDashboardPage() {
           pendingPayments={pendingPayments}
           totalRevenue={totalRevenue}
           banners={homeDraft.banners}
-          contactSettings={contactDraft}
+          contactSettings={homeDraft.contactSettings}
           dashboard={dashboard}
           dashboardLoading={dashboardLoading}
           dashboardError={dashboardError}
@@ -1209,11 +1359,21 @@ export default function AdminDashboardPage() {
       )}
 
       {activeSection === "home" && (
-        <AdminHomeSection
+        <AdminHomeVisualEditor
           density={uiPreferencesDraft.density}
           content={homeDraft}
-          dirtyMap={homeDirtyMap}
-          savedAtMap={homeSavedAtMap}
+          saveState={homeDraftSaveState}
+          saveError={homeDraftSaveError}
+          savedAt={homeDraftSavedAt}
+          hasUnpublishedChanges={homeHasUnpublishedChanges}
+          canUndo={homeHistoryPast.length > 0}
+          canRedo={homeHistoryFuture.length > 0}
+          linkOptions={homeEditorLinkOptions}
+          onUndo={undoHomeDraft}
+          onRedo={redoHomeDraft}
+          onRevert={revertHomeDraft}
+          onPublish={() => void publishHomeDraft()}
+          onFlushDraft={flushHomeDraftSave}
           onBannersChange={handleHomeBannersChange}
           onIntroChange={handleHomeIntroChange}
           onSpotlightChange={handleHomeSpotlightChange}
@@ -1221,13 +1381,11 @@ export default function AdminDashboardPage() {
           onSpotlightAdd={handleHomeSpotlightAdd}
           onSpotlightDelete={handleHomeSpotlightDelete}
           onSpotlightMove={handleHomeSpotlightMove}
-          onSpotlightReorder={handleHomeSpotlightReorder}
           onFeatureChange={handleHomeFeatureChange}
           onAboutTeaserChange={handleHomeAboutTeaserChange}
           onPopupChange={handlePromoPopupChange}
           onNotificationChange={handleNotificationChange}
-          onSaveGroup={saveHomeGroup}
-          setError={setError}
+          onContactChange={handleHomeContactChange}
         />
       )}
 
@@ -1297,875 +1455,15 @@ export default function AdminDashboardPage() {
       {activeSection === "contact" && (
         <AdminContactSection
           density={uiPreferencesDraft.density}
-          value={contactDraft}
-          onChange={handleContactChange}
+          value={homeDraft.contactSettings}
+          onChange={handleHomeContactChange}
           onSave={handleContactSave}
-          isDirty={contactDirty}
-          savedAt={contactSavedAt}
+          isDirty={homeDirtyMap.contactSettings || homeHasUnpublishedChanges}
+          savedAt={homeDraftSavedAt}
         />
       )}
 
     </AdminShell>
-  );
-}
-
-function AdminHomeSection({
-  density,
-  content,
-  dirtyMap,
-  savedAtMap,
-  onBannersChange,
-  onIntroChange,
-  onSpotlightChange,
-  onSpotlightBulletsChange,
-  onSpotlightAdd,
-  onSpotlightDelete,
-  onSpotlightMove,
-  onSpotlightReorder,
-  onFeatureChange,
-  onAboutTeaserChange,
-  onPopupChange,
-  onNotificationChange,
-  onSaveGroup,
-  setError
-}: {
-  density: AdminDensityMode;
-  content: HomePageContent;
-  dirtyMap: Record<HomeGroupKey, boolean>;
-  savedAtMap: Record<HomeGroupKey, string | null>;
-  onBannersChange: (next: HomeBanner[]) => void;
-  onIntroChange: (patch: Partial<HomePageContent["intro"]>) => void;
-  onSpotlightChange: (
-    index: number,
-    patch: Partial<HomePageContent["spotlights"][number]>
-  ) => void;
-  onSpotlightBulletsChange: (index: number, value: string) => void;
-  onSpotlightAdd: () => void;
-  onSpotlightDelete: (index: number) => void;
-  onSpotlightMove: (index: number, direction: SpotlightMoveDirection) => void;
-  onSpotlightReorder: (fromIndex: number, toIndex: number) => void;
-  onFeatureChange: (
-    index: number,
-    patch: Partial<HomePageContent["features"][number]>
-  ) => void;
-  onAboutTeaserChange: (patch: Partial<HomePageContent["aboutTeaser"]>) => void;
-  onPopupChange: (patch: Partial<PromoPopupSettings>) => void;
-  onNotificationChange: (next: NotificationSettings) => void;
-  onSaveGroup: (group: HomeGroupKey) => void | Promise<void>;
-  setError: (value: string) => void;
-}) {
-  const isCompact = density === "compact";
-  const homePanelClass = panelByDensity(density);
-  const sectionStackClass = isCompact ? "space-y-5" : "space-y-6";
-  const spotlightsStackClass = isCompact ? "mt-4 space-y-5" : "mt-5 space-y-6";
-  const tabs: { id: HomeGroupKey; label: string; icon: typeof Home }[] = [
-    { id: "banners", label: "Banner", icon: ImageIcon },
-    { id: "intro", label: "Định hướng", icon: Home },
-    { id: "spotlights", label: "Banner sản phẩm", icon: Layers },
-    { id: "features", label: "Ưu điểm", icon: Bell },
-    { id: "aboutTeaser", label: "Giới thiệu", icon: BookOpen },
-    { id: "promoPopup", label: "Popup", icon: Megaphone },
-    { id: "notifications", label: "Thông báo", icon: Bell }
-  ];
-  const [activeTab, setActiveTab] = useState<HomeGroupKey>("banners");
-  const [draggingSpotlightIndex, setDraggingSpotlightIndex] = useState<number | null>(
-    null
-  );
-  const [dragOverSpotlightIndex, setDragOverSpotlightIndex] = useState<number | null>(
-    null
-  );
-
-  const clearSpotlightDragState = () => {
-    setDraggingSpotlightIndex(null);
-    setDragOverSpotlightIndex(null);
-  };
-
-  const handleSpotlightDragStart = (
-    event: DragEvent<HTMLButtonElement>,
-    index: number
-  ) => {
-    setDraggingSpotlightIndex(index);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", String(index));
-  };
-
-  const handleSpotlightDragOver = (event: DragEvent<HTMLDivElement>, index: number) => {
-    if (draggingSpotlightIndex === null || draggingSpotlightIndex === index) {
-      return;
-    }
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    if (dragOverSpotlightIndex !== index) {
-      setDragOverSpotlightIndex(index);
-    }
-  };
-
-  const handleSpotlightDrop = (event: DragEvent<HTMLDivElement>, index: number) => {
-    event.preventDefault();
-    const fromIndex =
-      draggingSpotlightIndex ?? Number.parseInt(event.dataTransfer.getData("text/plain"), 10);
-    if (Number.isInteger(fromIndex) && fromIndex >= 0 && fromIndex !== index) {
-      onSpotlightReorder(fromIndex, index);
-    }
-    clearSpotlightDragState();
-  };
-
-  const patchBanner = (index: number, patch: Partial<HomeBanner>) => {
-    if (!content.banners[index]) {
-      return;
-    }
-    onBannersChange(
-      content.banners.map((banner, bannerIndex) =>
-        bannerIndex === index ? { ...banner, ...patch } : banner
-      )
-    );
-  };
-
-  const patchSpotlight = (
-    index: number,
-    patch: Partial<HomePageContent["spotlights"][number]>
-  ) => {
-    if (!content.spotlights[index]) {
-      return;
-    }
-    onSpotlightChange(index, patch);
-  };
-
-  const firstBanner = content.banners[0];
-  const firstSpotlight = content.spotlights[0];
-  const secondSpotlight = content.spotlights[1];
-
-  const renderSaveActions = (group: HomeGroupKey, label: string) => (
-    <div className="flex flex-wrap items-center gap-2">
-      {savedAtMap[group] ? (
-        <span className="text-base text-slate-500 md:text-sm">Đã lưu: {savedAtMap[group]}</span>
-      ) : null}
-      <Button
-        onClick={() => void onSaveGroup(group)}
-        disabled={!dirtyMap[group]}
-        data-testid={`admin-home-save-${group}`}
-        className={primaryActionClass}
-      >
-        {label}
-      </Button>
-    </div>
-  );
-
-  return (
-    <div className={sectionStackClass}>
-      <div className={homePanelClass}>
-        <AdminSectionHeader
-          title="Trang chủ"
-          description="Quản lý toàn bộ nội dung hiển thị trên homepage trong một nơi."
-        />
-        <div className="mt-4 flex flex-wrap gap-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = tab.id === activeTab;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                data-testid={`admin-home-tab-${tab.id}`}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-base font-semibold transition md:text-sm cursor-pointer ${
-                  active
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                    : "border-slate-200 text-slate-600 hover:border-[var(--color-primary)]/40"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {tab.label}
-                {dirtyMap[tab.id] ? <span className="text-amber-600">*</span> : null}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-slate-900">Preview trực tiếp trang chủ</p>
-            <p className="text-xs text-slate-500">
-              Bấm vào section và chỉnh ngay trên khối preview.
-            </p>
-          </div>
-          <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr_1fr]">
-            <button
-              type="button"
-              onClick={() => setActiveTab("banners")}
-              className={`group overflow-hidden rounded-xl border text-left transition ${
-                activeTab === "banners"
-                  ? "border-[var(--color-primary)] bg-white shadow-sm"
-                  : "border-slate-200 bg-white hover:border-[var(--color-primary)]/40"
-              }`}
-              data-testid="admin-home-live-banner"
-            >
-              <div className="relative h-36 w-full bg-slate-200">
-                {firstBanner ? (
-                  <Image
-                    src={firstBanner.desktopSrc}
-                    alt={firstBanner.alt || firstBanner.title}
-                    fill
-                    className="object-cover transition duration-300 group-hover:scale-[1.02]"
-                    sizes="(max-width: 1280px) 100vw, 420px"
-                  />
-                ) : null}
-                <div className="absolute inset-0 bg-gradient-to-tr from-black/55 via-black/25 to-transparent p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
-                    Banner chính
-                  </p>
-                  <p className="mt-2 line-clamp-2 text-base font-semibold text-white">
-                    {firstBanner?.title || "Chưa có banner"}
-                  </p>
-                </div>
-              </div>
-              {firstBanner ? (
-                <div className="space-y-2 p-3">
-                  <input
-                    className={inputClass}
-                    value={firstBanner.title}
-                    onChange={(event) => patchBanner(0, { title: event.target.value })}
-                    onClick={(event) => event.stopPropagation()}
-                    placeholder="Tiêu đề banner"
-                  />
-                  <input
-                    className={inputClass}
-                    value={firstBanner.ctaLabel}
-                    onChange={(event) => patchBanner(0, { ctaLabel: event.target.value })}
-                    onClick={(event) => event.stopPropagation()}
-                    placeholder="Nhãn CTA"
-                  />
-                </div>
-              ) : null}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("intro")}
-              className={`rounded-xl border p-4 text-left transition ${
-                activeTab === "intro"
-                  ? "border-[var(--color-primary)] bg-white shadow-sm"
-                  : "border-slate-200 bg-white hover:border-[var(--color-primary)]/40"
-              }`}
-              data-testid="admin-home-live-intro"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Định hướng
-              </p>
-              <input
-                className={`${inputClass} mt-2`}
-                value={content.intro.headline}
-                onChange={(event) => onIntroChange({ headline: event.target.value })}
-                onClick={(event) => event.stopPropagation()}
-                placeholder="Headline"
-              />
-              <textarea
-                className={`${textareaClass} mt-2 min-h-[88px]`}
-                value={content.intro.description}
-                onChange={(event) => onIntroChange({ description: event.target.value })}
-                onClick={(event) => event.stopPropagation()}
-                placeholder="Mô tả định hướng"
-              />
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <input
-                  className={inputClass}
-                  value={content.intro.secondaryCtaLabel}
-                  onChange={(event) =>
-                    onIntroChange({ secondaryCtaLabel: event.target.value })
-                  }
-                  onClick={(event) => event.stopPropagation()}
-                  placeholder="CTA phụ"
-                />
-                <input
-                  className={inputClass}
-                  value={content.intro.primaryCtaLabel}
-                  onChange={(event) => onIntroChange({ primaryCtaLabel: event.target.value })}
-                  onClick={(event) => event.stopPropagation()}
-                  placeholder="CTA chính"
-                />
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("spotlights")}
-              className={`rounded-xl border p-4 text-left transition ${
-                activeTab === "spotlights"
-                  ? "border-[var(--color-primary)] bg-white shadow-sm"
-                  : "border-slate-200 bg-white hover:border-[var(--color-primary)]/40"
-              }`}
-              data-testid="admin-home-live-spotlights"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Banner sản phẩm
-              </p>
-              {[firstSpotlight, secondSpotlight]
-                .filter(Boolean)
-                .map((spotlight, index) => (
-                  <div key={`live-spotlight-${spotlight?.id}`} className="mt-2 rounded-lg border border-slate-200 p-2">
-                    <input
-                      className={inputClass}
-                      value={spotlight?.title || ""}
-                      onChange={(event) =>
-                        patchSpotlight(index, { title: event.target.value })
-                      }
-                      onClick={(event) => event.stopPropagation()}
-                      placeholder={`Tiêu đề block ${index + 1}`}
-                    />
-                    <input
-                      className={`${inputClass} mt-2`}
-                      value={spotlight?.ctaLabel || ""}
-                      onChange={(event) =>
-                        patchSpotlight(index, { ctaLabel: event.target.value })
-                      }
-                      onClick={(event) => event.stopPropagation()}
-                      placeholder="Nhãn CTA"
-                    />
-                  </div>
-                ))}
-              {content.spotlights.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-500">Chưa có block spotlight.</p>
-              ) : null}
-            </button>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <button
-              type="button"
-              onClick={() => setActiveTab("features")}
-              className={`rounded-xl border p-3 text-left transition ${
-                activeTab === "features"
-                  ? "border-[var(--color-primary)] bg-white shadow-sm"
-                  : "border-slate-200 bg-white hover:border-[var(--color-primary)]/40"
-              }`}
-              data-testid="admin-home-live-features"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Ưu điểm
-              </p>
-              <input
-                className={`${inputClass} mt-2`}
-                value={content.features[0]?.title || ""}
-                onChange={(event) => onFeatureChange(0, { title: event.target.value })}
-                onClick={(event) => event.stopPropagation()}
-                placeholder="Tiêu đề ưu điểm 1"
-              />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("aboutTeaser")}
-              className={`rounded-xl border p-3 text-left transition ${
-                activeTab === "aboutTeaser"
-                  ? "border-[var(--color-primary)] bg-white shadow-sm"
-                  : "border-slate-200 bg-white hover:border-[var(--color-primary)]/40"
-              }`}
-              data-testid="admin-home-live-about"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Giới thiệu nhanh
-              </p>
-              <input
-                className={`${inputClass} mt-2`}
-                value={content.aboutTeaser.title}
-                onChange={(event) => onAboutTeaserChange({ title: event.target.value })}
-                onClick={(event) => event.stopPropagation()}
-                placeholder="Tiêu đề about teaser"
-              />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("promoPopup")}
-              className={`rounded-xl border p-3 text-left transition ${
-                activeTab === "promoPopup"
-                  ? "border-[var(--color-primary)] bg-white shadow-sm"
-                  : "border-slate-200 bg-white hover:border-[var(--color-primary)]/40"
-              }`}
-              data-testid="admin-home-live-popup"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Popup ưu đãi
-              </p>
-              <input
-                className={`${inputClass} mt-2`}
-                value={content.promoPopup.title}
-                onChange={(event) => onPopupChange({ title: event.target.value })}
-                onClick={(event) => event.stopPropagation()}
-                placeholder="Tiêu đề popup"
-              />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("notifications")}
-              className={`rounded-xl border p-3 text-left transition ${
-                activeTab === "notifications"
-                  ? "border-[var(--color-primary)] bg-white shadow-sm"
-                  : "border-slate-200 bg-white hover:border-[var(--color-primary)]/40"
-              }`}
-              data-testid="admin-home-live-notifications"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Thông báo
-              </p>
-              <input
-                className={`${inputClass} mt-2`}
-                value={content.notifications.items[0]?.title || ""}
-                onChange={(event) => {
-                  const first = content.notifications.items[0];
-                  if (!first) return;
-                  onNotificationChange({
-                    items: [{ ...first, title: event.target.value }, ...content.notifications.items.slice(1)]
-                  });
-                }}
-                onClick={(event) => event.stopPropagation()}
-                placeholder="Thông báo đầu tiên"
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {activeTab === "banners" ? (
-        <AdminBannersSection
-          banners={content.banners}
-          onChange={onBannersChange}
-          onSave={() => void onSaveGroup("banners")}
-          isDirty={dirtyMap.banners}
-          savedAt={savedAtMap.banners}
-          setError={setError}
-        />
-      ) : null}
-
-      {activeTab === "intro" ? (
-        <div className={homePanelClass}>
-          <AdminSectionHeader
-            title="Định hướng phát triển"
-            description="Khối giới thiệu lớn ngay sau slider trang chủ."
-            actions={renderSaveActions("intro", "Lưu định hướng")}
-          />
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            <AdminField label="Nhãn đầu mục">
-              <input
-                className={inputClass}
-                value={content.intro.eyebrow}
-                onChange={(event) => onIntroChange({ eyebrow: event.target.value })}
-              />
-            </AdminField>
-            <AdminField label="Tên thương hiệu">
-              <input
-                className={inputClass}
-                value={content.intro.title}
-                onChange={(event) => onIntroChange({ title: event.target.value })}
-              />
-            </AdminField>
-            <AdminField label="Tiêu đề chính" helper="Dùng headline nổi bật.">
-              <input
-                className={inputClass}
-                value={content.intro.headline}
-                onChange={(event) => onIntroChange({ headline: event.target.value })}
-              />
-            </AdminField>
-            <AdminField label="CTA phụ label">
-              <input
-                className={inputClass}
-                data-testid="admin-intro-secondary-cta-label"
-                value={content.intro.secondaryCtaLabel}
-                onChange={(event) => onIntroChange({ secondaryCtaLabel: event.target.value })}
-              />
-            </AdminField>
-            <AdminField label="CTA chính label">
-              <input
-                className={inputClass}
-                data-testid="admin-intro-primary-cta-label"
-                value={content.intro.primaryCtaLabel}
-                onChange={(event) => onIntroChange({ primaryCtaLabel: event.target.value })}
-              />
-            </AdminField>
-            <AdminField label="Mô tả" helper="Nội dung dài của khối định hướng.">
-              <textarea
-                className={textareaClass}
-                rows={8}
-                value={content.intro.description}
-                onChange={(event) => onIntroChange({ description: event.target.value })}
-              />
-            </AdminField>
-            <div className="grid gap-4">
-              <AdminField label="CTA phụ link">
-                <input
-                  className={inputClass}
-                  data-testid="admin-intro-secondary-cta-link"
-                  value={content.intro.secondaryCtaHref}
-                  onChange={(event) => onIntroChange({ secondaryCtaHref: event.target.value })}
-                />
-              </AdminField>
-              <AdminField label="CTA chính link">
-                <input
-                  className={inputClass}
-                  data-testid="admin-intro-primary-cta-link"
-                  value={content.intro.primaryCtaHref}
-                  onChange={(event) => onIntroChange({ primaryCtaHref: event.target.value })}
-                />
-              </AdminField>
-              <AdminField label="Ảnh chính">
-                <input
-                  className={inputClass}
-                  value={content.intro.imageSrc}
-                  onChange={(event) => onIntroChange({ imageSrc: event.target.value })}
-                />
-              </AdminField>
-              <AdminField label="Alt ảnh">
-                <input
-                  className={inputClass}
-                  value={content.intro.imageAlt}
-                  onChange={(event) => onIntroChange({ imageAlt: event.target.value })}
-                />
-              </AdminField>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "spotlights" ? (
-        <div className={homePanelClass}>
-          <AdminSectionHeader
-            title="Banner sản phẩm"
-            description={`${content.spotlights.length} block sản phẩm trên homepage.`}
-            actions={
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={onSpotlightAdd}
-                  data-testid="admin-spotlight-add"
-                  className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
-                >
-                  Thêm block
-                </Button>
-                {savedAtMap.spotlights ? (
-                  <span className="text-base text-slate-500 md:text-sm">
-                    Đã lưu: {savedAtMap.spotlights}
-                  </span>
-                ) : null}
-                <Button
-                  onClick={() => void onSaveGroup("spotlights")}
-                  disabled={!dirtyMap.spotlights}
-                  data-testid="admin-spotlight-save"
-                  className={primaryActionClass}
-                >
-                  Lưu banner sản phẩm
-                </Button>
-              </div>
-            }
-          />
-          <div className={spotlightsStackClass} data-testid="admin-spotlights-list">
-            {content.spotlights.map((spotlight, index) => (
-              <div
-                key={spotlight.id}
-                data-testid="admin-spotlight-card"
-                className={`rounded-xl border p-4 transition-colors ${
-                  dragOverSpotlightIndex === index
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
-                    : "border-slate-200"
-                } ${draggingSpotlightIndex === index ? "opacity-70" : ""}`}
-                onDragOver={(event) => handleSpotlightDragOver(event, index)}
-                onDrop={(event) => handleSpotlightDrop(event, index)}
-                onDragLeave={() => {
-                  if (dragOverSpotlightIndex === index) {
-                    setDragOverSpotlightIndex(null);
-                  }
-                }}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-semibold text-slate-900 md:text-sm">
-                      Block {index + 1}
-                    </p>
-                    {content.spotlights.length <= MIN_SPOTLIGHT_BLOCKS ? (
-                      <p className="text-sm text-slate-500">Tối thiểu 1 block.</p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      draggable
-                      onDragStart={(event) => handleSpotlightDragStart(event, index)}
-                      onDragEnd={clearSpotlightDragState}
-                      data-testid={`admin-spotlight-drag-${index}`}
-                      aria-label={`Kéo thả block ${index + 1}`}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] cursor-grab active:cursor-grabbing"
-                    >
-                      <GripVertical className="h-4 w-4" />
-                    </button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onSpotlightMove(index, -1)}
-                      disabled={index === 0}
-                      data-testid={`admin-spotlight-move-up-${index}`}
-                      className={secondaryActionClass}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                      Lên
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onSpotlightMove(index, 1)}
-                      disabled={index === content.spotlights.length - 1}
-                      data-testid={`admin-spotlight-move-down-${index}`}
-                      className={secondaryActionClass}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                      Xuống
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onSpotlightDelete(index)}
-                      disabled={content.spotlights.length <= MIN_SPOTLIGHT_BLOCKS}
-                      data-testid={`admin-spotlight-delete-${index}`}
-                      className={dangerActionClass}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Xóa
-                    </Button>
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                  <AdminField label="Tiêu đề">
-                    <input
-                      className={inputClass}
-                      value={spotlight.title}
-                      onChange={(event) =>
-                        onSpotlightChange(index, { title: event.target.value })
-                      }
-                    />
-                  </AdminField>
-                  <AdminField label="CTA label">
-                    <input
-                      className={inputClass}
-                      value={spotlight.ctaLabel}
-                      onChange={(event) =>
-                        onSpotlightChange(index, { ctaLabel: event.target.value })
-                      }
-                    />
-                  </AdminField>
-                  <AdminField label="Mô tả">
-                    <textarea
-                      className={textareaClass}
-                      rows={5}
-                      value={spotlight.description}
-                      onChange={(event) =>
-                        onSpotlightChange(index, { description: event.target.value })
-                      }
-                    />
-                  </AdminField>
-                  <div className="grid gap-4">
-                    <AdminField label="CTA link">
-                      <input
-                        className={inputClass}
-                        value={spotlight.ctaHref}
-                        onChange={(event) =>
-                          onSpotlightChange(index, { ctaHref: event.target.value })
-                        }
-                      />
-                    </AdminField>
-                    <AdminField label="Ảnh">
-                      <input
-                        className={inputClass}
-                        value={spotlight.imageSrc}
-                        onChange={(event) =>
-                          onSpotlightChange(index, { imageSrc: event.target.value })
-                        }
-                      />
-                    </AdminField>
-                    <AdminField label="Alt ảnh">
-                      <input
-                        className={inputClass}
-                        value={spotlight.imageAlt}
-                        onChange={(event) =>
-                          onSpotlightChange(index, { imageAlt: event.target.value })
-                        }
-                      />
-                    </AdminField>
-                    <AdminField label="Foreground image">
-                      <input
-                        className={inputClass}
-                        value={spotlight.foregroundImageSrc || ""}
-                        onChange={(event) =>
-                          onSpotlightChange(index, {
-                            foregroundImageSrc: event.target.value
-                          })
-                        }
-                        data-testid={`admin-spotlight-foreground-src-${index}`}
-                      />
-                    </AdminField>
-                    <AdminField label="Foreground alt">
-                      <input
-                        className={inputClass}
-                        value={spotlight.foregroundImageAlt || ""}
-                        onChange={(event) =>
-                          onSpotlightChange(index, {
-                            foregroundImageAlt: event.target.value
-                          })
-                        }
-                      />
-                    </AdminField>
-                  </div>
-                  <div className="lg:col-span-2">
-                    <AdminField label="Bullets" helper="Mỗi dòng là một bullet.">
-                      <textarea
-                        className={textareaClass}
-                        rows={4}
-                        value={spotlight.bullets.join("\n")}
-                        onChange={(event) =>
-                          onSpotlightBulletsChange(index, event.target.value)
-                        }
-                      />
-                    </AdminField>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "features" ? (
-        <div className={homePanelClass}>
-          <AdminSectionHeader
-            title="Ưu điểm"
-            description="3 khối ưu điểm trang chủ (icon giữ cố định, chỉ sửa text)."
-            actions={renderSaveActions("features", "Lưu ưu điểm")}
-          />
-          <div className="mt-5 space-y-4">
-            {content.features.map((feature, index) => (
-              <div
-                key={feature.id}
-                className="rounded-xl border border-slate-200 p-4 grid gap-3"
-              >
-                <p className="text-base font-semibold text-slate-900 md:text-sm">
-                  Ưu điểm {index + 1}
-                </p>
-                <AdminField label="Tiêu đề">
-                  <input
-                    className={inputClass}
-                    value={feature.title}
-                    onChange={(event) =>
-                      onFeatureChange(index, { title: event.target.value })
-                    }
-                  />
-                </AdminField>
-                <AdminField label="Mô tả">
-                  <textarea
-                    className={textareaClass}
-                    value={feature.description}
-                    onChange={(event) =>
-                      onFeatureChange(index, { description: event.target.value })
-                    }
-                  />
-                </AdminField>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "aboutTeaser" ? (
-        <div className={homePanelClass}>
-          <AdminSectionHeader
-            title="Khối giới thiệu"
-            description="Khối giới thiệu ngắn ở cuối trang chủ."
-            actions={renderSaveActions("aboutTeaser", "Lưu khối giới thiệu")}
-          />
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            <AdminField label="Nhãn đầu mục">
-              <input
-                className={inputClass}
-                value={content.aboutTeaser.eyebrow}
-                onChange={(event) => onAboutTeaserChange({ eyebrow: event.target.value })}
-              />
-            </AdminField>
-            <AdminField label="Tiêu đề">
-              <input
-                className={inputClass}
-                value={content.aboutTeaser.title}
-                onChange={(event) => onAboutTeaserChange({ title: event.target.value })}
-              />
-            </AdminField>
-            <AdminField label="Phụ đề" helper="Mô tả ngắn dưới tiêu đề.">
-              <textarea
-                className={textareaClass}
-                value={content.aboutTeaser.subtitle}
-                onChange={(event) => onAboutTeaserChange({ subtitle: event.target.value })}
-              />
-            </AdminField>
-            <div className="grid gap-4">
-              <AdminField label="CTA chính">
-                <input
-                  className={inputClass}
-                  value={content.aboutTeaser.primaryCtaLabel}
-                  onChange={(event) =>
-                    onAboutTeaserChange({ primaryCtaLabel: event.target.value })
-                  }
-                />
-              </AdminField>
-              <AdminField label="Link CTA chính">
-                <input
-                  className={inputClass}
-                  value={content.aboutTeaser.primaryCtaHref}
-                  onChange={(event) =>
-                    onAboutTeaserChange({ primaryCtaHref: event.target.value })
-                  }
-                />
-              </AdminField>
-              <AdminField label="CTA phụ">
-                <input
-                  className={inputClass}
-                  value={content.aboutTeaser.secondaryCtaLabel}
-                  onChange={(event) =>
-                    onAboutTeaserChange({ secondaryCtaLabel: event.target.value })
-                  }
-                />
-              </AdminField>
-              <AdminField label="Link CTA phụ">
-                <input
-                  className={inputClass}
-                  value={content.aboutTeaser.secondaryCtaHref}
-                  onChange={(event) =>
-                    onAboutTeaserChange({ secondaryCtaHref: event.target.value })
-                  }
-                />
-              </AdminField>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "promoPopup" ? (
-        <AdminPromoPopupSection
-          value={content.promoPopup}
-          onChange={onPopupChange}
-          onSave={() => void onSaveGroup("promoPopup")}
-          isDirty={dirtyMap.promoPopup}
-          savedAt={savedAtMap.promoPopup}
-        />
-      ) : null}
-
-      {activeTab === "notifications" ? (
-        <AdminNotificationsSection
-          value={content.notifications}
-          onChange={onNotificationChange}
-          onSave={() => void onSaveGroup("notifications")}
-          isDirty={dirtyMap.notifications}
-          savedAt={savedAtMap.notifications}
-        />
-      ) : null}
-    </div>
   );
 }
 
@@ -2361,7 +1659,7 @@ function AdminProductsSection({
   };
 
   const handleDeleteProduct = async (product: AdminProduct) => {
-    const confirmed = window.confirm(`Xóa sản phẩm "${product.name}"?`);
+    const confirmed = window.confirm(`XÃ³a sáº£n pháº©m "${product.name}"?`);
     if (!confirmed) {
       return;
     }
@@ -2852,7 +2150,7 @@ function AdminProductsSection({
                       >
                         <Image
                           src={url}
-                          alt={`Ảnh hiện có ${index + 1}`}
+                          alt={`áº¢nh hiá»‡n cÃ³ ${index + 1}`}
                           fill
                           sizes="(min-width: 640px) 160px, 50vw"
                           className="object-cover"
@@ -2869,7 +2167,7 @@ function AdminProductsSection({
                       >
                         <Image
                           src={url}
-                          alt={`Ảnh mới ${index + 1}`}
+                          alt={`áº¢nh má»›i ${index + 1}`}
                           fill
                           sizes="(min-width: 640px) 160px, 50vw"
                           className="object-cover"
@@ -3040,7 +2338,7 @@ function AdminCategoriesSection({
   };
 
   const handleDelete = async (category: AdminCategory) => {
-    const confirmed = window.confirm(`Xóa danh mục "${category.name}"?`);
+    const confirmed = window.confirm(`XÃ³a danh má»¥c "${category.name}"?`);
     if (!confirmed) {
       return;
     }
@@ -3764,6 +3062,86 @@ function AdminQnASection({
   );
 }
 
+const ALL_ORDER_STATUS_FILTER_VALUE = "__all-order-status__";
+const ALL_PAYMENT_STATUS_FILTER_VALUE = "__all-payment-status__";
+
+type StatusSelectOption = {
+  value: string;
+  label: string;
+  dotClass: string;
+  selectItemToneClass: string;
+  ariaLabel: string;
+};
+
+function StatusDot({ className }: { className: string }) {
+  return <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${className}`} aria-hidden="true" />;
+}
+
+function StatusSelectLabel({
+  label,
+  dotClass,
+  className
+}: {
+  label: string;
+  dotClass: string;
+  className?: string;
+}) {
+  return (
+    <span className={`inline-flex min-w-0 items-center gap-2 ${className || ""}`}>
+      <StatusDot className={dotClass} />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+function StatusSelectControl({
+  value,
+  onValueChange,
+  options,
+  triggerToneClass,
+  triggerClassName,
+  contentClassName,
+  dataTestId
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  options: StatusSelectOption[];
+  triggerToneClass: string;
+  triggerClassName?: string;
+  contentClassName?: string;
+  dataTestId?: string;
+}) {
+  const selectedOption = options.find((option) => option.value === value);
+  const fallbackOption = selectedOption || options[0];
+
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger
+        className={`h-10 min-h-[40px] w-full gap-2 rounded-lg border px-3 text-xs font-semibold shadow-sm ${triggerToneClass} ${triggerClassName || ""}`}
+        data-testid={dataTestId}
+        aria-label={fallbackOption?.ariaLabel}
+      >
+        {fallbackOption ? (
+          <StatusSelectLabel label={fallbackOption.label} dotClass={fallbackOption.dotClass} className="max-w-full" />
+        ) : (
+          <SelectValue placeholder="-" />
+        )}
+      </SelectTrigger>
+      <SelectContent className={`border-slate-200 ${contentClassName || ""}`}>
+        {options.map((option) => (
+          <SelectItem
+            key={option.value}
+            value={option.value}
+            className={`text-xs font-semibold ${option.selectItemToneClass}`}
+          >
+            <StatusSelectLabel label={option.label} dotClass={option.dotClass} />
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 function AdminOrdersSection({
   orders,
   setError,
@@ -3781,6 +3159,48 @@ function AdminOrdersSection({
 }) {
   const statusOptions = ADMIN_ORDER_STATUS_OPTIONS;
   const paymentOptions = ADMIN_PAYMENT_STATUS_OPTIONS;
+  const neutralOrderStatusMeta = getAdminOrderStatusMeta("__unknown__");
+  const neutralPaymentStatusMeta = getAdminPaymentStatusMeta("__unknown__");
+  const orderStatusSelectOptions: StatusSelectOption[] = statusOptions.map((value) => {
+    const meta = getAdminOrderStatusMeta(value);
+    return {
+      value,
+      label: meta.label,
+      dotClass: meta.dotClass,
+      selectItemToneClass: meta.selectItemToneClass,
+      ariaLabel: meta.ariaLabel
+    };
+  });
+  const paymentStatusSelectOptions: StatusSelectOption[] = paymentOptions.map((value) => {
+    const meta = getAdminPaymentStatusMeta(value);
+    return {
+      value,
+      label: meta.label,
+      dotClass: meta.dotClass,
+      selectItemToneClass: meta.selectItemToneClass,
+      ariaLabel: meta.ariaLabel
+    };
+  });
+  const orderFilterOptions: StatusSelectOption[] = [
+    {
+      value: ALL_ORDER_STATUS_FILTER_VALUE,
+      label: "Tất cả",
+      dotClass: neutralOrderStatusMeta.dotClass,
+      selectItemToneClass: neutralOrderStatusMeta.selectItemToneClass,
+      ariaLabel: "Lọc theo tất cả trạng thái đơn hàng"
+    },
+    ...orderStatusSelectOptions
+  ];
+  const paymentFilterOptions: StatusSelectOption[] = [
+    {
+      value: ALL_PAYMENT_STATUS_FILTER_VALUE,
+      label: "Tất cả",
+      dotClass: neutralPaymentStatusMeta.dotClass,
+      selectItemToneClass: neutralPaymentStatusMeta.selectItemToneClass,
+      ariaLabel: "Lọc theo tất cả trạng thái thanh toán"
+    },
+    ...paymentStatusSelectOptions
+  ];
   const optionalColumns: Array<{ id: AdminOrderColumnId; label: string }> = [
     { id: "payment_method", label: "Phương thức thanh toán" },
     { id: "shipping_method", label: "Hình thức giao hàng" }
@@ -4119,7 +3539,7 @@ function AdminOrdersSection({
             />
           </AdminField>
           <AdminField label="Trạng thái đơn hàng">
-            <select
+            {/* <select
               className={selectClass}
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
@@ -4130,10 +3550,25 @@ function AdminOrdersSection({
                   {getAdminOrderStatusMeta(value).label}
                 </option>
               ))}
-            </select>
+            */}
+            {(() => {
+              const selectedValue = statusFilter || ALL_ORDER_STATUS_FILTER_VALUE;
+              const selectedMeta = statusFilter ? getAdminOrderStatusMeta(statusFilter) : neutralOrderStatusMeta;
+              return (
+                <StatusSelectControl
+                  value={selectedValue}
+                  onValueChange={(value) =>
+                    setStatusFilter(value === ALL_ORDER_STATUS_FILTER_VALUE ? "" : value)
+                  }
+                  options={orderFilterOptions}
+                  triggerToneClass={selectedMeta.selectToneClass}
+                  triggerClassName="text-sm"
+                />
+              );
+            })()}
           </AdminField>
           <AdminField label="Trạng thái thanh toán">
-            <select
+            {/* <select
               className={selectClass}
               value={paymentFilter}
               onChange={(event) => setPaymentFilter(event.target.value)}
@@ -4144,7 +3579,24 @@ function AdminOrdersSection({
                   {getAdminPaymentStatusMeta(value).label}
                 </option>
               ))}
-            </select>
+            */}
+            {(() => {
+              const selectedValue = paymentFilter || ALL_PAYMENT_STATUS_FILTER_VALUE;
+              const selectedMeta = paymentFilter
+                ? getAdminPaymentStatusMeta(paymentFilter)
+                : neutralPaymentStatusMeta;
+              return (
+                <StatusSelectControl
+                  value={selectedValue}
+                  onValueChange={(value) =>
+                    setPaymentFilter(value === ALL_PAYMENT_STATUS_FILTER_VALUE ? "" : value)
+                  }
+                  options={paymentFilterOptions}
+                  triggerToneClass={selectedMeta.selectToneClass}
+                  triggerClassName="text-sm"
+                />
+              );
+            })()}
           </AdminField>
           <div className="flex flex-wrap items-end justify-end gap-2 xl:pb-0.5">
             <DropdownMenu>
@@ -4202,7 +3654,7 @@ function AdminOrdersSection({
                 : saveState?.error
                   ? "Lưu thất bại"
                   : saveState?.saved
-                    ? `Đã lưu lúc ${saveState.lastSavedAt}`
+                    ? `ÄÃ£ lÆ°u lÃºc ${saveState.lastSavedAt}`
                     : "Chưa lưu";
               const saveStateClass = saveState?.saving
                 ? "text-slate-600"
@@ -4213,7 +3665,11 @@ function AdminOrdersSection({
                     : "text-slate-500";
 
               return (
-                <div key={order.id} className="border-b border-slate-200 last:border-b-0" data-testid={`admin-order-row-${order.id}`}>
+                <div
+                  key={order.id}
+                  className="border-b border-slate-200 transition-colors duration-200 last:border-b-0 hover:bg-slate-50/70"
+                  data-testid={`admin-order-row-${order.id}`}
+                >
                   <div
                     className={`grid gap-3 px-4 ${isCompact ? "py-3" : "py-4"} lg:items-center`}
                     style={{ gridTemplateColumns: orderTableTemplate }}
@@ -4250,25 +3706,15 @@ function AdminOrdersSection({
                         const paymentMeta = getAdminPaymentStatusMeta(edit.payment_status);
                         return (
                           <div key={column}>
-                            <select
-                              className={`${selectClass} min-h-[44px] py-1 text-xs ${paymentMeta.selectToneClass}`}
+                            <StatusSelectControl
                               value={edit.payment_status}
-                              onChange={(event) =>
-                                updateOrderField(
-                                  order.id,
-                                  { payment_status: event.target.value },
-                                  "immediate"
-                                )
+                              onValueChange={(value) =>
+                                updateOrderField(order.id, { payment_status: value }, "immediate")
                               }
-                              data-testid={`admin-order-quick-payment-${order.id}`}
-                              aria-label={paymentMeta.ariaLabel}
-                            >
-                              {paymentOptions.map((value) => (
-                                <option key={value} value={value}>
-                                  {getAdminPaymentStatusMeta(value).label}
-                                </option>
-                              ))}
-                            </select>
+                              options={paymentStatusSelectOptions}
+                              triggerToneClass={paymentMeta.selectToneClass}
+                              dataTestId={`admin-order-quick-payment-${order.id}`}
+                            />
                           </div>
                         );
                       }
@@ -4277,37 +3723,31 @@ function AdminOrdersSection({
                         const orderMeta = getAdminOrderStatusMeta(edit.status);
                         return (
                           <div key={column}>
-                            <select
-                              className={`${selectClass} min-h-[44px] py-1 text-xs ${orderMeta.selectToneClass}`}
+                            <StatusSelectControl
                               value={edit.status}
-                              onChange={(event) =>
-                                updateOrderField(order.id, { status: event.target.value }, "immediate")
+                              onValueChange={(value) =>
+                                updateOrderField(order.id, { status: value }, "immediate")
                               }
-                              data-testid={`admin-order-quick-status-${order.id}`}
-                              aria-label={orderMeta.ariaLabel}
-                            >
-                              {statusOptions.map((value) => (
-                                <option key={value} value={value}>
-                                  {getAdminOrderStatusMeta(value).label}
-                                </option>
-                              ))}
-                            </select>
+                              options={orderStatusSelectOptions}
+                              triggerToneClass={orderMeta.selectToneClass}
+                              dataTestId={`admin-order-quick-status-${order.id}`}
+                            />
                           </div>
                         );
                       }
 
                       if (column === "payment_method") {
                         return (
-                          <div key={column} className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                            {order.payment_method || "-"}
+                          <div key={column} className="text-xs font-semibold text-slate-700">
+                            {formatPaymentMethodLabel(order.payment_method || "cod")}
                           </div>
                         );
                       }
 
                       if (column === "shipping_method") {
                         return (
-                          <div key={column} className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                            {order.shipping_method || "standard"}
+                          <div key={column} className="text-xs font-semibold text-slate-700">
+                            {formatShippingMethodLabel(order.shipping_method || "standard")}
                           </div>
                         );
                       }
@@ -4323,13 +3763,13 @@ function AdminOrdersSection({
                             data-testid={`admin-order-toggle-${order.id}`}
                             aria-label={
                               isExpanded
-                                ? `Ẩn chi tiết đơn ${order.order_number}`
-                                : `Mở chi tiết đơn ${order.order_number}`
+                                ? `áº¨n chi tiáº¿t Ä‘Æ¡n ${order.order_number}`
+                                : `Má»Ÿ chi tiáº¿t Ä‘Æ¡n ${order.order_number}`
                             }
                             title={
                               isExpanded
-                                ? `Ẩn chi tiết đơn ${order.order_number}`
-                                : `Mở chi tiết đơn ${order.order_number}`
+                                ? `áº¨n chi tiáº¿t Ä‘Æ¡n ${order.order_number}`
+                                : `Má»Ÿ chi tiáº¿t Ä‘Æ¡n ${order.order_number}`
                             }
                           >
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -4409,20 +3849,14 @@ function AdminOrdersSection({
                           {(() => {
                             const orderMeta = getAdminOrderStatusMeta(edit.status);
                             return (
-                              <select
-                                className={`${selectClass} ${orderMeta.selectToneClass}`}
+                              <StatusSelectControl
                                 value={edit.status}
-                                onChange={(event) =>
-                                  updateOrderField(order.id, { status: event.target.value }, "immediate")
+                                onValueChange={(value) =>
+                                  updateOrderField(order.id, { status: value }, "immediate")
                                 }
-                                aria-label={orderMeta.ariaLabel}
-                              >
-                                {statusOptions.map((value) => (
-                                  <option key={value} value={value}>
-                                    {getAdminOrderStatusMeta(value).label}
-                                  </option>
-                                ))}
-                              </select>
+                                options={orderStatusSelectOptions}
+                                triggerToneClass={orderMeta.selectToneClass}
+                              />
                             );
                           })()}
                         </AdminField>
@@ -4430,24 +3864,14 @@ function AdminOrdersSection({
                           {(() => {
                             const paymentMeta = getAdminPaymentStatusMeta(edit.payment_status);
                             return (
-                              <select
-                                className={`${selectClass} ${paymentMeta.selectToneClass}`}
+                              <StatusSelectControl
                                 value={edit.payment_status}
-                                onChange={(event) =>
-                                  updateOrderField(
-                                    order.id,
-                                    { payment_status: event.target.value },
-                                    "immediate"
-                                  )
+                                onValueChange={(value) =>
+                                  updateOrderField(order.id, { payment_status: value }, "immediate")
                                 }
-                                aria-label={paymentMeta.ariaLabel}
-                              >
-                                {paymentOptions.map((value) => (
-                                  <option key={value} value={value}>
-                                    {getAdminPaymentStatusMeta(value).label}
-                                  </option>
-                                ))}
-                              </select>
+                                options={paymentStatusSelectOptions}
+                                triggerToneClass={paymentMeta.selectToneClass}
+                              />
                             );
                           })()}
                         </AdminField>
@@ -4550,7 +3974,7 @@ function AdminOrdersSection({
         <AdminDialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
-              {proofPreview ? `Chứng từ thanh toán - ${proofPreview.orderNumber}` : "Chứng từ thanh toán"}
+              {proofPreview ? `Chá»©ng tá»« thanh toÃ¡n - ${proofPreview.orderNumber}` : "Chứng từ thanh toán"}
             </DialogTitle>
             <DialogDescription>
               Dùng để đối soát giao dịch thanh toán cho đơn hàng.
@@ -4561,7 +3985,7 @@ function AdminOrdersSection({
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
                 <img
                   src={proofPreview.url}
-                  alt={`Chứng từ ${proofPreview.orderNumber}`}
+                  alt={`Chá»©ng tá»« ${proofPreview.orderNumber}`}
                   className="h-auto max-h-[70vh] w-full object-contain"
                 />
               </div>
@@ -4821,7 +4245,7 @@ function AdminAboutSection({
   };
 
   const handleSlideDelete = (slide: AboutSlide) => {
-    const confirmed = window.confirm(`Xóa slide "${slide.title}"?`);
+    const confirmed = window.confirm(`XÃ³a slide "${slide.title}"?`);
     if (!confirmed) {
       return;
     }
@@ -4846,7 +4270,7 @@ function AdminAboutSection({
       .split("\n")
       .map((item) => item.trim())
       .filter(Boolean);
-    const tagValue = slideForm.tag.trim() || `Chặng ${(value.slides.length + 1).toString().padStart(2, "0")}`;
+    const tagValue = slideForm.tag.trim() || `Cháº·ng ${(value.slides.length + 1).toString().padStart(2, "0")}`;
     const payload: AboutSlide = {
       id: editingId || `about-slide-${Date.now()}`,
       tag: tagValue,
@@ -5220,7 +4644,7 @@ function AdminContactSection({
     <div className={panelClass}>
       <AdminSectionHeader
         title="Thông tin liên hệ"
-        description="Cập nhật thông tin hiển thị ở trang liên hệ, topbar và footer."
+        description="Du lieu lien he di cung nhap/publish trang chu."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {savedAt ? (
@@ -5233,7 +4657,7 @@ function AdminContactSection({
               disabled={!isDirty}
               className={primaryActionClass}
             >
-              Lưu thông tin
+              Luu nhap trang chu
             </Button>
           </div>
         }
@@ -5322,671 +4746,5 @@ function AdminContactSection({
   );
 }
 
-function AdminPromoPopupSection({
-  value,
-  onChange,
-  onSave,
-  isDirty,
-  savedAt
-}: {
-  value: PromoPopupSettings;
-  onChange: (patch: Partial<PromoPopupSettings>) => void;
-  onSave: () => void;
-  isDirty: boolean;
-  savedAt: string | null;
-}) {
-  const handleProgramChange = (index: number, patch: Partial<PromoProgram>) => {
-    const next = value.programs.map((item, idx) =>
-      idx === index ? { ...item, ...patch } : item
-    );
-    onChange({ programs: next });
-  };
 
-  const handleCouponChange = (index: number, patch: Partial<PromoCoupon>) => {
-    const next = value.coupons.map((item, idx) =>
-      idx === index ? { ...item, ...patch } : item
-    );
-    onChange({ coupons: next });
-  };
 
-  const addProgram = () => {
-    onChange({
-      programs: [...value.programs, { title: "Ưu đãi mới", description: "" }]
-    });
-  };
-
-  const removeProgram = (index: number) => {
-    onChange({ programs: value.programs.filter((_, idx) => idx != index) });
-  };
-
-  const addCoupon = () => {
-    onChange({
-      coupons: [...value.coupons, { label: "Mã ưu đãi", code: "", description: "" }]
-    });
-  };
-
-  const removeCoupon = (index: number) => {
-    onChange({ coupons: value.coupons.filter((_, idx) => idx != index) });
-  };
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <AdminSectionHeader
-        title="Popup khuyến mãi"
-        description="Thiết lập nội dung popup khuyến mãi hiển thị ở trang chủ."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {savedAt ? (
-              <span className="text-base text-slate-500 md:text-sm">
-                Đã lưu: {savedAt}
-              </span>
-            ) : null}
-            <Button
-              onClick={onSave}
-              disabled={!isDirty}
-              className={primaryActionClass}
-            >
-              Lưu popup
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <AdminField label="Bật popup" helper="Bật/tắt popup khuyến mãi trên trang chủ.">
-          <select
-            className={selectClass}
-            value={value.isActive ? "true" : "false"}
-            onChange={(event) => onChange({ isActive: event.target.value === "true" })}
-          >
-            <option value="true">Đang bật</option>
-            <option value="false">Đang tắt</option>
-          </select>
-        </AdminField>
-        <AdminField label="Độ trễ (giây)" helper="Popup sẽ hiển thị sau số giây này.">
-          <input
-            className={inputClass}
-            type="number"
-            min={0}
-            value={value.delaySeconds}
-            onChange={(event) => onChange({ delaySeconds: Number(event.target.value) || 0 })}
-          />
-        </AdminField>
-        <AdminField label="Tiêu đề" helper="Tiêu đề nổi bật của popup.">
-          <input
-            className={inputClass}
-            value={value.title}
-            onChange={(event) => onChange({ title: event.target.value })}
-          />
-        </AdminField>
-        <AdminField label="Phụ đề" helper="Dòng mô tả ngắn bên dưới tiêu đề.">
-          <input
-            className={inputClass}
-            value={value.subtitle}
-            onChange={(event) => onChange({ subtitle: event.target.value })}
-          />
-        </AdminField>
-        <AdminField label="Ảnh popup" helper="URL ảnh hiển thị ở phần trên của popup.">
-          <input
-            className={inputClass}
-            value={value.imageSrc}
-            onChange={(event) => onChange({ imageSrc: event.target.value })}
-          />
-        </AdminField>
-        <AdminField label="Alt ảnh" helper="Mô tả ngắn cho ảnh.">
-          <input
-            className={inputClass}
-            value={value.imageAlt}
-            onChange={(event) => onChange({ imageAlt: event.target.value })}
-          />
-        </AdminField>
-        <AdminField label="Nút CTA" helper="Nhãn nút liên hệ trong popup.">
-          <input
-            className={inputClass}
-            value={value.ctaLabel}
-            onChange={(event) => onChange({ ctaLabel: event.target.value })}
-          />
-        </AdminField>
-        <AdminField label="Liên kết CTA" helper="Đường dẫn khi bấm nút CTA.">
-          <input
-            className={inputClass}
-            value={value.ctaHref}
-            onChange={(event) => onChange({ ctaHref: event.target.value })}
-          />
-        </AdminField>
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-900 md:text-sm">
-              Chương trình ưu đãi
-            </h3>
-            <Button
-              onClick={addProgram}
-              className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
-            >
-              Thêm ưu đãi
-            </Button>
-          </div>
-          <div className="mt-4 space-y-4">
-            {value.programs.map((item, index) => (
-              <div key={`program-${index}`} className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">Ưu đãi #{index + 1}</span>
-                  <Button
-                    onClick={() => removeProgram(index)}
-                    className="h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 normal-case tracking-normal text-sm cursor-pointer"
-                  >
-                    Xóa
-                  </Button>
-                </div>
-                <div className="mt-3 space-y-3">
-                  <input
-                    className={inputClass}
-                    value={item.title}
-                    onChange={(event) => handleProgramChange(index, { title: event.target.value })}
-                  />
-                  <textarea
-                    className={textareaClass}
-                    value={item.description}
-                    onChange={(event) => handleProgramChange(index, { description: event.target.value })}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-900 md:text-sm">
-              Mã giảm giá
-            </h3>
-            <Button
-              onClick={addCoupon}
-              className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
-            >
-              Thêm mã
-            </Button>
-          </div>
-          <div className="mt-4 space-y-4">
-            {value.coupons.map((item, index) => (
-              <div key={`coupon-${index}`} className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">Mã #{index + 1}</span>
-                  <Button
-                    onClick={() => removeCoupon(index)}
-                    className="h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 normal-case tracking-normal text-sm cursor-pointer"
-                  >
-                    Xóa
-                  </Button>
-                </div>
-                <div className="mt-3 space-y-3">
-                  <input
-                    className={inputClass}
-                    value={item.label}
-                    onChange={(event) => handleCouponChange(index, { label: event.target.value })}
-                    placeholder="Tên ưu đãi"
-                  />
-                  <input
-                    className={inputClass}
-                    value={item.code}
-                    onChange={(event) => handleCouponChange(index, { code: event.target.value })}
-                    placeholder="Mã giảm giá"
-                  />
-                  <textarea
-                    className={textareaClass}
-                    value={item.description}
-                    onChange={(event) => handleCouponChange(index, { description: event.target.value })}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AdminNotificationsSection({
-  value,
-  onChange,
-  onSave,
-  isDirty,
-  savedAt
-}: {
-  value: NotificationSettings;
-  onChange: (next: NotificationSettings) => void;
-  onSave: () => void;
-  isDirty: boolean;
-  savedAt: string | null;
-}) {
-  const handleItemChange = (index: number, patch: Partial<NotificationItem>) => {
-    const next = value.items.map((item, idx) =>
-      idx === index ? { ...item, ...patch } : item
-    );
-    onChange({ items: next });
-  };
-
-  const addItem = () => {
-    const nextItem: NotificationItem = {
-      id: `notify-${Date.now()}`,
-      title: "Thông báo mới",
-      description: "",
-      href: "/",
-      isActive: true
-    };
-    onChange({ items: [...value.items, nextItem] });
-  };
-
-  const removeItem = (index: number) => {
-    onChange({ items: value.items.filter((_, idx) => idx !== index) });
-  };
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <AdminSectionHeader
-        title="Thông báo"
-        description="Thông báo popup lấy từ mục Popup khuyến mãi."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {savedAt ? (
-              <span className="text-base text-slate-500 md:text-sm">
-                Đã lưu: {savedAt}
-              </span>
-            ) : null}
-            <Button
-              onClick={onSave}
-              disabled={!isDirty}
-              className={primaryActionClass}
-            >
-              Lưu thông báo
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-900 md:text-sm">
-            Danh sách thông báo
-          </h3>
-          <Button
-            onClick={addItem}
-            className="h-9 bg-white text-slate-900 border border-slate-200 hover:bg-slate-100 normal-case tracking-normal text-base md:text-sm cursor-pointer"
-          >
-            Thêm thông báo
-          </Button>
-        </div>
-
-        <div className="mt-4 space-y-4">
-          {value.items.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-              Chưa có thông báo tùy chỉnh.
-            </div>
-          ) : (
-            value.items.map((item, index) => (
-              <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">Thông báo #{index + 1}</span>
-                  <Button
-                    onClick={() => removeItem(index)}
-                    className="h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 normal-case tracking-normal text-sm cursor-pointer"
-                  >
-                    Xóa
-                  </Button>
-                </div>
-                <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                  <AdminField label="Tiêu đề">
-                    <input
-                      className={inputClass}
-                      value={item.title}
-                      onChange={(event) => handleItemChange(index, { title: event.target.value })}
-                    />
-                  </AdminField>
-                  <AdminField label="Liên kết">
-                    <input
-                      className={inputClass}
-                      value={item.href}
-                      onChange={(event) => handleItemChange(index, { href: event.target.value })}
-                    />
-                  </AdminField>
-                  <AdminField label="Trạng thái">
-                    <select
-                      className={selectClass}
-                      value={item.isActive ? "true" : "false"}
-                      onChange={(event) =>
-                        handleItemChange(index, { isActive: event.target.value === "true" })
-                      }
-                    >
-                      <option value="true">Đang bật</option>
-                      <option value="false">Đang tắt</option>
-                    </select>
-                  </AdminField>
-                  <AdminField label="Mô tả">
-                    <textarea
-                      className={textareaClass}
-                      value={item.description}
-                      onChange={(event) =>
-                        handleItemChange(index, { description: event.target.value })
-                      }
-                    />
-                  </AdminField>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AdminBannersSection({
-  banners,
-  onChange,
-  onSave,
-  isDirty,
-  savedAt,
-  setError
-}: {
-  banners: HomeBanner[];
-  onChange: (next: HomeBanner[]) => void;
-  onSave: () => void;
-  isDirty: boolean;
-  savedAt: string | null;
-  setError: (value: string) => void;
-}) {
-  const initialForm = {
-    title: "",
-    badge: "Banner nổi bật",
-    description: "",
-    ctaLabel: "",
-    ctaHref: "",
-    desktopSrc: "",
-    mobileSrc: "",
-    alt: "",
-    order: "1",
-    isActive: true
-  };
-  const [form, setForm] = useState(initialForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const sortedBanners = useMemo(
-    () => [...banners].sort((a, b) => a.order - b.order),
-    [banners]
-  );
-
-  const resetForm = () => {
-    setForm(initialForm);
-    setEditingId(null);
-  };
-
-  const handleEdit = (banner: HomeBanner) => {
-    setEditingId(banner.id);
-    setForm({
-      title: banner.title,
-      badge: banner.badge,
-      description: banner.description,
-      ctaLabel: banner.ctaLabel,
-      ctaHref: banner.ctaHref,
-      desktopSrc: banner.desktopSrc,
-      mobileSrc: banner.mobileSrc,
-      alt: banner.alt,
-      order: String(banner.order),
-      isActive: banner.isActive
-    });
-  };
-
-  const handleDelete = (banner: HomeBanner) => {
-    const confirmed = window.confirm(`Xóa banner "${banner.title}"?`);
-    if (!confirmed) {
-      return;
-    }
-    onChange(banners.filter((item) => item.id !== banner.id));
-  };
-
-  const handleSubmit = () => {
-    setError("");
-    if (!form.title.trim()) {
-      setError("Vui lòng nhập tiêu đề banner.");
-      return;
-    }
-    if (!form.desktopSrc.trim()) {
-      setError("Vui lòng nhập URL ảnh desktop.");
-      return;
-    }
-    if (!form.ctaLabel.trim()) {
-      setError("Vui lòng nhập nhãn CTA.");
-      return;
-    }
-    if (!form.ctaHref.trim()) {
-      setError("Vui lòng nhập đường dẫn CTA.");
-      return;
-    }
-
-    const orderValue = Number(form.order || 0);
-    const payload: HomeBanner = {
-      id: editingId || `banner-${Date.now()}`,
-      badge: form.badge.trim() || "Banner nổi bật",
-      title: form.title.trim(),
-      description: form.description.trim(),
-      ctaLabel: form.ctaLabel.trim(),
-      ctaHref: form.ctaHref.trim(),
-      desktopSrc: form.desktopSrc.trim(),
-      mobileSrc: form.mobileSrc.trim() || form.desktopSrc.trim(),
-      alt: form.alt.trim() || form.title.trim(),
-      order: Number.isFinite(orderValue) && orderValue > 0 ? orderValue : banners.length + 1,
-      isActive: form.isActive
-    };
-
-    const next = editingId
-      ? banners.map((item) => (item.id === editingId ? payload : item))
-      : [...banners, payload];
-
-    onChange(next);
-    resetForm();
-  };
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <AdminSectionHeader
-          title="Banner trang chủ"
-          description="Quản lý nội dung slider hiển thị ở trang chủ."
-          actions={
-            <div className="flex flex-wrap items-center gap-2">
-              {savedAt ? (
-                <span className="text-base text-slate-500 md:text-sm">
-                  Đã lưu: {savedAt}
-                </span>
-              ) : null}
-              <Button
-                onClick={onSave}
-                disabled={!isDirty}
-                className={primaryActionClass}
-              >
-                Lưu thay đổi
-              </Button>
-            </div>
-          }
-        />
-
-        <div className="mt-4 space-y-4">
-          {sortedBanners.length ? (
-            sortedBanners.map((banner) => (
-              <div
-                key={banner.id}
-                className="flex flex-wrap items-start gap-4 rounded-xl border border-slate-200 p-4"
-              >
-                <div className="h-20 w-32 overflow-hidden rounded-lg bg-slate-100">
-                  <Image
-                    src={banner.desktopSrc}
-                    alt={banner.alt}
-                    width={128}
-                    height={80}
-                    className="h-full w-full object-cover"
-                    sizes="128px"
-                  />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-base font-semibold text-slate-900 md:text-sm">
-                    {banner.title}
-                  </p>
-                  <p className="text-base text-slate-500 md:text-sm">
-                    CTA: {banner.ctaLabel} · {banner.ctaHref}
-                  </p>
-                  <div className="flex flex-wrap gap-2 text-base text-slate-500 md:text-sm">
-                    {banner.badge ? (
-                      <span className="rounded-full bg-[var(--color-primary)]/10 px-3 py-1 text-[var(--color-primary)]">
-                        {banner.badge}
-                      </span>
-                    ) : null}
-                    <span className="rounded-full bg-slate-100 px-3 py-1">
-                      Thứ tự: {banner.order}
-                    </span>
-                    <span
-                      className={`rounded-full px-3 py-1 ${
-                        banner.isActive
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "bg-rose-50 text-rose-600"
-                      }`}
-                    >
-                      {banner.isActive ? "Đang hiển thị" : "Đang ẩn"}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(banner)}
-                    className={secondaryActionClass}
-                  >
-                    Sửa
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(banner)}
-                    className={dangerActionClass}
-                  >
-                    Xóa
-                  </Button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-base text-slate-500 md:text-sm">
-              Chưa có banner nào. Hãy tạo banner đầu tiên.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <AdminSectionHeader
-          title={editingId ? "Cập nhật banner" : "Tạo banner"}
-          description="Nhập đầy đủ thông tin để hiển thị trên slider."
-        />
-        <div className="mt-4 grid gap-4">
-          <AdminField label="Tiêu đề" helper="Tiêu đề chính của banner.">
-            <input
-              className={inputClass}
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-            />
-          </AdminField>
-          <AdminField
-            label="Nhãn banner"
-            helper="Ví dụ: Banner nổi bật, ưu đãi tuần này."
-          >
-            <input
-              className={inputClass}
-              value={form.badge}
-              onChange={(event) => setForm({ ...form, badge: event.target.value })}
-            />
-          </AdminField>
-          <AdminField label="Mô tả" helper="Mô tả ngắn, tối đa 2 dòng.">
-            <textarea
-              className={textareaClass}
-              value={form.description}
-              onChange={(event) => setForm({ ...form, description: event.target.value })}
-            />
-          </AdminField>
-          <AdminField label="Nhãn CTA" helper="Ví dụ: Xem sản phẩm.">
-            <input
-              className={inputClass}
-              value={form.ctaLabel}
-              onChange={(event) => setForm({ ...form, ctaLabel: event.target.value })}
-            />
-          </AdminField>
-          <AdminField label="Đường dẫn CTA" helper="Ví dụ: /collections/all">
-            <input
-              className={inputClass}
-              value={form.ctaHref}
-              onChange={(event) => setForm({ ...form, ctaHref: event.target.value })}
-            />
-          </AdminField>
-          <AdminField label="Ảnh desktop" helper="Kích thước gợi ý 1600x720px.">
-            <input
-              className={inputClass}
-              value={form.desktopSrc}
-              onChange={(event) => setForm({ ...form, desktopSrc: event.target.value })}
-            />
-          </AdminField>
-          <AdminField label="Ảnh mobile" helper="Nếu bỏ trống sẽ dùng ảnh desktop.">
-            <input
-              className={inputClass}
-              value={form.mobileSrc}
-              onChange={(event) => setForm({ ...form, mobileSrc: event.target.value })}
-            />
-          </AdminField>
-          <AdminField label="Alt text" helper="Mô tả cho ảnh, hỗ trợ SEO.">
-            <input
-              className={inputClass}
-              value={form.alt}
-              onChange={(event) => setForm({ ...form, alt: event.target.value })}
-            />
-          </AdminField>
-          <AdminField label="Thứ tự" helper="Số nhỏ hiển thị trước.">
-            <input
-              type="number"
-              className={inputClass}
-              value={form.order}
-              onChange={(event) => setForm({ ...form, order: event.target.value })}
-            />
-          </AdminField>
-          <div className="flex items-center gap-2 text-base font-semibold text-slate-700 md:text-sm">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => setForm({ ...form, isActive: event.target.checked })}
-              className="h-4 w-4 accent-[var(--color-primary)] cursor-pointer"
-            />
-            Hiển thị banner
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={handleSubmit}
-              className={primaryActionClass}
-            >
-              {editingId ? "Lưu banner" : "Tạo banner"}
-            </Button>
-            {editingId ? (
-              <Button
-                variant="outline"
-                onClick={resetForm}
-                className={secondaryActionClass}
-              >
-                Hủy
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}

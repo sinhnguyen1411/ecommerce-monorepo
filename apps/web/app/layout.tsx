@@ -49,13 +49,14 @@ export default async function RootLayout({
         <Topbar
           promoSettings={homeContent.promoPopup}
           notificationSettings={homeContent.notifications}
+          contactSettings={homeContent.contactSettings}
         />
         <StorefrontAnalyticsTracker />
         <Header />
         <div className="min-h-screen pb-16">{children}</div>
-        <Footer />
+        <Footer contactSettings={homeContent.contactSettings} />
         <CartDrawer />
-        <SocialFloatingButtons />
+        <SocialFloatingButtons contactSettings={homeContent.contactSettings} />
         <Sonner />
       </body>
     </html>

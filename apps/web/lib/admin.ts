@@ -153,8 +153,11 @@ export type AdminPage = {
   title: string;
   slug: string;
   content: string;
+  draft_content?: string;
   updated_at?: string;
 };
+
+export type AdminPageSaveMode = "draft" | "publish";
 
 export type AdminQnA = {
   id: number;
@@ -332,14 +335,19 @@ export function getAdminPage(id: number) {
   return adminRequest<AdminPage>(`/api/admin/pages/${id}`);
 }
 
-export function createAdminPage(input: Partial<AdminPage>) {
+export function createAdminPage(
+  input: Partial<AdminPage> & { save_mode?: AdminPageSaveMode }
+) {
   return adminRequest<AdminPage>("/api/admin/pages", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export function updateAdminPage(id: number, input: Partial<AdminPage>) {
+export function updateAdminPage(
+  id: number,
+  input: Partial<AdminPage> & { save_mode?: AdminPageSaveMode }
+) {
   return adminRequest<AdminPage>(`/api/admin/pages/${id}`, {
     method: "PATCH",
     body: JSON.stringify(input),

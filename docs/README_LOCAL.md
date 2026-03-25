@@ -22,6 +22,28 @@ cd infra
 docker compose up -d --build
 ```
 
+Quick restart (always pick latest web code):
+
+```
+powershell -ExecutionPolicy Bypass -File .\infra\restart-web.ps1
+```
+
+Equivalent manual steps:
+
+```
+docker compose -f infra/docker-compose.yml up -d --build web
+docker compose -f infra/docker-compose.yml ps
+curl.exe http://localhost:3000
+curl.exe http://localhost:8080/healthz
+```
+
+Admin Home Editor freshness checks (after restart):
+- `Topbar & Lien he` action is visible.
+- Banner editor has `Eyebrow`.
+- CTA link uses picker/select (not free text URL input).
+- Banner image editor supports separate `Desktop` and `Mobile`.
+- Media picker no longer has a `RECENT` tab.
+
 3) Verify services:
 
 ```

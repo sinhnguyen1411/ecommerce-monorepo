@@ -7,11 +7,16 @@ import { Phone } from "lucide-react";
 
 import { isAuthOnlyPath } from "@/lib/auth-route";
 import { useContactSettings } from "@/lib/client-content";
-import { defaultContactSettings } from "@/lib/content";
+import { ContactSettings, defaultContactSettings } from "@/lib/content";
 
-export default function SocialFloatingButtons() {
+export default function SocialFloatingButtons({
+  contactSettings
+}: {
+  contactSettings?: ContactSettings;
+}) {
   const pathname = usePathname();
-  const settings = useContactSettings();
+  const liveSettings = useContactSettings();
+  const settings = contactSettings || liveSettings;
   const hiddenOnRoute = isAuthOnlyPath(pathname);
   const [isDesktop, setIsDesktop] = useState(false);
   const [expanded, setExpanded] = useState(false);
