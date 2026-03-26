@@ -317,6 +317,76 @@ test.describe("Admin UI data flows", () => {
     await expect(createDialog.locator("input").first()).toHaveValue("");
   });
 
+  test("reorders product images and saves the primary image order", async ({ page }) => {
+    const categories = [
+      {
+        id: 1,
+        name: "Category A",
+        slug: "category-a",
+        description: "Category A",
+        sort_order: 1
+      }
+    ];
+
+    const products = [
+      {
+        id: 1,
+        name: "Product A",
+        slug: "product-a",
+        description: "Short description",
+        price: 100000,
+        compare_at_price: null,
+        featured: false,
+        status: "published",
+        tags: "test",
+        sort_order: 1,
+        images: [
+          {
+            id: 1,
+            url: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=80",
+            sort_order: 1
+          },
+          {
+            id: 2,
+            url: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=600&q=80",
+            sort_order: 2
+          },
+          {
+            id: 3,
+            url: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=600&q=80",
+            sort_order: 3
+          }
+        ],
+        categories: [
+          {
+            id: 1,
+            name: "Category A",
+            slug: "category-a"
+          }
+        ]
+      }
+    ];
+
+    await mockAdminApi(page, { products, categories });
+    await page.goto("/admin", { waitUntil: "domcontentloaded" });
+
+    await clickAdminNav(page, 1024, "products");
+    const main = page.getByRole("main");
+    await main.getByTestId("admin-product-edit-1").click();
+
+    const dialog = page.getByRole("dialog").last();
+    await expect(dialog.getByText("Ảnh đại diện")).toBeVisible();
+    await dialog.getByLabel("Đặt làm ảnh chính").nth(0).click();
+    await dialog.getByRole("button", { name: "Lưu sản phẩm" }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(main.getByText("Ảnh: 3").first()).toBeVisible();
+
+    await main.getByTestId("admin-product-edit-1").click();
+    const reopened = page.getByRole("dialog").last();
+    await expect(reopened.getByTestId("admin-product-image-tile-0").getByText("Ảnh đại diện")).toBeVisible();
+  });
+
   test("supports spotlight edit with autosave draft and publish", async ({ page }) => {
     await mockAdminApi(page);
     await page.goto("/admin", { waitUntil: "domcontentloaded" });

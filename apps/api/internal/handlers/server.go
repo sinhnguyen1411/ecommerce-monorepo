@@ -144,6 +144,7 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 			admin.PATCH("/products/:id", s.AdminUpdateProduct)
 			admin.DELETE("/products/:id", s.AdminDeleteProduct)
 			admin.POST("/products/:id/images", s.AdminAddProductImage)
+			admin.PUT("/products/:id/images", s.AdminReplaceProductImages)
 
 			admin.GET("/categories", s.AdminListCategories)
 			admin.POST("/categories", s.AdminCreateCategory)

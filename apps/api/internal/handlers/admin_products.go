@@ -38,8 +38,13 @@ type AdminProductInput struct {
 }
 
 type AdminProductImageInput struct {
+	ID        int    `json:"id"`
 	URL       string `json:"url"`
 	SortOrder int    `json:"sort_order"`
+}
+
+type AdminReplaceProductImagesInput struct {
+	Images []AdminProductImageInput `json:"images"`
 }
 
 func (s *Server) AdminListProducts(c *gin.Context) {
@@ -241,6 +246,105 @@ func (s *Server) AdminAddProductImage(c *gin.Context) {
 	_, err = s.DB.Exec(`INSERT INTO product_images (product_id, url, sort_order) VALUES (?, ?, ?)`, id, input.URL, input.SortOrder)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "db_error", "Failed to add image")
+		return
+	}
+
+	s.adminGetProductByID(c, id)
+}
+
+func (s *Server) AdminReplaceProductImages(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_product", "Invalid product ID")
+		return
+	}
+
+	var input AdminReplaceProductImagesInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		respondError(c, http.StatusBadRequest, "invalid_payload", "Invalid image payload")
+		return
+	}
+
+	tx, err := s.DB.Begin()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to start image update")
+		return
+	}
+	defer tx.Rollback()
+
+	rows, err := tx.Query(`SELECT id FROM product_images WHERE product_id = ?`, id)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load existing images")
+		return
+	}
+	defer rows.Close()
+
+	existingIDs := make(map[int]struct{})
+	for rows.Next() {
+		var imageID int
+		if err := rows.Scan(&imageID); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to parse existing images")
+			return
+		}
+		existingIDs[imageID] = struct{}{}
+	}
+
+	keepIDs := make(map[int]struct{})
+	for index, image := range input.Images {
+		url := strings.TrimSpace(image.URL)
+		if url == "" {
+			respondError(c, http.StatusBadRequest, "missing_fields", "Image URL is required")
+			return
+		}
+
+		sortOrder := index
+		if image.ID > 0 {
+			if _, ok := existingIDs[image.ID]; !ok {
+				respondError(c, http.StatusBadRequest, "invalid_image", "Image does not belong to this product")
+				return
+			}
+			if _, duplicated := keepIDs[image.ID]; duplicated {
+				respondError(c, http.StatusBadRequest, "duplicate_image", "Duplicate image ID")
+				return
+			}
+
+			if _, err := tx.Exec(
+				`UPDATE product_images SET url = ?, sort_order = ? WHERE id = ? AND product_id = ?`,
+				url,
+				sortOrder,
+				image.ID,
+				id,
+			); err != nil {
+				respondError(c, http.StatusInternalServerError, "db_error", "Failed to update image")
+				return
+			}
+			keepIDs[image.ID] = struct{}{}
+			continue
+		}
+
+		if _, err := tx.Exec(
+			`INSERT INTO product_images (product_id, url, sort_order) VALUES (?, ?, ?)`,
+			id,
+			url,
+			sortOrder,
+		); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to add image")
+			return
+		}
+	}
+
+	for existingID := range existingIDs {
+		if _, keep := keepIDs[existingID]; keep {
+			continue
+		}
+		if _, err := tx.Exec(`DELETE FROM product_images WHERE id = ? AND product_id = ?`, existingID, id); err != nil {
+			respondError(c, http.StatusInternalServerError, "db_error", "Failed to delete removed image")
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to save product images")
 		return
 	}
 

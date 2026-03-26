@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -28,6 +28,7 @@ import {
 import AdminShell, { AdminNavItem } from "@/components/admin/AdminShell";
 import AdminOverview from "@/components/admin/AdminOverview";
 import AdminHomeVisualEditor from "@/components/admin/AdminHomeVisualEditor";
+import ProductImageManager from "@/components/admin/ProductImageManager";
 import type { AdminLinkOption } from "@/components/admin/AdminLinkPicker";
 import {
   AdminField,
@@ -41,6 +42,20 @@ import {
   selectClass,
   textareaClass
 } from "@/components/admin/AdminHelpers";
+import {
+  PRODUCT_IMAGE_LIMIT,
+  PRODUCT_IMAGE_MIN,
+  createProductImageItem,
+  hasImageUrl,
+  mapProductImagesToItems,
+  moveImageDown,
+  moveImageUp,
+  removeImage,
+  setPrimaryImage,
+  toProductImagePayload,
+  validateProductImageFile,
+  type ProductImageItem,
+} from "@/components/admin/product-image-helpers";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -108,6 +123,7 @@ import {
   listAdminPages,
   listAdminPosts,
   listAdminProducts,
+  replaceAdminProductImages,
   listAdminQnA,
   updateAdminCategory,
   updateAdminOrder,
@@ -1467,7 +1483,7 @@ export default function AdminDashboardPage() {
   );
 }
 
-function AdminProductsSection({
+function LegacyAdminProductsSection({
   products,
   categories,
   onReload,
@@ -1493,9 +1509,11 @@ function AdminProductsSection({
   };
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [imageItems, setImageItems] = useState<ProductImageItem[]>([]);
+  const [imageUrlInput, setImageUrlInput] = useState("");
+  const [uploadSummary, setUploadSummary] = useState("");
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [newImages, setNewImages] = useState<string[]>([]);
-  const [imageUrlInput, setImageUrlInput] = useState("");
   const [uploading, setUploading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -1505,8 +1523,6 @@ function AdminProductsSection({
   const [page, setPage] = useState(1);
   const dialogScrollRef = useRef<HTMLDivElement | null>(null);
   const isCompact = density === "compact";
-  const sectionGapClass = isCompact ? "space-y-5" : "space-y-6";
-  const panelClass = panelByDensity(density);
   const filterGridClass = isCompact
     ? "mt-4 grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr]"
     : "mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr]";
@@ -1517,9 +1533,10 @@ function AdminProductsSection({
     ? "grid gap-3 px-4 py-3 text-sm md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:items-center transition hover:bg-slate-50"
     : "grid gap-4 px-4 py-4 text-base md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:items-center md:text-sm transition hover:bg-slate-50";
 
-  const totalImages = existingImages.length + newImages.length;
-  const canAddMore = totalImages < 10;
-  const remainingSlots = Math.max(0, 10 - totalImages);
+  const totalImages = imageItems.length;
+  const canAddMore = totalImages < PRODUCT_IMAGE_LIMIT;
+  const uploadingCount = imageItems.filter((item) => item.status === "uploading").length;
+  const remainingSlots = Math.max(0, PRODUCT_IMAGE_LIMIT - totalImages);
   const pageSize = 6;
 
   const filteredProducts = useMemo(() => {
@@ -1556,12 +1573,19 @@ function AdminProductsSection({
     [filteredProducts, page, pageSize]
   );
 
+  const revokeBlobUrl = (url: string) => {
+    if (url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+  };
+
   const resetForm = () => {
+    imageItems.forEach((item) => revokeBlobUrl(item.url));
     setForm(initialForm);
     setEditingId(null);
-    setExistingImages([]);
-    setNewImages([]);
+    setImageItems([]);
     setImageUrlInput("");
+    setUploadSummary("");
     setSelectedCategories([]);
   };
 
@@ -1571,11 +1595,7 @@ function AdminProductsSection({
   };
 
   const handleSelectProduct = (product: AdminProduct) => {
-    const validExistingImages =
-      product.images
-        ?.map((image) => image.url?.trim())
-        .filter((url): url is string => Boolean(url)) || [];
-
+    imageItems.forEach((item) => revokeBlobUrl(item.url));
     setEditingId(product.id);
     setForm({
       name: product.name,
@@ -1589,9 +1609,9 @@ function AdminProductsSection({
       description: product.description || ""
     });
     setSelectedCategories(product.categories?.map((cat) => cat.id) || []);
-    setExistingImages(validExistingImages);
-    setNewImages([]);
+    setImageItems(mapProductImagesToItems(product));
     setImageUrlInput("");
+    setUploadSummary("");
     setDialogOpen(true);
   };
 
@@ -1614,7 +1634,7 @@ function AdminProductsSection({
     if (!url) {
       return;
     }
-    if (!url.startsWith("http")) {
+    if (!/^https?:\/\//i.test(url)) {
       setError("Vui lòng nhập URL hợp lệ.");
       return;
     }
@@ -1622,35 +1642,43 @@ function AdminProductsSection({
       setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
       return;
     }
-    if (existingImages.includes(url) || newImages.includes(url)) {
+    if (hasImageUrl(imageItems, url)) {
       setImageUrlInput("");
       return;
     }
-    setNewImages((prev) => [...prev, url]);
+    setImageItems((prev) => [
+      ...prev,
+      createProductImageItem({
+        url,
+        source: "url",
+        status: "uploaded",
+        isNew: true
+      })
+    ]);
     setImageUrlInput("");
   };
 
-  const handleUploadFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) {
+  const handleFilesUpload = async (files: FileList | null) => {
+    const nextFiles = Array.from(files || []);
+    if (nextFiles.length === 0) {
       return;
     }
 
-    if (totalImages + files.length > 10) {
+    setError("");
+    if (totalImages + nextFiles.length > PRODUCT_IMAGE_LIMIT) {
       setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
-      event.target.value = "";
       return;
     }
 
-    setUploading(true);
+    let completed = 0;
+    setUploadSummary(`Đang tải 0/${nextFiles.length} ảnh...`);
     try {
-      const uploaded = await Promise.all(files.map((file) => uploadAdminFile(file)));
-      setNewImages((prev) => [...prev, ...uploaded.map((item) => item.url)]);
+      const uploaded = await uploadAdminFile(nextFiles[completed]);
+      void uploaded;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể tải ảnh lên.");
     } finally {
       setUploading(false);
-      event.target.value = "";
     }
   };
 
@@ -2131,7 +2159,7 @@ function AdminProductsSection({
                     <input
                       type="file"
                       multiple
-                      onChange={handleUploadFiles}
+                      onChange={(event) => void handleFilesUpload(event.target.files)}
                       disabled={!canAddMore || uploading}
                       className="text-base text-slate-600 md:text-sm cursor-pointer"
                     />
@@ -2235,6 +2263,759 @@ function AdminProductsSection({
             >
               <ChevronDown className="h-4 w-4" />
             </button>
+          </div>
+        </AdminDialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function AdminProductsSection({
+  products,
+  categories,
+  onReload,
+  setError,
+  density
+}: {
+  products: AdminProduct[];
+  categories: AdminCategory[];
+  onReload: () => void;
+  setError: (value: string) => void;
+  density: AdminDensityMode;
+}) {
+  const initialForm = {
+    name: "",
+    slug: "",
+    price: "",
+    compare_at_price: "",
+    status: "published",
+    featured: false,
+    tags: "",
+    sort_order: "0",
+    description: ""
+  };
+
+  const [form, setForm] = useState(initialForm);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [imageItems, setImageItems] = useState<ProductImageItem[]>([]);
+  const [imageUrlInput, setImageUrlInput] = useState("");
+  const [uploadSummary, setUploadSummary] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
+  const [page, setPage] = useState(1);
+  const dialogScrollRef = useRef<HTMLDivElement | null>(null);
+  const isCompact = density === "compact";
+  const filterGridClass = isCompact
+    ? "mt-4 grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr]"
+    : "mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr]";
+  const tableHeaderClass = isCompact
+    ? "hidden bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500 md:grid md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:gap-3"
+    : "hidden md:grid md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:gap-3 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-500 md:text-sm";
+  const tableRowClass = isCompact
+    ? "grid gap-3 px-4 py-3 text-sm md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:items-center transition hover:bg-slate-50"
+    : "grid gap-4 px-4 py-4 text-base md:grid-cols-[2fr_1fr_1fr_1.2fr_auto] md:items-center md:text-sm transition hover:bg-slate-50";
+
+  const totalImages = imageItems.length;
+  const canAddMore = totalImages < PRODUCT_IMAGE_LIMIT;
+  const uploadingCount = imageItems.filter((item) => item.status === "uploading").length;
+  const pageSize = 6;
+
+  const filteredProducts = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return products.filter((product) => {
+      if (
+        term &&
+        ![product.name, product.slug].some((value) =>
+          value?.toLowerCase().includes(term)
+        )
+      ) {
+        return false;
+      }
+      if (statusFilter && product.status !== statusFilter) {
+        return false;
+      }
+      if (categoryFilter) {
+        const categoryId = Number(categoryFilter);
+        if (!product.categories?.some((category) => category.id === categoryId)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [products, query, statusFilter, categoryFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, statusFilter, categoryFilter, products.length]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const pagedProducts = useMemo(
+    () => filteredProducts.slice((page - 1) * pageSize, page * pageSize),
+    [filteredProducts, page, pageSize]
+  );
+
+  const revokeBlobUrl = (url: string) => {
+    if (url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const resetForm = () => {
+    imageItems.forEach((item) => revokeBlobUrl(item.url));
+    setForm(initialForm);
+    setEditingId(null);
+    setImageItems([]);
+    setImageUrlInput("");
+    setUploadSummary("");
+    setSelectedCategories([]);
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const handleSelectProduct = (product: AdminProduct) => {
+    imageItems.forEach((item) => revokeBlobUrl(item.url));
+    setEditingId(product.id);
+    setForm({
+      name: product.name,
+      slug: product.slug,
+      price: String(product.price),
+      compare_at_price: product.compare_at_price ? String(product.compare_at_price) : "",
+      status: product.status || "published",
+      featured: product.featured,
+      tags: product.tags || "",
+      sort_order: String(product.sort_order || 0),
+      description: product.description || ""
+    });
+    setSelectedCategories(product.categories?.map((cat) => cat.id) || []);
+    setImageItems(mapProductImagesToItems(product));
+    setImageUrlInput("");
+    setUploadSummary("");
+    setDialogOpen(true);
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      resetForm();
+    }
+  };
+
+  const handleToggleCategory = (id: number) => {
+    setSelectedCategories((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
+    );
+  };
+
+  const handleAddUrl = () => {
+    setError("");
+    const url = imageUrlInput.trim();
+    if (!url) {
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      setError("Vui lòng nhập URL hợp lệ.");
+      return;
+    }
+    if (!canAddMore) {
+      setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
+      return;
+    }
+    if (hasImageUrl(imageItems, url)) {
+      setImageUrlInput("");
+      return;
+    }
+
+    setImageItems((prev) => [
+      ...prev,
+      createProductImageItem({
+        url,
+        source: "url",
+        status: "uploaded",
+        isNew: true
+      })
+    ]);
+    setImageUrlInput("");
+  };
+
+  const handleFilesUpload = async (files: FileList | null) => {
+    const nextFiles = Array.from(files || []);
+    if (nextFiles.length === 0) {
+      return;
+    }
+
+    setError("");
+    if (totalImages + nextFiles.length > PRODUCT_IMAGE_LIMIT) {
+      setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
+      return;
+    }
+
+    let completed = 0;
+    setUploadSummary(`Đang tải 0/${nextFiles.length} ảnh...`);
+
+    for (const file of nextFiles) {
+      const validationMessage = validateProductImageFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      const clientId = `upload-${file.name}-${Date.now()}-${completed}`;
+
+      setImageItems((prev) => [
+        ...prev,
+        createProductImageItem({
+          clientId,
+          url: previewUrl,
+          source: "upload",
+          status: "uploading",
+          isNew: true
+        })
+      ]);
+
+      if (validationMessage) {
+        completed += 1;
+        setImageItems((prev) =>
+          prev.map((item) =>
+            item.clientId === clientId
+              ? { ...item, status: "error", error: validationMessage }
+              : item
+          )
+        );
+        setUploadSummary(
+          completed < nextFiles.length ? `Đang tải ${completed}/${nextFiles.length} ảnh...` : ""
+        );
+        continue;
+      }
+
+      try {
+        const uploaded = await uploadAdminFile(file);
+        revokeBlobUrl(previewUrl);
+        completed += 1;
+        setImageItems((prev) =>
+          prev.map((item) =>
+            item.clientId === clientId
+              ? { ...item, url: uploaded.url, status: "uploaded", error: undefined }
+              : item
+          )
+        );
+      } catch (err) {
+        completed += 1;
+        setImageItems((prev) =>
+          prev.map((item) =>
+            item.clientId === clientId
+              ? {
+                  ...item,
+                  status: "error",
+                  error:
+                    err instanceof Error && err.message
+                      ? err.message
+                      : "Tải lên thất bại. Vui lòng thử lại."
+                }
+              : item
+          )
+        );
+      }
+
+      setUploadSummary(
+        completed < nextFiles.length ? `Đang tải ${completed}/${nextFiles.length} ảnh...` : ""
+      );
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImageItems((prev) => {
+      const target = prev[index];
+      if (target) {
+        revokeBlobUrl(target.url);
+      }
+      return removeImage(prev, index);
+    });
+  };
+
+  const handleMoveImageUp = (index: number) => {
+    setImageItems((prev) => moveImageUp(prev, index));
+  };
+
+  const handleMoveImageDown = (index: number) => {
+    setImageItems((prev) => moveImageDown(prev, index));
+  };
+
+  const handleSetPrimaryImage = (index: number) => {
+    setImageItems((prev) => setPrimaryImage(prev, index));
+  };
+
+  const handleDeleteProduct = async (product: AdminProduct) => {
+    const confirmed = window.confirm(`Xóa sản phẩm "${product.name}"?`);
+    if (!confirmed) {
+      return;
+    }
+    setError("");
+    try {
+      await deleteAdminProduct(product.id);
+      onReload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể xóa sản phẩm.");
+    }
+  };
+
+  const handleSubmit = async () => {
+    setError("");
+    if (imageItems.some((item) => item.status === "uploading")) {
+      setError("Vui lòng chờ tải ảnh hoàn tất trước khi lưu.");
+      return;
+    }
+
+    const finalImages = toProductImagePayload(imageItems);
+    if (finalImages.length < PRODUCT_IMAGE_MIN) {
+      setError("Mỗi sản phẩm cần tối thiểu 3 ảnh.");
+      return;
+    }
+    if (finalImages.length > PRODUCT_IMAGE_LIMIT) {
+      setError("Tối đa 10 ảnh cho mỗi sản phẩm.");
+      return;
+    }
+    if (!form.name.trim()) {
+      setError("Vui lòng nhập tên sản phẩm.");
+      return;
+    }
+    if (!form.slug.trim()) {
+      setError("Vui lòng nhập slug sản phẩm.");
+      return;
+    }
+
+    const priceValue = Number(form.price || 0);
+    if (!priceValue || Number.isNaN(priceValue)) {
+      setError("Vui lòng nhập giá bán hợp lệ.");
+      return;
+    }
+
+    try {
+      const payload = {
+        name: form.name.trim(),
+        slug: form.slug.trim(),
+        price: priceValue,
+        compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : undefined,
+        status: form.status,
+        featured: form.featured,
+        tags: form.tags.trim(),
+        sort_order: Number(form.sort_order || 0),
+        description: form.description.trim(),
+        category_ids: selectedCategories
+      };
+
+      const result = editingId
+        ? await updateAdminProduct(editingId, payload)
+        : await createAdminProduct(payload);
+
+      await replaceAdminProductImages(editingId || result.id, finalImages);
+
+      setDialogOpen(false);
+      resetForm();
+      onReload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể lưu sản phẩm.");
+    }
+  };
+
+  const statusOptions = [
+    { value: "published", label: "Đang bán" },
+    { value: "hidden", label: "Ẩn" }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className={panelByDensity(density)}>
+        <AdminSectionHeader
+          title="Quản lý sản phẩm"
+          description="Theo dõi tồn kho, cập nhật giá và hình ảnh sản phẩm."
+          actions={
+            <Button
+              onClick={openCreateDialog}
+              data-testid="admin-product-create"
+              className="bg-[var(--color-cta)] text-white hover:brightness-110 normal-case tracking-normal text-base md:text-sm cursor-pointer"
+            >
+              Thêm sản phẩm
+            </Button>
+          }
+        />
+
+        <div className={filterGridClass}>
+          <AdminField label="Tìm kiếm" helper="Theo tên hoặc slug sản phẩm.">
+            <input
+              className={inputClass}
+              data-testid="admin-products-filter-query"
+              placeholder="Tìm theo tên hoặc slug"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </AdminField>
+          <AdminField label="Trạng thái">
+            <select
+              className={selectClass}
+              data-testid="admin-products-filter-status"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="">Tất cả</option>
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </AdminField>
+          <AdminField label="Danh mục">
+            <select
+              className={selectClass}
+              data-testid="admin-products-filter-category"
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+            >
+              <option value="">Tất cả</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </AdminField>
+        </div>
+
+        <div className={`${isCompact ? "mt-4" : "mt-5"} overflow-hidden rounded-xl border border-slate-200`}>
+          <div className={tableHeaderClass}>
+            <span>Sản phẩm</span>
+            <span>Giá</span>
+            <span>Trạng thái</span>
+            <span>Danh mục</span>
+            <span className="text-right">Thao tác</span>
+          </div>
+          <div className="divide-y divide-slate-200">
+            {pagedProducts.length ? (
+              pagedProducts.map((product) => {
+                const firstImage = product.images?.[0]?.url;
+                const statusLabel = product.status === "published" ? "Đang bán" : "Ẩn";
+
+                return (
+                  <div key={product.id} className={tableRowClass}>
+                    <div className="flex items-start gap-3">
+                      <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100">
+                        {firstImage ? (
+                          <Image
+                            src={firstImage}
+                            alt={product.name}
+                            width={64}
+                            height={64}
+                            className="h-full w-full object-cover"
+                            sizes="64px"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-base text-slate-400 md:text-sm">
+                            Chưa có ảnh
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-semibold text-slate-900">{product.name}</p>
+                        <p className="text-slate-500">/{product.slug}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-base text-slate-500 md:text-sm">
+                          <span>Ảnh: {product.images?.length || 0}</span>
+                          <span>Thứ tự: {product.sort_order}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-base font-semibold text-slate-900 md:text-sm">
+                      {formatCurrency(product.price)}
+                      {product.compare_at_price ? (
+                        <p className="text-base text-slate-400 line-through md:text-sm">
+                          {formatCurrency(product.compare_at_price)}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-base text-slate-600 md:text-sm">
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                        {statusLabel}
+                      </span>
+                      {product.featured ? (
+                        <span className="rounded-full bg-[var(--color-cta)]/10 px-3 py-1 text-[var(--color-cta)]">
+                          Nổi bật
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {product.categories?.length ? (
+                        product.categories.map((category) => (
+                          <span
+                            key={category.id}
+                            className="rounded-full bg-[var(--color-primary)]/10 px-3 py-1 text-base font-semibold text-[var(--color-primary)] md:text-sm"
+                          >
+                            {category.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-base text-slate-400 md:text-sm">
+                          Chưa gắn danh mục
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSelectProduct(product)}
+                        data-testid={`admin-product-edit-${product.id}`}
+                        className={secondaryActionClass}
+                      >
+                        Chỉnh sửa
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteProduct(product)}
+                        className={dangerActionClass}
+                      >
+                        Xóa
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="px-4 py-8 text-center text-base text-slate-500 md:text-sm">
+                Chưa có sản phẩm phù hợp bộ lọc.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className={`${isCompact ? "mt-3" : "mt-4"} flex flex-wrap items-center justify-between gap-3`}>
+          <span className="text-base text-slate-500 md:text-sm">
+            Hiển thị {pagedProducts.length}/{filteredProducts.length} sản phẩm
+          </span>
+          <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </div>
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
+        <AdminDialogContent className="max-w-6xl overflow-hidden border-none bg-transparent p-0 shadow-none">
+          <div className="rounded-[28px] border border-slate-200 bg-white shadow-xl shadow-slate-200/40">
+            <div ref={dialogScrollRef} className="max-h-[calc(100vh-7rem)] overflow-y-auto">
+              <div className="border-b border-slate-200 px-6 pb-5 pt-6 sm:px-8">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold text-slate-900">
+                    {editingId ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
+                  </DialogTitle>
+                  <DialogDescription className="mt-2 max-w-2xl text-sm text-slate-500">
+                    Quản lý nội dung, phân loại và bộ ảnh sản phẩm trong một không gian gọn gàng hơn. Ảnh đầu tiên luôn là ảnh chính.
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              <div className="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+                <div className="grid gap-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <AdminSectionHeader
+                      title="Thông tin cơ bản"
+                      description="Tên, slug và mô tả ngắn cho sản phẩm."
+                    />
+                    <div className="mt-4 grid gap-4">
+                      <AdminField label="Tên sản phẩm" helper="Hiển thị trên trang chi tiết.">
+                        <input
+                          className={inputClass}
+                          value={form.name}
+                          onChange={(event) => setForm({ ...form, name: event.target.value })}
+                        />
+                      </AdminField>
+                      <AdminField label="Slug sản phẩm" helper="Không dấu, dùng trong URL.">
+                        <input
+                          className={inputClass}
+                          value={form.slug}
+                          onChange={(event) => setForm({ ...form, slug: event.target.value })}
+                        />
+                      </AdminField>
+                      <AdminField label="Mô tả ngắn" helper="Tóm tắt 1-2 câu về sản phẩm.">
+                        <textarea
+                          className={textareaClass}
+                          value={form.description}
+                          onChange={(event) =>
+                            setForm({ ...form, description: event.target.value })
+                          }
+                        />
+                      </AdminField>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <AdminSectionHeader
+                      title="Giá và trạng thái"
+                      description="Kiểm soát giá bán và cách sản phẩm xuất hiện trong admin."
+                    />
+                    <div className="mt-4 grid gap-4">
+                      <AdminField label="Giá bán" helper="Nhập giá bán hiện tại.">
+                        <input
+                          type="number"
+                          className={inputClass}
+                          value={form.price}
+                          onChange={(event) => setForm({ ...form, price: event.target.value })}
+                        />
+                      </AdminField>
+                      <AdminField label="Giá niêm yết" helper="Bỏ trống nếu không có giá gốc.">
+                        <input
+                          type="number"
+                          className={inputClass}
+                          value={form.compare_at_price}
+                          onChange={(event) =>
+                            setForm({ ...form, compare_at_price: event.target.value })
+                          }
+                        />
+                      </AdminField>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <AdminField label="Trạng thái">
+                          <select
+                            className={selectClass}
+                            value={form.status}
+                            onChange={(event) =>
+                              setForm({ ...form, status: event.target.value })
+                            }
+                          >
+                            {statusOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </AdminField>
+                        <AdminField
+                          label="Sản phẩm nổi bật"
+                          helper="Đánh dấu để hiển thị nổi bật."
+                        >
+                          <div className="flex min-h-[44px] items-center gap-3 rounded-lg border border-slate-200 px-3">
+                            <input
+                              type="checkbox"
+                              checked={form.featured}
+                              onChange={(event) =>
+                                setForm({ ...form, featured: event.target.checked })
+                              }
+                              className="h-4 w-4 accent-[var(--color-primary)] cursor-pointer"
+                            />
+                            <span className="text-base font-semibold text-slate-700 md:text-sm">
+                              Hiển thị nổi bật
+                            </span>
+                          </div>
+                        </AdminField>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <AdminSectionHeader
+                      title="Phân loại và sắp xếp"
+                      description="Thẻ, thứ tự hiển thị và nhóm danh mục."
+                    />
+                    <div className="mt-4 grid gap-4">
+                      <AdminField label="Thẻ sản phẩm" helper="Ngăn cách bằng dấu phẩy.">
+                        <input
+                          className={inputClass}
+                          value={form.tags}
+                          onChange={(event) => setForm({ ...form, tags: event.target.value })}
+                        />
+                      </AdminField>
+                      <AdminField label="Thứ tự hiển thị" helper="Số nhỏ hiển thị trước.">
+                        <input
+                          type="number"
+                          className={inputClass}
+                          value={form.sort_order}
+                          onChange={(event) =>
+                            setForm({ ...form, sort_order: event.target.value })
+                          }
+                        />
+                      </AdminField>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <AdminSectionHeader
+                      title="Danh mục"
+                      description="Gắn sản phẩm vào danh mục phù hợp."
+                    />
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {categories.length ? (
+                        categories.map((category) => {
+                          const active = selectedCategories.includes(category.id);
+                          return (
+                            <label
+                              key={category.id}
+                              className={`flex items-center gap-2 rounded-full border px-3 py-1 text-base font-semibold transition cursor-pointer md:text-sm ${
+                                active
+                                  ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                                  : "border-slate-200 text-slate-600 hover:border-[var(--color-primary)]/40"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={active}
+                                onChange={() => handleToggleCategory(category.id)}
+                                className="h-4 w-4 accent-[var(--color-primary)] cursor-pointer"
+                              />
+                              {category.name}
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <p className="text-base text-slate-500 md:text-sm">
+                          Chưa có danh mục để chọn.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <ProductImageManager
+                    items={imageItems}
+                    urlInput={imageUrlInput}
+                    uploadSummary={uploadSummary}
+                    canAddMore={canAddMore}
+                    onUrlInputChange={setImageUrlInput}
+                    onAddByUrl={handleAddUrl}
+                    onFilesSelected={(files) => {
+                      void handleFilesUpload(files);
+                    }}
+                    onRemoveImage={handleRemoveImage}
+                    onMoveImageUp={handleMoveImageUp}
+                    onMoveImageDown={handleMoveImageDown}
+                    onSetPrimaryImage={handleSetPrimaryImage}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-6 py-4 sm:px-8">
+              <div className="text-sm text-slate-500">
+                {uploadingCount > 0
+                  ? `Còn ${uploadingCount} ảnh đang tải lên.`
+                  : `Cần tối thiểu ${PRODUCT_IMAGE_MIN} ảnh, tối đa ${PRODUCT_IMAGE_LIMIT} ảnh.`}
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
+                  className={secondaryActionClass}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={uploadingCount > 0}
+                  className={primaryActionClass}
+                >
+                  {editingId ? "Lưu sản phẩm" : "Tạo sản phẩm"}
+                </Button>
+              </div>
+            </div>
           </div>
         </AdminDialogContent>
       </Dialog>
@@ -3117,7 +3898,7 @@ function StatusSelectControl({
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger
-        className={`h-10 min-h-[40px] w-full gap-2 rounded-lg border px-3 text-xs font-semibold shadow-sm ${triggerToneClass} ${triggerClassName || ""}`}
+        className={`h-11 min-h-[44px] w-full gap-2 rounded-lg border px-3 text-base font-semibold shadow-sm md:text-sm ${triggerToneClass} ${triggerClassName || ""}`}
         data-testid={dataTestId}
         aria-label={fallbackOption?.ariaLabel}
       >
@@ -3604,8 +4385,7 @@ function AdminOrdersSection({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className="normal-case border-slate-200 text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  className="h-11 normal-case border-slate-200 px-3 text-sm text-slate-700 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                   data-testid="admin-orders-column-toggle"
                   disabled={savingPreferences}
                 >

@@ -67,6 +67,7 @@ Response envelope:
 - `PATCH /api/admin/products/:id`
 - `DELETE /api/admin/products/:id`
 - `POST /api/admin/products/:id/images`
+- `PUT /api/admin/products/:id/images`
 - `GET /api/admin/categories`
 - `POST /api/admin/categories`
 - `GET /api/admin/categories/:id`

@@ -135,6 +135,12 @@ export type AdminProduct = {
   categories: { id: number; name: string; slug: string }[];
 };
 
+export type AdminProductImageInput = {
+  id?: number;
+  url: string;
+  sort_order?: number;
+};
+
 export type AdminPost = {
   id: number;
   title: string;
@@ -341,6 +347,16 @@ export function createAdminPage(
   return adminRequest<AdminPage>("/api/admin/pages", {
     method: "POST",
     body: JSON.stringify(input),
+  });
+}
+
+export function replaceAdminProductImages(
+  id: number,
+  images: AdminProductImageInput[],
+) {
+  return adminRequest<AdminProduct>(`/api/admin/products/${id}/images`, {
+    method: "PUT",
+    body: JSON.stringify({ images }),
   });
 }
 

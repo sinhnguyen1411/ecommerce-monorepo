@@ -20,6 +20,15 @@ const PLACEHOLDER_IMAGES = [
   "https://images.pexels.com/photos/9816769/pexels-photo-9816769.jpeg?cs=srgb&dl=pexels-brianjiz-9816769.jpg&fm=jpg"
 ];
 
+function shouldBypassImageOptimization(url: string) {
+  return (
+    url.startsWith("blob:") ||
+    url.startsWith("/uploads/") ||
+    url.includes("://localhost:8080/uploads/") ||
+    url.includes("://127.0.0.1:8080/uploads/")
+  );
+}
+
 export default function ProductCard({ product }: { product: Product }) {
   const images = useMemo(() => {
     const sources = [...(product.images || [])]
@@ -92,14 +101,23 @@ export default function ProductCard({ product }: { product: Product }) {
         <div className="proloop-image">
           <div className="proloop-image__inner">
             <div className="lazy-img lazy-img__prod">
-              <Image
-                src={images[activeImage]}
-                alt={product.name}
-                width={480}
-                height={360}
-                className="product-img product-img--carousel"
-                sizes="(max-width: 768px) 90vw, 320px"
-              />
+              {shouldBypassImageOptimization(images[activeImage]) ? (
+                <img
+                  src={images[activeImage]}
+                  alt={product.name}
+                  className="product-img product-img--carousel"
+                  loading="lazy"
+                />
+              ) : (
+                <Image
+                  src={images[activeImage]}
+                  alt={product.name}
+                  width={480}
+                  height={360}
+                  className="product-img product-img--carousel"
+                  sizes="(max-width: 768px) 90vw, 320px"
+                />
+              )}
             </div>
           </div>
           <div className="proloop-image__position">

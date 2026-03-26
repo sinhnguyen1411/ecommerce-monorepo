@@ -12,5 +12,5 @@ export default function AdminLayout({
     return () => document.body.classList.remove("admin-mode");
   }, []);
 
-  return <div className="admin-root">{children}</div>;
+  return <div className="admin-root min-h-screen bg-neutral-50 text-[var(--color-text)]">{children}</div>;
 }

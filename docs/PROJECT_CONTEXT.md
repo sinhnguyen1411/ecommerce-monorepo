@@ -864,6 +864,7 @@ Error responses use:
 | `GET /api/admin/me` | Current admin profile |
 | `GET/POST/GET/PATCH/DELETE /api/admin/products...` | Product CRUD |
 | `POST /api/admin/products/:id/images` | Adds product image record |
+| `PUT /api/admin/products/:id/images` | Replaces full ordered product image list |
 | `GET/POST/GET/PATCH/DELETE /api/admin/categories...` | Category CRUD |
 | `GET/POST/GET/PATCH/DELETE /api/admin/posts...` | Post CRUD |
 | `GET/POST/GET/PATCH /api/admin/pages...` | Page list/create/get/update only |

@@ -551,6 +551,7 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
     dashboard: dashboardData = dashboard,
     failPaths = []
   } = overrides;
+  const mutableProducts = structuredClone(productData) as MockAdminRecord[];
   const mutableOrders = structuredClone(orderData) as MockAdminOrder[];
   const mutablePages = structuredClone(pageData) as MockAdminPage[];
 
@@ -584,8 +585,85 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
         profile.ui_preferences = normalizeUIPreferences(payload.ui_preferences);
       }
       data = profile;
-    } else if (url.pathname.endsWith("/api/admin/products")) {
-      data = productData;
+    } else if (url.pathname.endsWith("/api/admin/products") && method === "GET") {
+      data = mutableProducts;
+    } else if (/\/api\/admin\/products\/\d+$/.test(url.pathname) && method === "PATCH") {
+      const productId = Number(url.pathname.split("/").pop());
+      const payload = (route.request().postDataJSON() || {}) as Record<string, unknown>;
+      const index = mutableProducts.findIndex((item) => Number(item.id) === productId);
+      if (index >= 0) {
+        mutableProducts[index] = {
+          ...mutableProducts[index],
+          ...payload,
+        };
+      }
+      data = index >= 0 ? mutableProducts[index] : {};
+    } else if (url.pathname.endsWith("/api/admin/products") && method === "POST") {
+      const payload = (route.request().postDataJSON() || {}) as Record<string, unknown>;
+      const nextId =
+        mutableProducts.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+      const created = {
+        id: nextId,
+        name: String(payload.name || ""),
+        slug: String(payload.slug || ""),
+        description: String(payload.description || ""),
+        price: Number(payload.price || 0),
+        compare_at_price:
+          payload.compare_at_price === undefined ? null : Number(payload.compare_at_price),
+        featured: Boolean(payload.featured),
+        status: String(payload.status || "published"),
+        tags: String(payload.tags || ""),
+        sort_order: Number(payload.sort_order || 0),
+        images: [],
+        categories: (categoryData as MockAdminRecord[]).filter((category) =>
+          Array.isArray(payload.category_ids) &&
+          payload.category_ids.includes(category.id as number)
+        )
+      };
+      mutableProducts.unshift(created);
+      data = created;
+    } else if (/\/api\/admin\/products\/\d+\/images$/.test(url.pathname) && method === "PUT") {
+      const productId = Number(url.pathname.split("/").slice(-2)[0]);
+      const payload = (route.request().postDataJSON() || {}) as {
+        images?: Array<{ id?: number; url?: string; sort_order?: number }>;
+      };
+      const index = mutableProducts.findIndex((item) => Number(item.id) === productId);
+      if (index >= 0) {
+        const current = mutableProducts[index] as Record<string, unknown>;
+        const existingImages = Array.isArray(current.images) ? current.images : [];
+        let nextImageId = existingImages.reduce(
+          (max: number, image: any) => Math.max(max, Number(image?.id) || 0),
+          0
+        );
+        const images = Array.isArray(payload.images) ? payload.images : [];
+        current.images = images.map((image, order) => ({
+          id: image.id || ++nextImageId,
+          url: String(image.url || ""),
+          sort_order: order + 1
+        }));
+      }
+      data = index >= 0 ? mutableProducts[index] : {};
+    } else if (/\/api\/admin\/products\/\d+\/images$/.test(url.pathname) && method === "POST") {
+      const productId = Number(url.pathname.split("/").slice(-2)[0]);
+      const payload = (route.request().postDataJSON() || {}) as Record<string, unknown>;
+      const index = mutableProducts.findIndex((item) => Number(item.id) === productId);
+      if (index >= 0) {
+        const current = mutableProducts[index] as Record<string, unknown>;
+        const existingImages = Array.isArray(current.images) ? current.images : [];
+        const nextImageId = existingImages.reduce(
+          (max: number, image: any) => Math.max(max, Number(image?.id) || 0),
+          0
+        ) + 1;
+        current.images = [
+          ...existingImages,
+          {
+            id: nextImageId,
+            url: String(payload.url || ""),
+            sort_order: Number(payload.sort_order || existingImages.length + 1)
+          }
+        ];
+      }
+      data = index >= 0 ? mutableProducts[index] : {};
     } else if (url.pathname.endsWith("/api/admin/categories")) {
       data = categoryData;
     } else if (url.pathname.endsWith("/api/admin/posts")) {
@@ -652,6 +730,10 @@ export const mockAdminApi = async (page: Page, overrides: AdminApiOverrides = {}
       data = index >= 0 ? mutableOrders[index] : {};
     } else if (url.pathname.endsWith("/api/admin/payment-settings")) {
       data = paymentData;
+    } else if (url.pathname.endsWith("/api/admin/uploads") && method === "POST") {
+      data = {
+        url: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=80"
+      };
     }
 
     await route.fulfill({
