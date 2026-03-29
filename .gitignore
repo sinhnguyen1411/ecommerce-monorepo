@@ -45,5 +45,7 @@ AGENTS.md
 !.githooks/pre-commit
 /scripts/*
 !/scripts/check-mojibake-repo.mjs
+!/scripts/bootstrap-env.ps1
+!/scripts/bootstrap-env.sh
 !/scripts/setup-git-hooks.ps1
 !/scripts/setup-git-hooks.sh

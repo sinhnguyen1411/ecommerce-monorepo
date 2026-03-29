@@ -48,9 +48,7 @@ Full-stack ecommerce + content platform (storefront + admin) with a Next.js web 
 Environment files live in `infra/env/`:
 
 ```powershell
-Copy-Item infra\env\mysql.env.example infra\env\mysql.env
-Copy-Item infra\env\api.env.example infra\env\api.env
-Copy-Item infra\env\web.env.example infra\env\web.env
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap-env.ps1
 ```
 
 Key variables:
@@ -269,7 +267,6 @@ Get-Content backup.sql | docker exec -i tambo_mysql mysql -u root -pYOUR_ROOT_PA
 - `docs/HANDOVER_GUIDE.md`: handover notes
 - `docs/CONTENT_QUALITY_CHECKLIST.md`: editorial/content-quality checklist
 - `apps/web/README_UI.md`: storefront UI summary
-
 
 
 

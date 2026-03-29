@@ -7,7 +7,13 @@ This monorepo runs MySQL, the Go API, and the Next.js frontend with Docker Compo
 
 ## Setup
 
-1) Review env files:
+1) Create local env files from tracked templates:
+
+```
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap-env.ps1
+```
+
+2) Review env files:
 
 ```
 infra\env\mysql.env
@@ -15,7 +21,7 @@ infra\env\api.env
 infra\env\web.env
 ```
 
-2) Start the stack:
+3) Start the stack:
 
 ```
 cd infra
@@ -44,7 +50,7 @@ Admin Home Editor freshness checks (after restart):
 - Banner image editor supports separate `Desktop` and `Mobile`.
 - Media picker no longer has a `RECENT` tab.
 
-3) Verify services:
+4) Verify services:
 
 ```
 curl http://localhost:8080/healthz

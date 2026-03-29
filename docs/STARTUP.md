@@ -13,6 +13,8 @@ Prerequisites
 
 Recommended local runtime
 1. Start the full stack:
+   - `powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap-env.ps1`
+   - review `infra/env/*.env` if you need local overrides
    - `cd infra`
    - `docker compose up -d --build`
 2. Restart web with fresh code (rebuild only web service):
@@ -27,10 +29,13 @@ Recommended local runtime
    - `http://localhost:3000`
 
 Manual runtime
-1. API:
+1. Bootstrap env files first:
+   - `powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap-env.ps1`
+2. API:
+   - if MySQL runs via Docker, set `DB_HOST=localhost` and `DB_PORT=3007` in `infra/env/api.env`
    - `cd apps/api`
    - `go run .`
-2. Web:
+3. Web:
    - `cd apps/web`
    - `npm install`
    - `npm run dev`
