@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -68,6 +69,23 @@ func buildTransferContent(orderNumber string) string {
 	return content[:25]
 }
 
+func normalizeVietQRImageURL(parsed *url.URL) {
+	if parsed == nil {
+		return
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host != "api.vietqr.io" {
+		return
+	}
+
+	port := parsed.Port()
+	if port != "" {
+		parsed.Host = net.JoinHostPort("img.vietqr.io", port)
+		return
+	}
+	parsed.Host = "img.vietqr.io"
+}
+
 func buildQuickLink(baseURL, bankID, accountNo, template, ext string, amount int64, addInfo, accountName string) (string, error) {
 	if bankID == "" || accountNo == "" {
 		return "", errors.New("missing bank configuration")
@@ -75,8 +93,13 @@ func buildQuickLink(baseURL, bankID, accountNo, template, ext string, amount int
 	if amount <= 0 {
 		return "", errors.New("invalid amount")
 	}
-	imageBase := strings.TrimRight(baseURL, "/")
-	if !strings.HasSuffix(imageBase, "/image") {
+	parsedBase, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil || parsedBase.Scheme == "" || parsedBase.Host == "" {
+		return "", errors.New("invalid VietQR image base URL")
+	}
+	normalizeVietQRImageURL(parsedBase)
+	imageBase := strings.TrimRight(parsedBase.String(), "/")
+	if !strings.HasSuffix(strings.ToLower(parsedBase.Path), "/image") {
 		imageBase = imageBase + "/image"
 	}
 	cleanExt := strings.TrimPrefix(strings.TrimSpace(ext), ".")

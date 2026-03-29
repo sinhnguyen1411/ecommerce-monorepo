@@ -238,6 +238,7 @@ func buildQuickLinkFromPreset(preset string, amount int64, content string, fallb
 	if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
 		return "", info, errors.New("invalid quick link")
 	}
+	normalizeVietQRImageURL(parsedURL)
 
 	query := parsedURL.Query()
 	if fallbackAccountName != "" && strings.TrimSpace(query.Get("accountName")) == "" {

@@ -7,7 +7,18 @@ func TestBuildQuickLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	expected := "https://api.vietqr.io/image/970436-0123456-f8QLOpm.jpg?accountName=Tam+Bo&addInfo=TB1&amount=150000"
+	expected := "https://img.vietqr.io/image/970436-0123456-f8QLOpm.jpg?accountName=Tam+Bo&addInfo=TB1&amount=150000"
+	if link != expected {
+		t.Fatalf("expected %q got %q", expected, link)
+	}
+}
+
+func TestBuildQuickLinkKeepsImageHost(t *testing.T) {
+	link, err := buildQuickLink("https://img.vietqr.io", "970436", "0123456", "compact2", "png", 540000, "TB290326N0001", "Tam Bo")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := "https://img.vietqr.io/image/970436-0123456-compact2.png?accountName=Tam+Bo&addInfo=TB290326N0001&amount=540000"
 	if link != expected {
 		t.Fatalf("expected %q got %q", expected, link)
 	}
