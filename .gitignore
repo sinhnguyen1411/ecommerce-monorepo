@@ -1,12 +1,10 @@
 ﻿node_modules
-.next
 npm-debug.log*
 .env
 .env.*
 !*.env.example
 infra/env/*.env
 !infra/env/*.env.example
-apps/api/uploads
 
 bin
 *.exe
@@ -18,19 +16,13 @@ bin
 .vscode
 .idea
 
-# build/cache outputs
-out
-dist
-build
-.turbo
-.cache
-
 # logs
 *.log
 
 # tool caches
 .eslintcache
 .stylelintcache
+apps/web/.next/cache/webpack/
 apps/web/test-results/
 apps/web/tsconfig.tsbuildinfo
 
@@ -49,3 +41,4 @@ AGENTS.md
 !/scripts/bootstrap-env.sh
 !/scripts/setup-git-hooks.ps1
 !/scripts/setup-git-hooks.sh
+/infra/env
