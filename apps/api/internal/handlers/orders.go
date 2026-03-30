@@ -193,16 +193,22 @@ func (s *Server) CreateOrder(c *gin.Context) {
 		subtotal += product.Price * float64(qty)
 	}
 
-	if s.Config.MinOrderAmount > 0 && subtotal < s.Config.MinOrderAmount {
-		respondError(c, http.StatusBadRequest, "min_order", fmt.Sprintf("Minimum order is %.0f", s.Config.MinOrderAmount))
+	checkoutSettings, err := s.loadCheckoutSettings()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "db_error", "Failed to load checkout settings")
 		return
 	}
 
-	shippingFee := s.Config.StandardShippingFee
-	if shippingMethod == "express" {
-		shippingFee = s.Config.ExpressShippingFee
+	if checkoutSettings.MinOrderAmount > 0 && subtotal < checkoutSettings.MinOrderAmount {
+		respondError(c, http.StatusBadRequest, "min_order", fmt.Sprintf("Minimum order is %.0f", checkoutSettings.MinOrderAmount))
+		return
 	}
-	if shippingMethod == "standard" && s.Config.FreeShippingThreshold > 0 && subtotal >= s.Config.FreeShippingThreshold {
+
+	shippingFee := checkoutSettings.ShippingFeeStandard
+	if shippingMethod == "express" {
+		shippingFee = checkoutSettings.ShippingFeeExpress
+	}
+	if shippingMethod == "standard" && checkoutSettings.FreeShippingThreshold > 0 && subtotal >= checkoutSettings.FreeShippingThreshold {
 		shippingFee = 0
 	}
 

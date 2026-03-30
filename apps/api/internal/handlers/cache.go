@@ -95,3 +95,14 @@ func (s *Server) cacheKey(method, uri string) string {
 	}
 	return s.Config.CachePrefix + hashIdentifier(raw)
 }
+
+func (s *Server) invalidateCache(method, uri string) {
+	if !s.Config.CacheEnabled || s.Redis == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	_ = s.Redis.Del(ctx, s.cacheKey(method, uri)).Err()
+}

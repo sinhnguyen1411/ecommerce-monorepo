@@ -9,6 +9,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { siteConfig } from "@/lib/site";
 import { useCartStore } from "@/store/cart";
 
+import { useCheckoutConfig } from "../cart/CheckoutConfigProvider";
 import Price from "./Price";
 
 type ProductDetailSidebarProps = {
@@ -24,6 +25,7 @@ export default function ProductDetailSidebar({ product }: ProductDetailSidebarPr
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [promoError, setPromoError] = useState("");
   const [now, setNow] = useState(() => new Date());
+  const checkoutConfig = useCheckoutConfig();
   const available =
     typeof product.available === "boolean"
       ? product.available
@@ -91,7 +93,7 @@ export default function ProductDetailSidebar({ product }: ProductDetailSidebarPr
 
   const handleBuyNow = () => {
     handleAdd();
-    router.push("/checkout");
+    router.push("/cart");
   };
 
   const handleCopy = async () => {
@@ -255,12 +257,12 @@ export default function ProductDetailSidebar({ product }: ProductDetailSidebarPr
 
         <div className="voucher-section">
           <div className="voucher-heading">{"Voucher gi\u1EA3m gi\u00E1"}</div>
-          {siteConfig.freeShippingThreshold > 0 ? (
+          {checkoutConfig.free_shipping_threshold > 0 ? (
             <div className="voucher-freeship">
               <Truck className="h-4 w-4" />
               <span>
                 {"Mi\u1EC5n ph\u00ED v\u1EADn chuy\u1EC3n cho \u0111\u01A1n t\u1EEB "}
-                {formatCurrency(siteConfig.freeShippingThreshold)}
+                {formatCurrency(checkoutConfig.free_shipping_threshold)}
               </span>
             </div>
           ) : null}

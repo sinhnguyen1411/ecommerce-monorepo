@@ -176,6 +176,8 @@ func (s *Server) RegisterRoutes(router *gin.Engine) {
 
 			admin.GET("/payment-settings", s.AdminGetPaymentSettings)
 			admin.PUT("/payment-settings", s.AdminUpdatePaymentSettings)
+			admin.GET("/checkout-settings", s.AdminGetCheckoutSettings)
+			admin.PUT("/checkout-settings", s.AdminUpdateCheckoutSettings)
 
 			admin.POST("/uploads", s.AdminUpload)
 		}

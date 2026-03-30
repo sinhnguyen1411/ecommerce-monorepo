@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS checkout_settings (
+  id INT PRIMARY KEY,
+  min_order_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  free_shipping_threshold DECIMAL(12,2) NOT NULL DEFAULT 0,
+  shipping_fee_standard DECIMAL(12,2) NOT NULL DEFAULT 30000,
+  shipping_fee_express DECIMAL(12,2) NOT NULL DEFAULT 50000,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

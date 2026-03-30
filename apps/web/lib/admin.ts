@@ -215,6 +215,13 @@ export type PaymentSettings = {
   bank_qr_template: string;
 };
 
+export type CheckoutSettings = {
+  min_order_amount: number;
+  free_shipping_threshold: number;
+  shipping_fee_standard: number;
+  shipping_fee_express: number;
+};
+
 export function adminLogin(input: { email: string; password: string }) {
   return adminRequest<{ token: string; admin: AdminProfile }>(
     "/api/admin/login",
@@ -440,6 +447,17 @@ export function getPaymentSettings() {
 
 export function updatePaymentSettings(input: PaymentSettings) {
   return adminRequest<PaymentSettings>("/api/admin/payment-settings", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getCheckoutSettings() {
+  return adminRequest<CheckoutSettings>("/api/admin/checkout-settings");
+}
+
+export function updateCheckoutSettings(input: CheckoutSettings) {
+  return adminRequest<CheckoutSettings>("/api/admin/checkout-settings", {
     method: "PUT",
     body: JSON.stringify(input),
   });

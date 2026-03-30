@@ -8,7 +8,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/collections/all",
     "/blogs/news",
     "/cart",
-    "/checkout",
     "/search",
     "/pages/about-us",
     "/pages/hoi-dap-cung-nha-nong",

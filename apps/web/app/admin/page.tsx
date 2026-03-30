@@ -90,6 +90,7 @@ import {
 } from "@/lib/admin-status";
 import {
   AdminCategory,
+  CheckoutSettings,
   AdminDashboard,
   AdminDashboardGrain,
   AdminDensityMode,
@@ -117,6 +118,7 @@ import {
   deleteAdminProduct,
   deleteAdminQnA,
   getAdminDashboard,
+  getCheckoutSettings,
   getPaymentSettings,
   listAdminCategories,
   listAdminOrders,
@@ -131,6 +133,7 @@ import {
   updateAdminPost,
   updateAdminProduct,
   updateAdminQnA,
+  updateCheckoutSettings,
   updatePaymentSettings,
   uploadAdminFile
 } from "@/lib/admin";
@@ -371,6 +374,7 @@ export default function AdminDashboardPage() {
   const [qna, setQnA] = useState<AdminQnA[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
+  const [checkoutSettings, setCheckoutSettings] = useState<CheckoutSettings | null>(null);
   const [error, setError] = useState("");
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [dashboardGrain, setDashboardGrain] = useState<AdminDashboardGrain>("day");
@@ -443,6 +447,7 @@ export default function AdminDashboardPage() {
         qnaData,
         orderData,
         paymentData,
+        checkoutData,
         pageData
       ] = await Promise.all([
         listAdminProducts(),
@@ -451,6 +456,7 @@ export default function AdminDashboardPage() {
         listAdminQnA(),
         listAdminOrders(),
         getPaymentSettings(),
+        getCheckoutSettings(),
         listAdminPages()
       ]);
       setProducts(productData);
@@ -459,6 +465,7 @@ export default function AdminDashboardPage() {
       setQnA(qnaData);
       setOrders(orderData);
       setSettings(paymentData);
+      setCheckoutSettings(checkoutData);
       setPages(pageData);
 
       const aboutPage = pageData.find((item) => item.slug === "about-us");
@@ -1462,7 +1469,9 @@ export default function AdminDashboardPage() {
       {activeSection === "payments" && (
         <AdminPaymentsSection
           settings={settings}
+          checkoutSettings={checkoutSettings}
           onSave={setSettings}
+          onCheckoutSave={setCheckoutSettings}
           setError={setError}
           density={uiPreferencesDraft.density}
         />
@@ -4787,12 +4796,16 @@ function AdminOrdersSection({
 }
 function AdminPaymentsSection({
   settings,
+  checkoutSettings,
   onSave,
+  onCheckoutSave,
   setError,
   density
 }: {
   settings: PaymentSettings | null;
+  checkoutSettings: CheckoutSettings | null;
   onSave: (value: PaymentSettings) => void;
+  onCheckoutSave: (value: CheckoutSettings) => void;
   setError: (value: string) => void;
   density: AdminDensityMode;
 }) {
@@ -4810,6 +4823,14 @@ function AdminPaymentsSection({
       bank_qr_payload: ""
     }
   );
+  const [checkoutForm, setCheckoutForm] = useState<CheckoutSettings>(
+    checkoutSettings || {
+      min_order_amount: 0,
+      free_shipping_threshold: 0,
+      shipping_fee_standard: 30000,
+      shipping_fee_express: 50000
+    }
+  );
 
   useEffect(() => {
     if (settings) {
@@ -4819,9 +4840,40 @@ function AdminPaymentsSection({
       });
     }
   }, [settings]);
+  useEffect(() => {
+    if (checkoutSettings) {
+      setCheckoutForm(checkoutSettings);
+    }
+  }, [checkoutSettings]);
   const isCompact = density === "compact";
   const panelClass = panelByDensity(density);
   const gridGapClass = isCompact ? "mt-4 grid gap-3" : "mt-5 grid gap-4";
+  const handleCheckoutSave = async () => {
+    if (
+      checkoutForm.min_order_amount < 0 ||
+      checkoutForm.free_shipping_threshold < 0 ||
+      checkoutForm.shipping_fee_standard < 0 ||
+      checkoutForm.shipping_fee_express < 0
+    ) {
+      setError("Cấu hình checkout phải là số không âm.");
+      return;
+    }
+
+    try {
+      const updated = await updateCheckoutSettings(checkoutForm);
+      onCheckoutSave(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể cập nhật checkout.");
+    }
+  };
+
+  const updateCheckoutField = (field: keyof CheckoutSettings, rawValue: string) => {
+    const value = rawValue === "" ? 0 : Number(rawValue);
+    setCheckoutForm((prev) => ({
+      ...prev,
+      [field]: Number.isFinite(value) ? value : 0
+    }));
+  };
 
   const handleSave = async () => {
     try {
@@ -4917,6 +4969,80 @@ function AdminPaymentsSection({
         >
           Lưu cấu hình
         </Button>
+        <div className="mt-6 border-t border-slate-200 pt-6">
+          <AdminSectionHeader
+            title="Cấu hình checkout & giao hàng"
+            description="Quản lý giá trị đơn tối thiểu, ngưỡng freeship và phí giao hàng."
+          />
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <AdminField
+              label="Đơn tối thiểu"
+              helper="Nhập 0 để tắt rule giá trị đơn tối thiểu."
+            >
+              <input
+                type="number"
+                min="0"
+                className={inputClass}
+                value={checkoutForm.min_order_amount}
+                onChange={(event) => updateCheckoutField("min_order_amount", event.target.value)}
+              />
+            </AdminField>
+            <AdminField
+              label="Ngưỡng freeship"
+              helper="Nhập 0 để tắt freeship. Freeship chỉ áp dụng cho giao tiêu chuẩn."
+            >
+              <input
+                type="number"
+                min="0"
+                className={inputClass}
+                value={checkoutForm.free_shipping_threshold}
+                onChange={(event) =>
+                  updateCheckoutField("free_shipping_threshold", event.target.value)
+                }
+              />
+            </AdminField>
+            <AdminField
+              label="Phí ship tiêu chuẩn"
+              helper="Phí áp dụng khi đơn chưa đạt freeship."
+            >
+              <input
+                type="number"
+                min="0"
+                className={inputClass}
+                value={checkoutForm.shipping_fee_standard}
+                onChange={(event) =>
+                  updateCheckoutField("shipping_fee_standard", event.target.value)
+                }
+              />
+            </AdminField>
+            <AdminField
+              label="Phí ship nhanh"
+              helper="Luôn tính riêng cho giao nhanh."
+            >
+              <input
+                type="number"
+                min="0"
+                className={inputClass}
+                value={checkoutForm.shipping_fee_express}
+                onChange={(event) =>
+                  updateCheckoutField("shipping_fee_express", event.target.value)
+                }
+              />
+            </AdminField>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-600 md:text-sm">
+            Giá trị <strong>0</strong> sẽ tắt rule tương ứng. Freeship tiếp tục chỉ áp dụng
+            cho <strong>giao tiêu chuẩn</strong>, không áp dụng cho giao nhanh.
+          </div>
+
+          <Button
+            onClick={handleCheckoutSave}
+            className={`${primaryActionClass} mt-4`}
+          >
+            Lưu checkout & giao hàng
+          </Button>
+        </div>
       </div>
     </div>
   );

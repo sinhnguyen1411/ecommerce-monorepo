@@ -204,7 +204,7 @@ test.describe("Buyer auth onboarding", () => {
       );
     });
 
-    await page.goto(withRawNext("/login", "/checkout"), {
+    await page.goto(withRawNext("/login", "/cart"), {
       waitUntil: "domcontentloaded"
     });
     await expect.poll(() => profileRequested).toBeGreaterThan(0);
@@ -214,7 +214,7 @@ test.describe("Buyer auth onboarding", () => {
     await page.getByTestId("login-password-submit").click();
 
     await expect.poll(() => loginRequested).toBe(true);
-    await expect.poll(() => new URL(page.url()).pathname).toBe("/checkout");
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/cart");
   });
 
   test("login page exposes OTP Gmail flow", async ({ page }) => {
@@ -233,7 +233,7 @@ test.describe("Buyer auth onboarding", () => {
       await route.fulfill(ok({ request_id: 99, cooldown_seconds: 30 }));
     });
 
-    await page.goto(withRawNext("/login", "/checkout"), {
+    await page.goto(withRawNext("/login", "/cart"), {
       waitUntil: "domcontentloaded"
     });
     await expect.poll(() => profileRequested).toBeGreaterThan(0);
@@ -289,7 +289,7 @@ test.describe("Buyer auth onboarding", () => {
       );
     });
 
-    await page.goto(withRawNext("/signup", "/checkout"), {
+    await page.goto(withRawNext("/signup", "/cart"), {
       waitUntil: "domcontentloaded"
     });
     await expect.poll(() => profileRequested).toBeGreaterThan(0);
@@ -303,7 +303,7 @@ test.describe("Buyer auth onboarding", () => {
     await page.getByTestId("signup-otp-verify").click();
     await expect.poll(() => otpVerified).toBe(true);
 
-    await expect(page).toHaveURL(new RegExp(`/account${escapedQuerySep}next=%2Fcheckout$`));
+    await expect(page).toHaveURL(new RegExp(`/account${escapedQuerySep}next=%2Fcart$`));
   });
 
   test("account onboarding submits and redirects back to next", async ({ page }) => {
@@ -326,7 +326,7 @@ test.describe("Buyer auth onboarding", () => {
       await route.fulfill(ok(completedProfile));
     });
 
-    await page.goto(withRawNext("/account", "/checkout"), {
+    await page.goto(withRawNext("/account", "/cart"), {
       waitUntil: "domcontentloaded"
     });
 
@@ -338,7 +338,7 @@ test.describe("Buyer auth onboarding", () => {
     await page.locator("#onboarding-password-confirm").fill("Password9");
     await page.getByTestId("onboarding-submit").click();
 
-    await expect.poll(() => new URL(page.url()).pathname).toBe("/checkout");
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/cart");
 
     expect(onboardingPayload).toEqual({
       full_name: "Buyer Demo",
@@ -515,7 +515,7 @@ test.describe("Buyer auth onboarding", () => {
       );
     });
 
-    await page.goto(withRawNext("/login", "/checkout"), {
+    await page.goto(withRawNext("/login", "/cart"), {
       waitUntil: "domcontentloaded"
     });
     await page.getByTestId("login-email").fill("buyer@gmail.com");
@@ -524,10 +524,10 @@ test.describe("Buyer auth onboarding", () => {
     await page.keyboard.press("Enter");
 
     await expect.poll(() => loginRequested).toBe(true);
-    await expect.poll(() => new URL(page.url()).pathname).toBe("/checkout");
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/cart");
   });
 
-  for (const path of ["/account/orders", "/account/addresses", "/checkout"]) {
+  for (const path of ["/account/orders", "/account/addresses", "/cart"]) {
     test(`gates ${path} to account when onboarding is required`, async ({ page }) => {
       await mockSharedCheckoutApis(page);
 

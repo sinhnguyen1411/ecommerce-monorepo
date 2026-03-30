@@ -5,8 +5,9 @@ import Link from "next/link";
 
 import { validatePromoCode } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
-import { siteConfig } from "@/lib/site";
 import { getCartSubtotal, useCartStore } from "@/store/cart";
+
+import { useCheckoutConfig } from "./CheckoutConfigProvider";
 
 const deliverySlots = [
   "08:00 - 09:00",
@@ -26,8 +27,9 @@ export default function CartSummary() {
   const setDeliveryTime = useCartStore((state) => state.setDeliveryTime);
   const promoCode = useCartStore((state) => state.promoCode);
   const setPromoCode = useCartStore((state) => state.setPromoCode);
+  const checkoutConfig = useCheckoutConfig();
   const subtotal = getCartSubtotal(items);
-  const minOrder = siteConfig.minOrderAmount;
+  const minOrder = checkoutConfig.min_order_amount;
   const meetsMinOrder = minOrder === 0 || subtotal >= minOrder;
   const [deliveryMode, setDeliveryMode] = useState("standard");
   const [deliveryDate, setDeliveryDate] = useState("");
@@ -184,7 +186,7 @@ export default function CartSummary() {
         </div>
         <div className="summary-button">
           <Link
-            href="/checkout"
+            href="/cart"
             className={`checkout-btn btnred ${meetsMinOrder ? "" : "disabled"}`}
           >
             THANH TOÁN

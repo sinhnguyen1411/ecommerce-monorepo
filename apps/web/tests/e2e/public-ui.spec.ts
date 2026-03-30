@@ -171,7 +171,9 @@ for (const viewport of viewports) {
         }
         return box;
       };
-      const requireDocumentMetrics = async (locator: ReturnType<typeof page.locator>) => {
+      const requireDocumentMetrics = async (
+        locator: ReturnType<typeof page.locator>
+      ): Promise<{ top: number; height: number }> => {
         let metrics: { top: number; height: number } | null = null;
         await expect
           .poll(

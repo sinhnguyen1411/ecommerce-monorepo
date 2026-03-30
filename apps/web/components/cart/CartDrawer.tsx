@@ -5,19 +5,20 @@ import Image from "next/image";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatCurrency } from "@/lib/format";
-import { siteConfig } from "@/lib/site";
 import { getCartCount, getCartSubtotal, useCartStore } from "@/store/cart";
 
+import { useCheckoutConfig } from "./CheckoutConfigProvider";
 import CartLineItem from "./CartLineItem";
 
 export default function CartDrawer() {
   const items = useCartStore((state) => state.items);
   const isOpen = useCartStore((state) => state.isOpen);
   const close = useCartStore((state) => state.close);
+  const checkoutConfig = useCheckoutConfig();
   const subtotal = getCartSubtotal(items);
   const count = getCartCount(items);
-  const freeThreshold = siteConfig.freeShippingThreshold;
-  const minOrder = siteConfig.minOrderAmount;
+  const freeThreshold = checkoutConfig.free_shipping_threshold;
+  const minOrder = checkoutConfig.min_order_amount;
   const progress = freeThreshold > 0 ? Math.min(subtotal / freeThreshold, 1) : 0;
   const meetsMinOrder = minOrder === 0 || subtotal >= minOrder;
 
@@ -87,7 +88,7 @@ export default function CartDrawer() {
                 Xem giỏ hàng
               </Link>
               <Link
-                href="/checkout"
+                href="/cart"
                 className={`button ${meetsMinOrder ? "" : "disabled"}`}
                 onClick={close}
               >
