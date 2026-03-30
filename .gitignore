@@ -22,7 +22,11 @@ bin
 # tool caches
 .eslintcache
 .stylelintcache
+apps/web/.next/cache/
 apps/web/.next/cache/webpack/
+apps/web/.next/diagnostics/
+apps/web/.next/types/
+apps/web/.next/trace
 apps/web/test-results/
 apps/web/tsconfig.tsbuildinfo
 
