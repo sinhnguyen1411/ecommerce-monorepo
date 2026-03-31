@@ -1,0 +1,51 @@
+<svg width="920" height="260" viewBox="0 0 920 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tb-editorial-line" x1="276" y1="172" x2="812" y2="172" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D79A0A"/>
+      <stop offset="1" stop-color="#F3C43B"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="920" height="260" rx="34" fill="#FFFDF6"/>
+  <g transform="translate(34 22)">
+    <circle cx="94" cy="108" r="84" fill="#FBF2C7"/>
+    <circle cx="94" cy="108" r="76" stroke="#D8C67A" stroke-width="3"/>
+    <circle cx="94" cy="108" r="68.5" stroke="#8DB77C" stroke-opacity="0.45" stroke-width="1.5"/>
+    <path d="M58 63C51 60 45 54 43 47C50 49 56 54 59 61C59 62 58 63 58 63Z" fill="#F2BE24"/>
+    <path d="M50 79C42 77 35 69 33 61C41 63 47 69 51 76C51 77 50 78 50 79Z" fill="#F2BE24"/>
+    <path d="M46 96C37 94 30 86 28 77C37 80 44 86 47 94C47 95 46 95 46 96Z" fill="#F2BE24"/>
+    <path d="M46 113C36 111 28 103 26 93C36 95 44 102 48 111C47 112 47 113 46 113Z" fill="#F2BE24"/>
+    <path d="M50 130C40 128 32 120 29 110C39 112 47 119 52 128C51 128 50 129 50 130Z" fill="#F2BE24"/>
+    <path d="M59 145C49 143 41 135 37 125C47 127 57 134 61 143C60 144 60 144 59 145Z" fill="#F2BE24"/>
+    <path d="M72 157C62 156 53 149 49 139C60 140 69 147 74 156C73 156 73 157 72 157Z" fill="#F2BE24"/>
+    <g transform="matrix(-1 0 0 1 188 0)">
+      <path d="M58 63C51 60 45 54 43 47C50 49 56 54 59 61C59 62 58 63 58 63Z" fill="#F2BE24"/>
+      <path d="M50 79C42 77 35 69 33 61C41 63 47 69 51 76C51 77 50 78 50 79Z" fill="#F2BE24"/>
+      <path d="M46 96C37 94 30 86 28 77C37 80 44 86 47 94C47 95 46 95 46 96Z" fill="#F2BE24"/>
+      <path d="M46 113C36 111 28 103 26 93C36 95 44 102 48 111C47 112 47 113 46 113Z" fill="#F2BE24"/>
+      <path d="M50 130C40 128 32 120 29 110C39 112 47 119 52 128C51 128 50 129 50 130Z" fill="#F2BE24"/>
+      <path d="M59 145C49 143 41 135 37 125C47 127 57 134 61 143C60 144 60 144 59 145Z" fill="#F2BE24"/>
+      <path d="M72 157C62 156 53 149 49 139C60 140 69 147 74 156C73 156 73 157 72 157Z" fill="#F2BE24"/>
+    </g>
+    <path d="M98 74C98 57 111 41 134 38C129 54 119 68 102 80L98 74Z" fill="#8FD150"/>
+    <path d="M94 79C80 74 70 64 66 49C82 51 94 60 100 74L94 79Z" fill="#76BE43"/>
+    <path d="M102 60C104 52 110 46 119 44C117 53 110 59 102 62V60Z" fill="#A0DF66"/>
+    <path d="M66 132C42 114 35 92 40 66C44 52 49 42 60 31C63 47 68 59 76 70C84 82 88 98 86 116C81 112 76 108 71 105C70 114 69 128 66 132Z" fill="#079945"/>
+    <path d="M122 132C146 114 153 92 148 66C144 52 139 42 128 31C125 47 120 59 112 70C104 82 100 98 102 116C107 112 112 108 117 105C118 114 119 128 122 132Z" fill="#079945"/>
+    <path d="M62 135C79 141 92 144 98 144C105 144 118 141 134 135" stroke="#E2AA13" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="78" cy="136" r="3.2" fill="#F2C53A"/>
+    <circle cx="98" cy="132" r="4.4" fill="#F2C53A"/>
+    <circle cx="118" cy="136" r="3.2" fill="#F2C53A"/>
+  </g>
+
+  <text x="276" y="106" fill="#173C22" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700">
+    Nông Dược Tam Bố
+  </text>
+  <text x="276" y="144" fill="#4D6248" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="500">
+    Công Ty Cổ Phần Nông Dược Tam Bố
+  </text>
+  <path d="M276 172H812" stroke="url(#tb-editorial-line)" stroke-width="4" stroke-linecap="round"/>
+  <text x="276" y="208" fill="#5A6A53" font-family="Arial, Helvetica, sans-serif" font-size="24">
+    Nông nghiệp xanh bền vững
+  </text>
+</svg>

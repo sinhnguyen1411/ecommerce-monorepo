@@ -2,6 +2,7 @@
 
 import { LogOut, Search } from "lucide-react";
 
+import BrandSignature from "@/components/brand/BrandSignature";
 import { Button } from "@/components/ui/button";
 
 type AdminTopbarProps = {
@@ -22,11 +23,9 @@ export default function AdminTopbar({
       <div className="flex min-h-[72px] flex-wrap items-center gap-3 px-4 py-3 lg:px-6">
         {mobileNavigation}
 
-        <div className="min-w-[200px]">
-          <p className="text-base font-semibold uppercase tracking-[0.2em] text-slate-400 md:text-xs">
-            NÔNG DƯỢC TAM BỐ
-          </p>
-          <h2 className="text-lg font-semibold text-slate-900">{title || "Tổng quan"}</h2>
+        <div className="min-w-[220px]" data-testid="admin-topbar-brand">
+          <BrandSignature mode="admin" priority logoSizes="44px" />
+          <h2 className="mt-2 text-lg font-semibold text-slate-900">{title || "Tổng quan"}</h2>
         </div>
 
         <div className="relative min-w-[220px] flex-1">

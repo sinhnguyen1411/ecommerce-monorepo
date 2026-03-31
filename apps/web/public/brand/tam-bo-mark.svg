@@ -1,0 +1,24 @@
+<svg width="196" height="168" viewBox="0 0 196 168" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tb-mark-leaf" x1="88" y1="24" x2="138" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8FD14F"/>
+      <stop offset="1" stop-color="#5AAE37"/>
+    </linearGradient>
+    <linearGradient id="tb-mark-gold" x1="54" y1="139" x2="142" y2="139" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D89B08"/>
+      <stop offset="1" stop-color="#F2BF24"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M98 78C98 56 115 35 144 31C138 52 125 71 104 88L98 78Z" fill="url(#tb-mark-leaf)"/>
+  <path d="M93 84C76 78 65 65 60 46C81 48 96 59 103 78L93 84Z" fill="#7BC043"/>
+  <path d="M101 56C104 46 112 39 123 36C120 48 112 57 101 61V56Z" fill="#88C84A"/>
+  <path d="M59 143C32 122 24 100 30 71C34 52 40 41 52 28C56 49 62 64 72 79C81 93 86 111 84 136C79 130 73 125 67 121C66 131 64 138 59 143Z" fill="#0A9B47"/>
+  <path d="M137 143C164 122 172 100 166 71C162 52 156 41 144 28C140 49 134 64 124 79C115 93 110 111 112 136C117 130 123 125 129 121C130 131 132 138 137 143Z" fill="#0A9B47"/>
+  <path d="M62 146C67 129 79 118 95 114C80 127 74 137 74 152L62 146Z" fill="#067E39" opacity="0.5"/>
+  <path d="M134 146C129 129 117 118 101 114C116 127 122 137 122 152L134 146Z" fill="#067E39" opacity="0.5"/>
+  <path d="M54 142C73 149 90 152 98 152C107 152 124 149 142 142" stroke="url(#tb-mark-gold)" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="74" cy="141" r="4.2" fill="#F2BF24"/>
+  <circle cx="98" cy="135" r="5.5" fill="#F2BF24"/>
+  <circle cx="122" cy="141" r="4.2" fill="#F2BF24"/>
+</svg>

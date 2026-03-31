@@ -1,0 +1,39 @@
+<svg width="744" height="240" viewBox="0 0 744 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="tb-lockup-light-bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(110 96) rotate(90) scale(96)">
+      <stop offset="0" stop-color="#FFFDF2"/>
+      <stop offset="0.78" stop-color="#F8E9AF"/>
+      <stop offset="1" stop-color="#E7D48B"/>
+    </radialGradient>
+    <linearGradient id="tb-lockup-light-gold" x1="216" y1="164" x2="687" y2="164" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E0AD1D"/>
+      <stop offset="1" stop-color="#FFD15C"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="110" cy="120" r="92" fill="url(#tb-lockup-light-bg)"/>
+  <circle cx="110" cy="120" r="82" stroke="#F9F3CF" stroke-width="1.5"/>
+
+  <g transform="translate(33 40)">
+    <path d="M73 58C73 38 88 18 114 14C109 33 97 50 79 65L73 58Z" fill="#8BD14F"/>
+    <path d="M67 63C52 58 42 46 38 29C56 31 69 41 76 58L67 63Z" fill="#79BE43"/>
+    <path d="M76 37C78 29 85 22 95 19C92 29 85 37 76 41V37Z" fill="#9FE065"/>
+    <path d="M39 115C16 97 9 79 14 54C18 37 23 27 33 16C37 34 42 47 50 60C59 72 63 88 61 109C57 104 51 101 46 98C46 106 44 112 39 115Z" fill="#0A9A47"/>
+    <path d="M106 115C129 97 136 79 131 54C127 37 122 27 112 16C108 34 103 47 95 60C86 72 82 88 84 109C88 104 94 101 99 98C99 106 101 112 106 115Z" fill="#0A9A47"/>
+    <path d="M35 115C52 121 66 124 72 124C79 124 93 121 109 115" stroke="#E7B62A" stroke-width="3.6" stroke-linecap="round"/>
+    <circle cx="54" cy="115" r="3.1" fill="#F2C334"/>
+    <circle cx="72" cy="110" r="4.2" fill="#F2C334"/>
+    <circle cx="90" cy="115" r="3.1" fill="#F2C334"/>
+  </g>
+
+  <text x="216" y="98" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="700" letter-spacing="1.4">
+    Nông Dược Tam Bồ
+  </text>
+  <text x="216" y="129" fill="#F3F7EC" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="4.2">
+    NÔNG NGHIỆP XANH BỀN VỮNG
+  </text>
+  <path d="M216 164H687" stroke="url(#tb-lockup-light-gold)" stroke-width="4" stroke-linecap="round"/>
+  <text x="216" y="198" fill="#F4F7F0" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="400">
+    Giải pháp sinh học đồng hành cùng nhà nông
+  </text>
+</svg>

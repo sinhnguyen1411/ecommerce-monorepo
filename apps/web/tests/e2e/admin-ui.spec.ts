@@ -49,6 +49,15 @@ for (const viewport of viewports) {
       await mockAdminApi(page);
       await page.goto("/admin", { waitUntil: "domcontentloaded" });
 
+      await expect(page.getByTestId("admin-topbar-brand")).toBeVisible({ timeout: 15000 });
+      if (viewport.width >= 1024) {
+        await expect(page.getByTestId("admin-sidebar-brand-compact")).toBeVisible();
+      } else {
+        await page.getByRole("button", { name: /menu admin/i }).click();
+        await expect(page.getByTestId("admin-mobile-sheet-brand")).toBeVisible();
+        await page.keyboard.press("Escape");
+      }
+
       await expect(page.getByRole("main")).toBeVisible({ timeout: 15000 });
       await clickAdminNav(page, viewport.width, "contact");
       await expect(page.getByRole("main")).toBeVisible({ timeout: 10000 });

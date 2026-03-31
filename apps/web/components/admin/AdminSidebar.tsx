@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import BrandLogo from "@/components/brand/BrandLogo";
+import BrandSignature from "@/components/brand/BrandSignature";
 import { Button } from "@/components/ui/button";
 
 export type AdminNavItem = {
@@ -343,13 +345,19 @@ export default function AdminSidebar({
       onBlurCapture={onBlurCapture}
     >
       <div className={`border-b border-slate-100 pb-4 ${compact ? "text-center" : ""}`}>
-        <h1
-          className={`font-semibold uppercase tracking-[0.16em] text-slate-900 ${
-            compact ? "text-sm" : "text-base"
-          }`}
-        >
-          ADMIN
-        </h1>
+        {compact ? (
+          <div className="flex justify-center" data-testid="admin-sidebar-brand-compact">
+            <BrandLogo
+              variant="seal-master"
+              sizes="48px"
+              className="w-12"
+            />
+          </div>
+        ) : (
+          <div className="space-y-3" data-testid="admin-sidebar-brand">
+            <BrandSignature mode="admin" priority logoSizes="44px" />
+          </div>
+        )}
       </div>
 
       <div

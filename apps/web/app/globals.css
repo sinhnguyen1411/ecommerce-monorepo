@@ -7301,6 +7301,29 @@ a.button.btndark:focus-visible {
   }
 }
 
+@media (max-width: 1023px) {
+  .header-wrap-menu {
+    display: none !important;
+  }
+
+  .header-wrap-logo {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .header-wrap-logo .wrap-logo {
+    min-width: 0;
+  }
+
+  .header-brand__logo {
+    max-width: 180px;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+}
+
 /* feature section isolation so it never overlaps spotlight */
 .home-main .section-home-feature {
   position: relative;
@@ -7332,4 +7355,470 @@ a.button.btndark:focus-visible {
 
 .home-main .section-home-feature .feature-block__inner {
   min-height: 252px;
+}
+
+/* Brand system */
+.brand-logo {
+  display: block;
+  height: auto;
+}
+
+.header-wrap-logo h1 {
+  margin: 0;
+}
+
+.header-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+}
+
+.header-brand__signature {
+  min-width: 0;
+}
+
+.header-brand:hover,
+.header-brand:focus-visible {
+  color: inherit !important;
+  background: transparent !important;
+}
+
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
+.footer-brand:hover,
+.footer-brand:focus-visible {
+  color: inherit !important;
+}
+
+.mobile-menu-brand {
+  margin-top: 16px;
+  border: 1px solid rgba(62, 122, 63, 0.12);
+  background:
+    radial-gradient(circle at top right, rgba(242, 191, 36, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 246, 0.98));
+  padding: 16px;
+}
+
+.mobile-menu-brand__home {
+  display: flex;
+  width: 100%;
+}
+
+.auth-brand-strip {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(47, 93, 49, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(242, 191, 36, 0.18), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 249, 243, 0.86));
+  padding: 16px 20px;
+  box-shadow: 0 18px 34px rgba(31, 42, 30, 0.08);
+}
+
+.auth-brand-strip::before {
+  content: "";
+  position: absolute;
+  right: -36px;
+  top: -36px;
+  width: 132px;
+  height: 132px;
+  background: url("/brand/tam-bo-mark-core.svg") center/contain no-repeat;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.auth-brand-strip__home {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.auth-brand-strip [data-brand-mode="auth"] {
+  justify-content: center;
+}
+
+.about-page--story {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(34, 197, 94, 0.08), transparent 45%),
+    radial-gradient(circle at 86% 12%, rgba(202, 138, 4, 0.1), transparent 40%),
+    linear-gradient(180deg, #f8fbf6 0%, #f3f7f1 48%, #f7faf5 100%);
+}
+
+.about-page--story::before {
+  content: "";
+  position: absolute;
+  right: 18px;
+  top: 160px;
+  width: 300px;
+  height: 300px;
+  background: url("/brand/tam-bo-mark-core.svg") center/contain no-repeat;
+  opacity: 0.045;
+  pointer-events: none;
+}
+
+.about-story-hero {
+  position: relative;
+  margin: 40px 0 28px;
+}
+
+.about-hero-text,
+.about-hero-media,
+.about-story-panel {
+  animation: about-fade-up 0.7s ease both;
+}
+
+.about-hero-media {
+  min-height: 400px;
+  border: 1px solid rgba(62, 122, 63, 0.12);
+  box-shadow: 0 24px 40px rgba(24, 32, 18, 0.12);
+}
+
+.about-hero-media::after {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 52%, rgba(10, 25, 12, 0.42) 100%);
+}
+
+.about-story-chip {
+  position: relative;
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  padding-left: 14px;
+  isolation: isolate;
+}
+
+.about-story-chip::before {
+  content: "";
+  position: absolute;
+  inset: 4px 0 4px 42px;
+  border: 1px solid rgba(62, 122, 63, 0.12);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at left center, rgba(247, 231, 167, 0.42), transparent 24%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 244, 0.9));
+  box-shadow:
+    0 16px 28px rgba(24, 32, 18, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  z-index: 0;
+}
+
+.about-story-chip::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 92px;
+  height: 92px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(138, 184, 107, 0.18), transparent 72%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.about-story-chip__signature {
+  min-width: 0;
+  min-height: 72px;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+  padding: 10px 24px 10px 0;
+}
+
+.about-story-chip__logo {
+  width: 58px;
+  flex-shrink: 0;
+  margin-left: -14px;
+  padding: 6px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 30%, #fffef7 0%, #f9f3d5 62%, #f1e2a8 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 185, 93, 0.34),
+    0 10px 22px rgba(169, 138, 30, 0.16);
+}
+
+.about-story-chip__title {
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.about-story-chip__subline {
+  margin-top: 4px;
+  line-height: 1.45;
+  color: rgba(66, 79, 61, 0.82);
+}
+
+.about-hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.about-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(62, 122, 63, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 20px rgba(24, 32, 18, 0.06);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--shop-color-title);
+}
+
+.about-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.about-hero-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid rgba(62, 122, 63, 0.18);
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--shop-color-main);
+}
+
+.about-hero-secondary:hover,
+.about-hero-secondary:focus-visible {
+  color: var(--shop-color-main);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.about-hero-seal {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.about-story-block {
+  margin: 26px 0 10px;
+}
+
+.about-story-panel {
+  position: relative;
+  overflow: hidden;
+  padding: 30px;
+  border: 1px solid rgba(62, 122, 63, 0.1);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 34px rgba(24, 32, 18, 0.08);
+}
+
+.about-story-panel::after {
+  content: "";
+  position: absolute;
+  right: -32px;
+  top: -32px;
+  width: 156px;
+  height: 156px;
+  background: url("/brand/tam-bo-mark-core.svg") center/contain no-repeat;
+  opacity: 0.055;
+  pointer-events: none;
+}
+
+.about-story-panel__header {
+  display: grid;
+  gap: 10px;
+  max-width: 620px;
+  margin-bottom: 18px;
+}
+
+.about-story-panel__header h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.about-story-panel__identity {
+  display: grid;
+  gap: 8px;
+  max-width: 760px;
+  margin-bottom: 18px;
+}
+
+.about-story-panel__legal {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #163922;
+}
+
+.about-story-panel__tagline {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.75;
+  color: rgba(26, 43, 28, 0.72);
+}
+
+.about-story-prose {
+  display: grid;
+  gap: 14px;
+  max-width: 760px;
+  color: var(--shop-color-text);
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.about-story-prose p,
+.about-story-prose ul {
+  margin: 0;
+}
+
+.about-story-prose ul {
+  display: grid;
+  gap: 10px;
+}
+
+.about-story-prose li {
+  position: relative;
+  padding-left: 20px;
+}
+
+.about-story-prose li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #d89b08;
+}
+
+.about-pillar-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 246, 0.96));
+}
+
+.about-pillar-tag {
+  background: rgba(194, 133, 14, 0.94);
+}
+
+.about-cta-card {
+  border: 1px solid rgba(62, 122, 63, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(242, 191, 36, 0.18), transparent 36%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(243, 248, 241, 0.96));
+}
+
+@keyframes about-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 991px) {
+  .about-page--story::before {
+    right: 6px;
+    top: 280px;
+    width: 220px;
+    height: 220px;
+  }
+
+  .about-hero-media {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-menu-brand {
+    padding: 14px;
+  }
+
+  .auth-brand-strip {
+    padding: 16px;
+  }
+
+  .about-story-chip {
+    width: 100%;
+    padding-left: 0;
+  }
+
+  .about-story-chip::before {
+    inset: 0;
+  }
+
+  .about-story-chip::after {
+    right: 8px;
+    width: 74px;
+    height: 74px;
+  }
+
+  .about-story-chip__signature {
+    width: 100%;
+    min-height: 0;
+    padding: 12px 18px 12px 10px;
+  }
+
+  .about-story-chip__logo {
+    width: 52px;
+    margin-left: 0;
+  }
+
+  .about-hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .about-hero-actions .button,
+  .about-hero-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .about-hero-media {
+    min-height: 240px;
+  }
+
+  .about-hero-seal {
+    top: 12px;
+    right: 12px;
+    padding: 0;
+  }
+
+  .about-story-panel {
+    padding: 22px 18px;
+  }
+
+  .about-page--story::before {
+    right: 4px;
+    top: 380px;
+    width: 160px;
+    height: 160px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-hero-text,
+  .about-hero-media,
+  .about-story-panel {
+    animation: none;
+  }
 }

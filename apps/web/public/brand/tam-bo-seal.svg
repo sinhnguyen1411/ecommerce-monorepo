@@ -1,0 +1,56 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="tb-seal-bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(120 112) rotate(90) scale(118)">
+      <stop offset="0" stop-color="#FFFCEA"/>
+      <stop offset="0.72" stop-color="#FFF5CC"/>
+      <stop offset="1" stop-color="#F6E7A3"/>
+    </radialGradient>
+    <linearGradient id="tb-seal-leaf" x1="54" y1="42" x2="79" y2="174" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F6C440"/>
+      <stop offset="1" stop-color="#E4A60C"/>
+    </linearGradient>
+    <linearGradient id="tb-seal-ring" x1="28" y1="24" x2="217" y2="221" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D9C77B"/>
+      <stop offset="0.5" stop-color="#F8EFB8"/>
+      <stop offset="1" stop-color="#D9C77B"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="120" cy="120" r="108" fill="url(#tb-seal-bg)"/>
+  <circle cx="120" cy="120" r="101.5" stroke="url(#tb-seal-ring)" stroke-width="3"/>
+  <circle cx="120" cy="120" r="91" stroke="#79A86C" stroke-opacity="0.5" stroke-width="1.5"/>
+
+  <g fill="url(#tb-seal-leaf)">
+    <path d="M59 63C49 59 41 50 39 40C49 42 58 49 62 59C61 61 60 62 59 63Z"/>
+    <path d="M49 82C39 79 31 70 29 59C39 61 48 69 52 79C51 80 50 81 49 82Z"/>
+    <path d="M44 102C33 99 24 89 22 77C33 79 43 88 47 99C46 100 45 101 44 102Z"/>
+    <path d="M44 123C31 120 21 110 18 97C31 100 42 109 47 120C46 121 45 122 44 123Z"/>
+    <path d="M49 144C36 141 26 130 23 117C36 120 47 129 53 141C52 142 50 143 49 144Z"/>
+    <path d="M60 163C46 160 35 148 31 134C45 137 58 147 64 160C62 161 61 162 60 163Z"/>
+    <path d="M76 178C62 176 50 165 45 151C60 153 73 163 80 176C79 177 78 178 76 178Z"/>
+    <path d="M94 190C80 189 67 179 60 166C75 167 89 177 97 188C96 189 95 190 94 190Z"/>
+  </g>
+
+  <g fill="url(#tb-seal-leaf)" transform="matrix(-1 0 0 1 240 0)">
+    <path d="M59 63C49 59 41 50 39 40C49 42 58 49 62 59C61 61 60 62 59 63Z"/>
+    <path d="M49 82C39 79 31 70 29 59C39 61 48 69 52 79C51 80 50 81 49 82Z"/>
+    <path d="M44 102C33 99 24 89 22 77C33 79 43 88 47 99C46 100 45 101 44 102Z"/>
+    <path d="M44 123C31 120 21 110 18 97C31 100 42 109 47 120C46 121 45 122 44 123Z"/>
+    <path d="M49 144C36 141 26 130 23 117C36 120 47 129 53 141C52 142 50 143 49 144Z"/>
+    <path d="M60 163C46 160 35 148 31 134C45 137 58 147 64 160C62 161 61 162 60 163Z"/>
+    <path d="M76 178C62 176 50 165 45 151C60 153 73 163 80 176C79 177 78 178 76 178Z"/>
+    <path d="M94 190C80 189 67 179 60 166C75 167 89 177 97 188C96 189 95 190 94 190Z"/>
+  </g>
+
+  <g transform="translate(50 44)">
+    <path d="M70 62C70 40 87 19 116 15C110 36 97 55 76 72L70 62Z" fill="#87C94C"/>
+    <path d="M65 68C48 62 37 49 32 30C53 32 68 43 75 62L65 68Z" fill="#72BB41"/>
+    <path d="M73 40C76 30 84 23 95 20C92 32 84 41 73 45V40Z" fill="#9BDA63"/>
+    <path d="M31 127C4 106 -4 84 2 55C6 36 12 25 24 12C28 33 34 48 44 63C53 77 58 95 56 120C51 114 45 109 39 105C38 115 36 122 31 127Z" fill="#089844"/>
+    <path d="M109 127C136 106 144 84 138 55C134 36 128 25 116 12C112 33 106 48 96 63C87 77 82 95 84 120C89 114 95 109 101 105C102 115 104 122 109 127Z" fill="#089844"/>
+    <path d="M26 126C45 133 62 136 70 136C79 136 96 133 114 126" stroke="#E3AE17" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="48" cy="126" r="3.8" fill="#F2C334"/>
+    <circle cx="70" cy="120" r="5.1" fill="#F2C334"/>
+    <circle cx="92" cy="126" r="3.8" fill="#F2C334"/>
+  </g>
+</svg>

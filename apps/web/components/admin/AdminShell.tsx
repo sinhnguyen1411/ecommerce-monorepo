@@ -3,6 +3,7 @@
 import { FocusEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Menu } from "lucide-react";
 
+import BrandSignature from "@/components/brand/BrandSignature";
 import AdminContent from "@/components/admin/AdminContent";
 import AdminSidebar, {
   AdminNavItem,
@@ -170,7 +171,13 @@ export default function AdminShell({
         </button>
       </SheetTrigger>
       <SheetContent className="max-w-xs border-slate-200 bg-white p-5">
-        <SheetHeader>
+        <SheetHeader className="space-y-3">
+          <BrandSignature
+            mode="admin"
+            priority
+            logoSizes="44px"
+            data-testid="admin-mobile-sheet-brand"
+          />
           <SheetTitle className="text-base font-semibold text-slate-900">Điều hướng</SheetTitle>
         </SheetHeader>
         <div className="mt-4">

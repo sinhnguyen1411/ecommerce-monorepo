@@ -153,6 +153,38 @@ for (const viewport of viewports) {
       expect(introOverflow).toBeFalsy();
     });
 
+    test("brand chrome appears on storefront, auth pages and about page", async ({ page }) => {
+      await seedContentStorage(page);
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+
+      await expect(page.getByTestId("site-header-brand")).toBeVisible();
+      await expect(page.getByTestId("site-footer-brand")).toBeVisible();
+
+      if (viewport.width < 1024) {
+        await page.waitForLoadState("networkidle");
+        await page.getByTestId("mobile-menu-trigger").click({ force: true });
+        await expect(page.getByTestId("mobile-menu-sheet")).toBeVisible();
+        await expect(page.getByTestId("mobile-menu-brand")).toBeVisible();
+        await page.keyboard.press("Escape");
+      }
+
+      for (const path of ["/login", "/signup", "/forgot-password"]) {
+        await page.goto(path, { waitUntil: "domcontentloaded" });
+        await expect(page.locator(".auth-brand-strip__logo")).toBeVisible();
+      }
+
+      await page.goto("/pages/about-us", { waitUntil: "domcontentloaded" });
+      await expect(page.locator(".about-hero-pills")).toBeVisible();
+      await expect(page.locator(".about-story-panel")).toBeVisible();
+      await expect(page.locator(".about-hero-seal")).toBeVisible();
+
+      const aboutOverflow = await page.locator(".about-page--story").evaluate((node) => {
+        const element = node as HTMLElement;
+        return element.scrollWidth > element.clientWidth + 1;
+      });
+      expect(aboutOverflow).toBeFalsy();
+    });
+
     test("home spotlight keeps responsive order and no horizontal overflow", async ({ page }) => {
       const requireBox = async (locator: ReturnType<typeof page.locator>) => {
         let box = null as Awaited<ReturnType<typeof locator.boundingBox>>;
@@ -384,6 +416,7 @@ for (const viewport of viewports) {
     test("admin login renders form", async ({ page }) => {
       await page.goto("/admin/login", { waitUntil: "domcontentloaded" });
 
+      await expect(page.getByTestId("admin-login-brand")).toBeVisible();
       await expect(page.locator("form input").first()).toBeVisible();
       await expect(page.locator("form input").nth(1)).toBeVisible();
     });

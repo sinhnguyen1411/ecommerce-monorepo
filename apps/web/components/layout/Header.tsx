@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { ShoppingBag, User } from "lucide-react";
 
+import BrandSignature from "@/components/brand/BrandSignature";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,11 +26,11 @@ import MobileMenu from "./MobileMenu";
 import SearchDialog from "./SearchDialog";
 
 const navLinks = [
-  { href: "/pages/about-us", label: "Gi\u1EDBi thi\u1EC7u" },
-  { href: "/collections/all", label: "S\u1EA3n ph\u1EA9m" },
-  { href: "/blogs/news", label: "Ki\u1EBFn th\u1EE9c nh\u00E0 n\u00F4ng" },
-  { href: "/pages/hoi-dap-cung-nha-nong", label: "H\u1ECFi \u0111\u00E1p c\u00F9ng nh\u00E0 n\u00F4ng" },
-  { href: "/pages/lien-he", label: "Li\u00EAn h\u1EC7" }
+  { href: "/pages/about-us", label: "Giới thiệu" },
+  { href: "/collections/all", label: "Sản phẩm" },
+  { href: "/blogs/news", label: "Kiến thức nhà nông" },
+  { href: "/pages/hoi-dap-cung-nha-nong", label: "Hỏi đáp cùng nhà nông" },
+  { href: "/pages/lien-he", label: "Liên hệ" }
 ];
 
 export default function Header() {
@@ -72,6 +73,17 @@ export default function Header() {
     return null;
   }
 
+  const homeBrand = (
+    <Link href="/" className="header-brand" data-testid="site-header-brand" aria-label={siteConfig.name}>
+      <BrandSignature
+        mode="header"
+        priority
+        logoSizes="(max-width: 640px) 44px, 52px"
+        className="header-brand__signature"
+      />
+    </Link>
+  );
+
   return (
     <header className="mainHeader--height">
       <div className="mainHeader mainHeader_temp01" id="main-header">
@@ -86,13 +98,11 @@ export default function Header() {
 
               <div className="header-wrap-logo">
                 <div className="wrap-logo">
-                  <h1>
-                    <Link href="/">{siteConfig.name}</Link>
-                  </h1>
+                  {pathname === "/" ? <h1>{homeBrand}</h1> : homeBrand}
                 </div>
               </div>
 
-              <div className="header-wrap-menu">
+              <div className="header-wrap-menu hidden lg:flex">
                 <nav className="navbar-mainmenu">
                   <ul className="menuList-main">
                     {navLinks.map((link) => (
@@ -109,44 +119,36 @@ export default function Header() {
                 <SearchDialog />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="header-action-btn" aria-label="T\u00E0i kho\u1EA3n">
+                    <button className="header-action-btn" aria-label="Tài khoản">
                       <User className="h-4 w-4" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 p-2">
-                    <div className="px-2 py-2 text-xs text-ink/60">
-                      {"T\u00E0i kho\u1EA3n c\u1EE7a b\u1EA1n"}
-                    </div>
+                    <div className="px-2 py-2 text-xs text-ink/60">Tài khoản của bạn</div>
                     {isAuthenticated ? (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link href="/account">{"T\u00E0i kho\u1EA3n c\u1EE7a t\u00F4i"}</Link>
+                          <Link href="/account">Tài khoản của tôi</Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={handleLogout}>
-                          {"\u0110\u0103ng xu\u1EA5t"}
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={handleLogout}>Đăng xuất</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          <Link href="/forgot-password">{"Qu\u00EAn m\u1EADt kh\u1EA9u"}</Link>
+                          <Link href="/forgot-password">Quên mật khẩu</Link>
                         </DropdownMenuItem>
                       </>
                     ) : (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link href="/login">{"\u0110\u0103ng nh\u1EADp"}</Link>
+                          <Link href="/login">Đăng nhập</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href="/signup">{"T\u1EA1o t\u00E0i kho\u1EA3n"}</Link>
+                          <Link href="/signup">Tạo tài khoản</Link>
                         </DropdownMenuItem>
                       </>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <button
-                  onClick={open}
-                  className="header-action-btn relative"
-                  aria-label="Gi\u1ECF h\u00E0ng"
-                >
+                <button onClick={open} className="header-action-btn relative" aria-label="Giỏ hàng">
                   <ShoppingBag className="h-4 w-4" />
                   <span className="badge-count">{count}</span>
                 </button>

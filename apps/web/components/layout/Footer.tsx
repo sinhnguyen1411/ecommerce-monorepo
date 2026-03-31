@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Facebook, MessageCircle, MessageSquare } from "lucide-react";
 
+import BrandSignature from "@/components/brand/BrandSignature";
 import { isAuthOnlyPath } from "@/lib/auth-route";
 import { useContactSettings } from "@/lib/client-content";
 import type { ContactSettings } from "@/lib/content";
@@ -176,7 +177,9 @@ export default function Footer({
 
       <div className="section-shell grid gap-10 py-10 lg:grid-cols-[1.2fr_1fr_0.8fr_1fr]">
         <div>
-          <h2 className="text-lg font-semibold">{siteConfig.name}</h2>
+          <Link href="/" className="footer-brand" data-testid="site-footer-brand" onClick={handleLinkClick}>
+            <BrandSignature mode="footer" priority logoSizes="(max-width: 640px) 56px, 64px" />
+          </Link>
           <p className="mt-3 text-sm text-white/70">
             {"Kết nối nông sản sạch và người tiêu dùng. Hỗ trợ tư vấn và giao hàng nhanh."}
           </p>
